@@ -111,7 +111,7 @@ Responsabilidades:
 
 ---
 
-## 📊 Funcionalidades do Sistema
+##  Funcionalidades do Sistema
 
 - Cadastro de clientes
 - Registro de pedidos
