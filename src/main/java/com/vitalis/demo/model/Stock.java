@@ -12,10 +12,10 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@ToString
-@EqualsAndHashCode
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Stock {
 
+    @EqualsAndHashCode.Include
     @Id
     @GeneratedValue
     @Column(name = "STOCK_id")

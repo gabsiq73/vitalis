@@ -11,10 +11,10 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@ToString
-@EqualsAndHashCode
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class ClientPrice {
 
+    @EqualsAndHashCode.Include
     @Id
     @GeneratedValue
     @Column(name = "CP_id")
