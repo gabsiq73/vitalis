@@ -28,6 +28,10 @@ public class Payment {
     @Column(name = "PAY_amount", nullable = false)
     private Double amount;
 
+    @ManyToOne
+    @JoinColumn(name = "ORD_id", nullable = false)
+    private Order order;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Method method;
