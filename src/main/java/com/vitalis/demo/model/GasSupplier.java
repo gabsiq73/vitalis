@@ -17,12 +17,12 @@ public class GasSupplier {
     @EqualsAndHashCode.Include
     @Id
     @GeneratedValue
-    @Column(name = "GASSUP_id")
+    @Column(name = "GAS_SUP_id")
     private UUID id;
 
-    @Column(name = "GASSUP_name")
+    @Column(name = "GAS_SUP_name", nullable = false)
     private String name;
 
-    @Column(name = "GASSUP_notes")
+    @Column(name = "GAS_SUP_notes")
     private String notes;
 }
