@@ -6,6 +6,7 @@ import lombok.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -39,4 +40,7 @@ public class GasSettlement {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private SettlementType settlementType;
+
+    @OneToMany(mappedBy = "gasSettlement")
+    private List<OrderItem> orderItems;
 }

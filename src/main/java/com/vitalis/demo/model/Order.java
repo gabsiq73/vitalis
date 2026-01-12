@@ -37,7 +37,12 @@ public class Order {
     @JoinColumn(name = "CLI_id", nullable = false)
     private Client client;
 
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL) //Salvar order salva payment junto, assim como deletar order deleta Payment junto
+    @OneToMany(mappedBy = "order")
     private List<Payment> payments;
+
+    @OneToMany(mappedBy = "order")
+    private List<OrderItem> items;
+
+    
 
 }
