@@ -4,6 +4,7 @@ import com.vitalis.demo.model.enums.ClientType;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -34,4 +35,7 @@ public class Client {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ClientType clientType;
+
+    @OneToMany(mappedBy = "client")
+    private List<LoanedBottle> loanedBottles;
 }
