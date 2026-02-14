@@ -3,13 +3,12 @@ spring:
     name: Vitalis
 
   datasource:
-    url: jdbc:h2:mem:vitalis-db
+    url: jdbc:h2:file:./data/vitalis-db
     driver-class-name: org.h2.Driver
     username: sa
     password:
 
   jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
       ddl-auto: update
     show-sql: true
