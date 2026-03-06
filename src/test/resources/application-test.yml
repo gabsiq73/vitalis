@@ -1,11 +1,16 @@
 spring:
+  application:
+    name: Vitalis
+
   datasource:
-    url: jdbc:h2:mem:testdb
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
+    url: jdbc:postgresql://localhost:5433/vitalis
+    username: postgres
+    password: postgres
 
   jpa:
     hibernate:
-      ddl-auto: create-drop
-    show-sql: false
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
