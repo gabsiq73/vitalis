@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.util.UUID;
+
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @SpringBootTest
@@ -17,15 +19,29 @@ public class ClientServiceTest {
     ClientService clientService;
 
     @Test
-    void deveCriarCliente() {
+    void createClient() {
 
         Client client = clientService.createClient(
-                "Gabriel",
-                "Rua Central",
+                "Test de User ",
+                "Rua Centralsssss",
                 ClientType.RETAIL
         );
 
         assertNotNull(client.getId());
+    }
+
+    @Test
+    void updateClient(){
+        // Muda o id para selecionar outro client
+        UUID clientIDTest = UUID.fromString("c636186a-f395-4010-a15c-9352bcaedd37");
+        Client clientUpdated = new Client();
+
+        clientUpdated.setId(clientIDTest);
+        clientUpdated.setAddress("Casa Amarela - São Denedito");
+        clientUpdated.setName("Felipe Sexo");
+
+        clientService.updateClient(clientUpdated);
+
     }
 
 }

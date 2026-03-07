@@ -40,21 +40,23 @@ public class ClientService {
     }
 
     @Transactional
-    public void updateClient(UUID id, String name, String address, String notes, ClientType clientType){
-        Client client = findClientById(id);
+    public void updateClient(Client client){
+        Client clientUpdated = findClientById(client.getId());
 
-        if(name != null && !name.isBlank()){
-            client.setName(name);
+        if(client.getName() != null && !client.getName().isBlank()){
+            clientUpdated.setName(client.getName());
         }
-        if(address != null && !address.isBlank()){
-            client.setAddress(address);
+        if(client.getAddress() != null && !client.getAddress().isBlank()){
+            clientUpdated.setAddress(client.getAddress());
         }
-        if(notes != null && !notes.isBlank()){
-            client.setNotes(notes);
+        if(client.getNotes() != null && !client.getNotes().isBlank()){
+            clientUpdated.setNotes(client.getNotes());
         }
-        if(clientType != null) {
-            client.setClientType(clientType);
+        if(client.getClientType() != null) {
+            clientUpdated.setClientType(client.getClientType() );
         }
+
+        clientRepository.save(clientUpdated);
 
     }
 
