@@ -2,6 +2,10 @@ package com.vitalis.demo.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -13,6 +17,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@EntityListeners(AuditingEntityListener.class)
 public class Stock {
 
     @EqualsAndHashCode.Include
@@ -31,10 +36,16 @@ public class Stock {
     @Column(name = "STOCK_minimum")
     private Integer minimumStock;
 
-    @Column(name = "STOCK_LastUpdated")
-    private LocalDateTime lastUpdated;
+    @CreatedDate
+    @Column(name = "createDate", nullable = false, updatable = false)
+    private LocalDateTime createDate;
 
-    @Column(name = "STOCK_CreatedAt")
-    private LocalDateTime createdAt;
+    @LastModifiedDate
+    @Column(name = "lastModifiedDate", nullable = false)
+    private LocalDateTime lastModifiedDate;
+
+    @LastModifiedBy
+    @Column(name = "lastModifiedBy")
+    private String lastModifiedBy;
 
 }

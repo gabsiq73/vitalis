@@ -3,6 +3,10 @@ package com.vitalis.demo.model;
 import com.vitalis.demo.model.enums.LoanStatus;
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -15,6 +19,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@EntityListeners(AuditingEntityListener.class)
 public class LoanedBottle {
 
     @EqualsAndHashCode.Include
@@ -40,6 +45,18 @@ public class LoanedBottle {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private LoanStatus loanStatus;
+
+    @CreatedDate
+    @Column(name = "createDate", nullable = false, updatable = false)
+    private LocalDateTime createDate;
+
+    @LastModifiedDate
+    @Column(name = "lastModifiedDate", nullable = false)
+    private LocalDateTime lastModifiedDate;
+
+    @LastModifiedBy
+    @Column(name = "lastModifiedBy")
+    private String lastModifiedBy;
 }
 
 
