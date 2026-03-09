@@ -3,6 +3,7 @@ package com.vitalis.demo.service;
 import com.vitalis.demo.model.Client;
 import com.vitalis.demo.model.enums.ClientType;
 import com.vitalis.demo.repository.ClientRepository;
+import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -10,13 +11,10 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
+@AllArgsConstructor
 public class ClientService {
 
     private final ClientRepository clientRepository;
-
-    public ClientService(ClientRepository clientRepository){
-        this.clientRepository = clientRepository;
-    }
 
     @Transactional
     public Client createClient(String name, String address, ClientType clientType){
