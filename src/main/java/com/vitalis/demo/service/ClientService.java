@@ -14,10 +14,26 @@ import java.util.UUID;
 @AllArgsConstructor
 public class ClientService {
 
-    private final ClientRepository clientRepository;
+    private final ClientRepository repository;
+
+    @Transactional(readOnly = true)
+    public Client findById(UUID id){
+        return repository.findById(id).orElseThrow(() -> new RuntimeException("Cliente não encontrado!"));
+    }
+
+    @Transactional(readOnly = true)
+    public List<Client> listClient(){
+        return repository.findAll();
+    }
 
     @Transactional
-    public Client createClient(String name, String address, ClientType clientType){
+    public void delete(UUID id){
+        Client client = findById(id);
+        repository.delete(client);
+    }
+
+    @Transactional
+    public Client save(String name, String address, ClientType clientType){
 
         if(name == null || name.isBlank()){
             throw new IllegalArgumentException("Nome do cliente é obrigatório");
@@ -33,13 +49,13 @@ public class ClientService {
         client.setAddress(address);
         client.setClientType(clientType);
 
-        return clientRepository.save(client);
+        return repository.save(client);
 
     }
 
     @Transactional
-    public void updateClient(Client client){
-        Client clientUpdated = findClientById(client.getId());
+    public void update(Client client){
+        Client clientUpdated = findById(client.getId());
 
         if(client.getName() != null && !client.getName().isBlank()){
             clientUpdated.setName(client.getName());
@@ -54,23 +70,8 @@ public class ClientService {
             clientUpdated.setClientType(client.getClientType() );
         }
 
-        clientRepository.save(clientUpdated);
+        repository.save(clientUpdated);
 
     }
 
-    @Transactional(readOnly = true)
-    public Client findClientById(UUID id){
-        return clientRepository.findById(id).orElseThrow(() -> new RuntimeException("Cliente não encontrado!"));
-    }
-
-    @Transactional(readOnly = true)
-    public List<Client> listClient(){
-        return clientRepository.findAll();
-    }
-
-    @Transactional
-    public void deleteClient(UUID id){
-        Client client = findClientById(id);
-        clientRepository.delete(client);
-    }
 }

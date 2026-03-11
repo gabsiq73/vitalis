@@ -16,10 +16,26 @@ import java.util.UUID;
 @AllArgsConstructor
 public class ProductService {
 
-    private final ProductRepository productRepository;
+    private final ProductRepository repository;
+
+    @Transactional(readOnly = true)
+    public Product findById(UUID id){
+        return repository.findById(id).orElseThrow(() -> new RuntimeException("Produto não encontrado!"));
+    }
+
+    @Transactional(readOnly = true)
+    public List<Product> findAll(){
+        return repository.findAll();
+    }
 
     @Transactional
-    public Product create(String name, BigDecimal basePrice, LocalDate validity, ProductType type){
+    public void delete(UUID id){
+        Product product = findById(id);
+        repository.delete(product);
+    }
+
+    @Transactional
+    public Product save(String name, BigDecimal basePrice, LocalDate validity, ProductType type){
 
         if(name == null || name.isBlank()){
             throw new IllegalArgumentException("Nome do produto é obrigatório");
@@ -44,7 +60,7 @@ public class ProductService {
         newProduct.setValidity(validity);
         newProduct.setType(type);
 
-        return productRepository.save(newProduct);
+        return repository.save(newProduct);
     }
 
     @Transactional
@@ -67,23 +83,8 @@ public class ProductService {
             product.setType(productDTO.getType());
         }
 
-        productRepository.save(product);
+        repository.save(product);
 
-    }
-    @Transactional(readOnly = true)
-    public Product findById(UUID id){
-        return productRepository.findById(id).orElseThrow(() -> new RuntimeException("Produto não encontrado!"));
-    }
-
-    @Transactional(readOnly = true)
-    public List<Product> findAll(){
-        return productRepository.findAll();
-    }
-
-    @Transactional
-    public void delete(UUID id){
-        Product product = findById(id);
-        productRepository.delete(product);
     }
 
 }

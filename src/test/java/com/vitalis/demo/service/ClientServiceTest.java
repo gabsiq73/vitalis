@@ -21,7 +21,7 @@ public class ClientServiceTest {
     @Test
     void createClient() {
 
-        Client client = clientService.createClient(
+        Client client = clientService.save(
                 "Test de User ",
                 "Rua Centralsssss",
                 ClientType.RETAIL
@@ -40,7 +40,7 @@ public class ClientServiceTest {
         clientUpdated.setAddress("Casa Amarela - São Denedito");
         clientUpdated.setName("Felipe Sexo");
 
-        clientService.updateClient(clientUpdated);
+        clientService.update(clientUpdated);
 
     }
 
