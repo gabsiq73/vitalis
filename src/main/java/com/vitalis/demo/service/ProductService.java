@@ -50,7 +50,7 @@ public class ProductService {
         }
 
         if(type == null){
-            throw new IllegalArgumentException("Validade do produto é obrigatório");
+            throw new IllegalArgumentException("Tipo do produto é obrigatório");
         }
 
         Product newProduct = new Product();

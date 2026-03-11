@@ -43,13 +43,13 @@ public class ClientService {
             throw new IllegalArgumentException("Tipo do cliente é obrigatório");
         }
 
-        Client client = new Client();
+        Client newClient = new Client();
 
-        client.setName(name);
-        client.setAddress(address);
-        client.setClientType(clientType);
+        newClient.setName(name);
+        newClient.setAddress(address);
+        newClient.setClientType(clientType);
 
-        return repository.save(client);
+        return repository.save(newClient);
 
     }
 

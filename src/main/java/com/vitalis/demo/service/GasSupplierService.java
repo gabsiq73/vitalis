@@ -26,8 +26,17 @@ public class GasSupplierService {
     }
 
     @Transactional
-    public GasSupplier save(GasSupplier gasSupplier) {
-        return repository.save(gasSupplier);
+    public GasSupplier save(GasSupplier gasSupplierDTO) {
+
+        if(gasSupplierDTO.getName() == null && gasSupplierDTO.getName().isBlank()){
+            throw new IllegalArgumentException("O nome do fornecedor é obrigatório");
+        }
+
+        GasSupplier newGasSupplier = new GasSupplier();
+        newGasSupplier.setName(gasSupplierDTO.getName());
+        newGasSupplier.setNotes(gasSupplierDTO.getNotes());
+
+        return repository.save(newGasSupplier);
     }
 
     @Transactional
