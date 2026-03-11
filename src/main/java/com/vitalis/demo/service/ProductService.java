@@ -4,12 +4,13 @@ import com.vitalis.demo.model.Product;
 import com.vitalis.demo.model.enums.ProductType;
 import com.vitalis.demo.repository.ProductRepository;
 import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
 
 @Service
 @AllArgsConstructor
@@ -44,6 +45,45 @@ public class ProductService {
         newProduct.setType(type);
 
         return productRepository.save(newProduct);
+    }
+
+    @Transactional
+    public void update(Product productDTO){
+        Product product = findById(productDTO.getId());
+
+        if(productDTO.getName() != null && !productDTO.getName().isBlank()){
+            product.setName(productDTO.getName());
+        }
+
+        if(productDTO.getBasePrice() != null){
+            product.setBasePrice(productDTO.getBasePrice());
+        }
+
+        if(productDTO.getValidity() != null){
+            product.setValidity(productDTO.getValidity());
+        }
+
+        if(productDTO.getType() != null){
+            product.setType(productDTO.getType());
+        }
+
+        productRepository.save(product);
+
+    }
+    @Transactional(readOnly = true)
+    public Product findById(UUID id){
+        return productRepository.findById(id).orElseThrow(() -> new RuntimeException("Produto não encontrado!"));
+    }
+
+    @Transactional(readOnly = true)
+    public List<Product> findAll(){
+        return productRepository.findAll();
+    }
+
+    @Transactional
+    public void delete(UUID id){
+        Product product = findById(id);
+        productRepository.delete(product);
     }
 
 }
