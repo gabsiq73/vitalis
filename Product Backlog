@@ -1,0 +1,27 @@
+Clientes
+- cadastrar cliente
+- editar cliente
+- buscar cliente
+- listar clientes
+
+Produtos
+- cadastrar produto
+- editar produto
+- listar produtos
+- atualizar preço
+
+Estoque
+- consultar estoque
+- atualizar estoque
+- registrar entrada
+
+Pedidos
+- criar pedido
+- adicionar item ao pedido
+- calcular total do pedido
+- finalizar pedido
+
+Pagamentos
+- registrar pagamento
+- listar pagamentos
+- consultar pagamentos por período
