@@ -8,6 +8,7 @@ import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -33,8 +34,8 @@ public class GasSettlement {
     @JoinColumn(name = "GAS_SUP_id", nullable = false)
     private GasSupplier gasSupplier;
 
-    @Column(name = "GAS_SUP_amount", nullable = false)
-    private Double amount;
+    @Column(name = "GAS_SUP_amount", precision = 10, scale = 2, nullable = false)
+    private BigDecimal amount;
 
     @Column(name = "GAS_SUP_settled", nullable = false)
     private Boolean settled;

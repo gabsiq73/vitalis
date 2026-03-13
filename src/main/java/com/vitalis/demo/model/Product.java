@@ -33,7 +33,7 @@ public class Product {
     @Column(name = "PROD_name", nullable = false)
     private String name;
 
-    @Column(name = "PROD_basePrice")
+    @Column(name = "PROD_basePrice", precision = 10, scale = 2)
     private BigDecimal basePrice;
 
     @Column(name = "PROD_validity")

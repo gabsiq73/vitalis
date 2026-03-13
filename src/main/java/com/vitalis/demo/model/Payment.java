@@ -8,6 +8,7 @@ import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -30,8 +31,8 @@ public class Payment {
     @Column(name = "PAY_date", nullable = false)
     private LocalDateTime date;
 
-    @Column(name = "PAY_amount", nullable = false)
-    private Double amount;
+    @Column(name = "PAY_amount", precision = 10, scale = 2, nullable = false)
+    private BigDecimal amount;
 
     @ManyToOne
     @JoinColumn(name = "ORD_id", nullable = false)

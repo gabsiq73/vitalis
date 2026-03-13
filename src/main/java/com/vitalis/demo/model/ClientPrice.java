@@ -7,6 +7,7 @@ import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -34,8 +35,8 @@ public class ClientPrice {
     @JoinColumn(name = "PROD_id", nullable = false)
     private Product product;
 
-    @Column(name = "CP_price")
-    private Double price;
+    @Column(name = "CP_price", precision = 10, scale = 2)
+    private BigDecimal price;
 
     @CreatedDate
     @Column(name = "createDate", nullable = false, updatable = false)
