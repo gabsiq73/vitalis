@@ -14,5 +14,5 @@ public interface ClientRepository extends JpaRepository<Client, UUID> {
 
     List<Client> findByNameContainingIgnoreCase(String name);
 
-    List<Client> findByType(ClientType type);
+    List<Client> findByClientType(ClientType type);
 }

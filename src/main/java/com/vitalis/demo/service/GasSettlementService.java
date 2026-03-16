@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -29,12 +30,12 @@ public class GasSettlementService {
     }
 
     @Transactional
-    public GasSettlement save(GasSupplier gasSupplier, Double amount, Boolean settled, SettlementType settlementType) {
+    public GasSettlement save(GasSupplier gasSupplier, BigDecimal amount, Boolean settled, SettlementType settlementType) {
 
         if (gasSupplier == null) {
             throw new IllegalArgumentException("O fornecedor de gás é obrigatório");
         }
-        if (amount == null || amount <= 0) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("O valor do acerto deve ser maior que zero");
         }
         if (settlementType == null) {
@@ -59,7 +60,7 @@ public class GasSettlementService {
             settlementUpdated.setGasSupplier(settlement.getGasSupplier());
         }
 
-        if (settlement.getAmount() != null && settlement.getAmount() > 0) {
+        if (settlement.getAmount() != null && settlement.getAmount().compareTo(BigDecimal.ZERO) > 0) {
             settlementUpdated.setAmount(settlement.getAmount());
         }
 

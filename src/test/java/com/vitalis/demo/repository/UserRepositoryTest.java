@@ -26,6 +26,5 @@ public class UserRepositoryTest {
         userRepository.save(user);
     }
 
-    @Test
 
 }
