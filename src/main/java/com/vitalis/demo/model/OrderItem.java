@@ -41,10 +41,6 @@ public class OrderItem {
     @JoinColumn(name = "PROD_id", nullable = false)
     private Product product;
 
-    @ManyToOne
-    @JoinColumn(name = "GAS_SET_id")
-    private GasSettlement gasSettlement;
-
     @CreatedDate
     @Column(name = "createDate", nullable = false, updatable = false)
     private LocalDateTime createDate;
