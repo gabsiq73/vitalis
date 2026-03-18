@@ -22,6 +22,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @EntityListeners(AuditingEntityListener.class)
+@ToString
 public class Product {
 
     @EqualsAndHashCode.Include
