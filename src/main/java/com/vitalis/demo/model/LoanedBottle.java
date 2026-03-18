@@ -32,6 +32,9 @@ public class LoanedBottle {
     @JoinColumn(name = "PROD_id", nullable = false)
     private Product product;
 
+    @Column(name = "LB_qtd")
+    private Integer quantity;
+    
     @ManyToOne
     @JoinColumn(name = "CLI_id", nullable = false)
     private Client client;
