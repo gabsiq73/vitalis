@@ -2,17 +2,17 @@ package com.vitalis.demo.repository;
 
 
 import com.vitalis.demo.model.Client;
-import com.vitalis.demo.model.LoanedBottle;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Optional;
 
 import static com.vitalis.demo.model.enums.ClientType.RETAIL;
 
 @DataJpaTest
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
 class ClientRepositoryTest {
 
     @Autowired
@@ -27,9 +27,10 @@ class ClientRepositoryTest {
         client.setNotes("Lindo");
         client.setClientType(RETAIL);
 
-        List<LoanedBottle> loanedBottleList = new ArrayList<>();
-        loanedBottleList.add(2);
-        
-        client.setLoanedBottles();
+        clientRepository.save(client);
+
+        Optional<Client> clientOptional = clientRepository.findById(client.getId());
+        System.out.println(clientOptional);
+
     }
 }

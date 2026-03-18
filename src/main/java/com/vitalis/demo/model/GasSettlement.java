@@ -47,9 +47,6 @@ public class GasSettlement {
     @Column(nullable = false)
     private SettlementType settlementType;
 
-    @OneToMany(mappedBy = "gasSettlement")
-    private List<OrderItem> orderItems;
-
     @CreatedDate
     @Column(name = "createDate", nullable = false, updatable = false)
     private LocalDateTime createDate;
