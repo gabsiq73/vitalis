@@ -1,148 +1,104 @@
-# Vitalis 
--Sistema de Controle de Vendas – Água e Gás
+# 📦 Vitalis - Sistema de Gestão
 
-Este projeto é um sistema simples de controle de vendas de água e gás, desenvolvido para uso em um pequeno comércio familiar.  
-Além de atender a uma necessidade real, o projeto também tem como objetivo servir como experiência prática de desenvolvimento de um aplicativo do zero.
+## 📌 Sobre o Projeto
 
----
-
-##  Objetivo do Sistema
-
-O sistema tem como finalidade:
-
-- Registrar vendas de água e gás
-- Controlar pagamentos (à vista, fiado ou parciais)
-- Acompanhar clientes devedores
-- Controlar pendências relacionadas ao gás (acertos com fornecedores)
-- Auxiliar no controle administrativo do comércio
-- Gerar relatórios simples de vendas e pagamentos
+O **Vitalis** é um sistema de gestão desenvolvido com foco no controle de vendas, clientes e movimentação de produtos, como água e gás. O objetivo principal é oferecer uma solução simples e eficiente para gerenciamento de pedidos, pagamentos e controle de estoque.
 
 ---
 
-##  Visão Geral da UML
+## 🎯 Objetivo
 
-O sistema foi modelado utilizando UML para facilitar o entendimento antes da implementação.  
-A UML representa as principais entidades do negócio e como elas se relacionam.
+O projeto tem como finalidade:
 
-As principais entidades são:
-
-- **Client**
-- **Order**
-- **OrderItem**
-- **Payment**
-- **Product**
-- **GasSupplier**
-- **GasSettlement**
+- Gerenciar clientes (varejo e revenda)
+- Controlar pedidos e seus status
+- Registrar pagamentos e métodos utilizados
+- Controlar produtos (água, gás, etc.)
+- Gerenciar empréstimo de garrafões
+- Organizar dados de forma consistente utilizando banco de dados relacional
 
 ---
 
-##  Entidades Principais
+## ⚙️ Tecnologias Utilizadas
 
-### Client
-Representa um cliente do comércio.
-
-Responsabilidades:
-- Armazenar dados básicos do cliente
-- Permitir identificar clientes com pendências financeiras ou operacionais
-- Servir como base para histórico de pedidos e pagamentos
-
----
-
-### Order
-Representa um pedido realizado por um cliente.
-
-Responsabilidades:
-- Agrupar os itens vendidos
-- Manter o valor total do pedido
-- Servir como base para controle de pagamentos
-- Permitir identificar pedidos pagos ou em aberto
+- **Java**
+- **Spring Boot**
+- **Spring Data JPA**
+- **Hibernate**
+- **H2 Database (testes)**
+- **PostgreSQL (produção)**
+- **JUnit (testes)**
 
 ---
 
-### OrderItem
-Representa um item dentro de um pedido.
+## 🧱 Arquitetura
 
-Responsabilidades:
-- Indicar o produto vendido
-- Indicar a quantidade
-- Definir o valor unitário no momento da venda
-- Servir de base para relatórios de vendas
+O projeto segue o padrão:
 
----
-
-### Product
-Representa um produto vendido no comércio (água, gás, garrafão, etc).
-
-Responsabilidades:
-- Armazenar informações básicas do produto
-- Diferenciar tipos de produtos (água, gás, outros)
-- Permitir análise de quais produtos são mais vendidos
+- **MVC (Model-View-Controller)**
+- Separação em camadas:
+  - Model (entidades)
+  - Repository (acesso a dados)
+  - Service (regras de negócio)
+  - Controller (API REST)
 
 ---
 
-### Payment
-Representa um pagamento realizado por um cliente.
+## 🖥️ Interface Gráfica
 
-Responsabilidades:
-- Registrar valores pagos
-- Permitir pagamentos parciais
-- Auxiliar no controle de clientes devedores
-- Servir de base para relatórios financeiros
+Está planejada a implementação de uma interface gráfica utilizando:
 
----
+- **Java Swing**
 
-### GasSupplier
-Representa um fornecedor de gás.
-
-Responsabilidades:
-- Identificar o fornecedor do gás vendido
-- Servir de base para controle de acertos financeiros
-- Permitir acompanhar pendências relacionadas ao gás
+A interface permitirá a interação direta com o sistema, facilitando operações como cadastro, consulta e gerenciamento de pedidos.
 
 ---
 
-### GasSettlement
-Representa um acerto financeiro relacionado ao gás.
+## 🔄 Metodologia de Desenvolvimento
 
-Responsabilidades:
-- Registrar valores que precisam ser acertados
-- Indicar se o acerto já foi realizado
-- Auxiliar no controle financeiro com fornecedores de gás
+O desenvolvimento do projeto está sendo realizado utilizando:
 
----
-
-##  Funcionalidades do Sistema
-
-- Cadastro de clientes
-- Registro de pedidos
-- Registro de pagamentos
-- Controle automático de clientes devedores
-- Controle de pendências de gás
-- Área administrativa para acompanhamento geral
-- Relatórios simples de vendas e pagamentos
+- **Metodologia ágil (Sprints)**
+- Divisão de tarefas por etapas
+- Evolução incremental das funcionalidades
 
 ---
 
-## Conceito Importante
+## 🧪 Testes
 
-O sistema **não depende de anotações manuais** para controle de dívidas ou pendências.  
-Essas informações são **derivadas automaticamente** a partir dos pedidos, itens e pagamentos registrados.
+Foram implementados testes para garantir:
 
----
-
-##  Tecnologias
-
-As tecnologias utilizadas serão definidas durante a implementação do projeto, priorizando simplicidade e aprendizado.
+- Persistência correta das entidades
+- Funcionamento dos relacionamentos
+- Validação dos repositórios (JPA)
 
 ---
 
-##  Equipe
+## 📄 Documentação
 
-Projeto desenvolvido por dois estudantes como forma de aprendizado prático e aplicação real em um comércio local.
+Toda a modelagem do sistema foi previamente documentada, incluindo:
+
+- Diagrama de classes
+- Definição das entidades e relacionamentos
+- Regras de negócio principais
 
 ---
 
-##  Observação Final
+## 🚀 Status do Projeto
 
-Este projeto foi pensado para ser simples, funcional e evolutivo.  
-Novas funcionalidades podem ser adicionadas conforme a necessidade do comércio e o avanço do aprendizado dos desenvolvedores.
+Em desenvolvimento.
+
+- ✔ Modelagem concluída  
+- ✔ Camada de persistência implementada  
+- ✔ Testes de repositório implementados  
+- 🔄 Implementação da camada de serviço  
+- 🔄 Interface gráfica (Swing)
+
+---
+
+## 👨‍💻 Autores
+
+- Felipe Damasceno
+- Gabriel Siqueira
+
+---
