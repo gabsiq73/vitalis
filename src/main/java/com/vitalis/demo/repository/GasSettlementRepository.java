@@ -10,4 +10,6 @@ import java.util.UUID;
 public interface GasSettlementRepository extends JpaRepository<GasSettlement, UUID> {
 
     List<GasSettlement> findByGasSupplier(GasSupplier supplier);
+
+    List<GasSettlement> findBySettled(boolean settled);
 }

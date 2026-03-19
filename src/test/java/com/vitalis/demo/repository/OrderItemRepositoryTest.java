@@ -196,7 +196,7 @@ public class OrderItemRepositoryTest {
                 throw new RuntimeException("Wrong product in result");
             }
         }
-        
+
         result.forEach(System.out::println);
     }
 }
