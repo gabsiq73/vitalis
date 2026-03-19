@@ -4,26 +4,68 @@ import com.vitalis.demo.model.User;
 import com.vitalis.demo.model.enums.Role;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 
-@SpringBootTest
+import java.util.Optional;
+
+@DataJpaTest
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
 public class UserRepositoryTest {
 
     @Autowired
     private UserRepository userRepository;
 
     @Test
-    public void saveClient(){
+    public void shouldSaveAndFindById(){
         User user = new User();
 
         user.setFirstName("Felipe");
-        user.setLastName("Sexo");
-        user.setUsername("felipeSexo");
-        user.setEmail("felipesexo@gmail.com");
-        user.setPassword("sexo123");
+        user.setLastName("Levi");
+        user.setUsername("felipeLevi");
+        user.setEmail("felipe@gmail.com");
+        user.setPassword("felipe123");
         user.setUserRole(Role.ADMINISTRATOR);
 
         userRepository.save(user);
+
+        if(user.getId() == null){
+            throw new RuntimeException("User was not saved");
+        }
+
+        Optional<User> optional = userRepository.findById(user.getId());
+
+        if(optional.isEmpty()){
+            throw new RuntimeException("User was not found");
+        }
+
+        User found = optional.get();
+
+        if(!found.getFirstName().equals("Felipe")){
+            throw new RuntimeException("Wrong name found!");
+        }
+
+        if(!found.getLastName().equals("Levi")){
+            throw new RuntimeException("Wrong last name found!");
+        }
+
+        if(!found.getEmail().equals("felipe@gmail.com")){
+            throw new RuntimeException("Wrong email found!");
+        }
+
+        if(!found.getUsername().equals("felipeLevi")){
+            throw new RuntimeException("Wrong username found!");
+        }
+
+        if(!found.getPassword().equals("felipe123")){
+            throw new RuntimeException("Wrong password found!");
+        }
+
+        if(found.getUserRole() != Role.ADMINISTRATOR){
+            throw new RuntimeException("Wrong role found");
+        }
+
+        System.out.println(found);
     }
 
 

@@ -83,7 +83,7 @@ public class PaymentRepositoryTest {
             throw new RuntimeException("Wrong Order found!");
         }
 
-        if(!found.getMethod().equals(Method.DINHEIRO)){
+        if(found.getMethod() != Method.DINHEIRO){
             throw new RuntimeException("Wrong Method found!");
         }
 
@@ -139,6 +139,5 @@ public class PaymentRepositoryTest {
         result.forEach(System.out::println);
 
     }
-
 
 }
