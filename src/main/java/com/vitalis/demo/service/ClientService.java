@@ -28,7 +28,8 @@ public class ClientService {
 
     @Transactional
     public void delete(UUID id){
-        Client client = findById(id);
+        Client client = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("This Client ID doesnt exist"));
         repository.delete(client);
     }
 
