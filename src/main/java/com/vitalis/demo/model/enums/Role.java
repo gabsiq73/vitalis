@@ -1,7 +1,7 @@
 package com.vitalis.demo.model.enums;
 
 public enum Role {
-    ADMINISTRATOR("ADMINISTRATOR"),
+    ADMIN("ADMIN"),
     SELLER("SELLER");
 
     private final String valor;

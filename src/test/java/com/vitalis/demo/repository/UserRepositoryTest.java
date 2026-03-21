@@ -25,7 +25,7 @@ public class UserRepositoryTest {
         user.setUsername("felipeLevi");
         user.setEmail("felipe@gmail.com");
         user.setPassword("felipe123");
-        user.setUserRole(Role.ADMINISTRATOR);
+        user.setUserRole(Role.ADMIN);
 
         userRepository.save(user);
 
@@ -61,7 +61,7 @@ public class UserRepositoryTest {
             throw new RuntimeException("Wrong password found!");
         }
 
-        if(found.getUserRole() != Role.ADMINISTRATOR){
+        if(found.getUserRole() != Role.ADMIN){
             throw new RuntimeException("Wrong role found");
         }
 
