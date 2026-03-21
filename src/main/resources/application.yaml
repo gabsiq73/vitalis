@@ -1,6 +1,8 @@
 spring:
   application:
     name: Vitalis
+  autoconfigure:
+  exclude: org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
 
   datasource:
     url: jdbc:postgresql://localhost:5433/vitalis
