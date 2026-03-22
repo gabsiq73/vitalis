@@ -43,7 +43,6 @@ public class PaymentRepositoryTest {
         clientRepository.save(client);
 
         Order order = new Order();
-        order.setMoment(LocalDateTime.now());
         order.setDeliveryDate(LocalDateTime.now());
         order.setStatus(OrderStatus.SHIPPED);
         order.setClient(client);
@@ -106,7 +105,6 @@ public class PaymentRepositoryTest {
         clientRepository.save(client);
 
         Order order = new Order();
-        order.setMoment(LocalDateTime.now());
         order.setDeliveryDate(LocalDateTime.now());
         order.setStatus(OrderStatus.DELIVERED);
         order.setClient(client);

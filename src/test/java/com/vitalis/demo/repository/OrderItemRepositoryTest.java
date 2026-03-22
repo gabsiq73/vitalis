@@ -47,7 +47,6 @@ public class OrderItemRepositoryTest {
         clientRepository.save(client);
 
         Order order = new Order();
-        order.setMoment(LocalDateTime.now());
         order.setDeliveryDate(LocalDateTime.now());
         order.setStatus(OrderStatus.SHIPPED);
         order.setClient(client);
@@ -124,7 +123,6 @@ public class OrderItemRepositoryTest {
         clientRepository.save(client);
 
         Order order = new Order();
-        order.setMoment(LocalDateTime.now());
         order.setDeliveryDate(LocalDateTime.now());
         order.setStatus(OrderStatus.SHIPPED);
         order.setClient(client);
@@ -158,7 +156,6 @@ public class OrderItemRepositoryTest {
         clientRepository.save(client2);
 
         Order order2 = new Order();
-        order2.setMoment(LocalDateTime.now());
         order2.setDeliveryDate(LocalDateTime.now());
         order2.setStatus(OrderStatus.DELIVERED);
         order2.setClient(client2);

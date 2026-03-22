@@ -30,9 +30,6 @@ public class Order {
     @Column(name = "ORD_id")
     private UUID id;
 
-    @Column(name = "ORD_moment")
-    private LocalDateTime moment;
-
     @Column(name = "ORD_deliveryDate")
     private LocalDateTime deliveryDate;
 

@@ -15,7 +15,7 @@ public record PaymentRequestDTO(
         @NotNull(message = "Campo obrigatório!")
         BigDecimal amount,
         @NotNull(message = "Campo obrigatório!")
-        UUID uuid,
+        UUID orderId,
         @NotNull(message = "Campo obrigatório!")
         Method paymentMethod,
         @NotBlank
