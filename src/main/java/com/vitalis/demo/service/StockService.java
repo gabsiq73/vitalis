@@ -19,7 +19,7 @@ public class StockService {
 
     @Transactional
     public Stock save(Stock stock){
-        validarEstoque(stock);
+        validateStock(stock);
         return repository.save(stock);
     }
 
@@ -58,7 +58,7 @@ public class StockService {
         stock.setQuantityInStock(stock.getQuantityInStock() + quantity);
         repository.save(stock);
     }
-    private void validarEstoque(Stock stock) {
+    private void validateStock(Stock stock) {
         if (stock.getQuantityInStock() < 0) throw new VitalisException("O saldo não pode ser negativo!");
         if (stock.getMinimumStock() < 0) throw new VitalisException("O estoque mínimo não pode ser negativo.");
         if (stock.getProduct() == null) throw new VitalisException("Estoque sem produto vinculado.");
