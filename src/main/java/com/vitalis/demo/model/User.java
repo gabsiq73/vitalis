@@ -2,6 +2,7 @@ package com.vitalis.demo.model;
 
 import com.vitalis.demo.model.enums.Role;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
@@ -37,6 +38,7 @@ public class User {
     @Column(name = "user_username", nullable = false, unique = true, length = 30)
     private String username;
 
+    @Email
     @Column(name = "user_email", nullable = false, unique = true, length = 100)
     private String email;
 
