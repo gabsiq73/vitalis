@@ -1,8 +1,11 @@
 package com.vitalis.demo.dto.request;
 
+import com.vitalis.demo.model.Order;
 import com.vitalis.demo.model.enums.OrderStatus;
+import com.vitalis.demo.service.ClientService;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Past;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.LocalDateTime;
 import java.util.UUID;

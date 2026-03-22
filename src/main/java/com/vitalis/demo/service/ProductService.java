@@ -1,14 +1,14 @@
 package com.vitalis.demo.service;
 
+import com.vitalis.demo.dto.request.ProductRequestDTO;
+import com.vitalis.demo.infra.exception.BusinessException;
 import com.vitalis.demo.model.Product;
 import com.vitalis.demo.model.enums.ProductType;
 import com.vitalis.demo.repository.ProductRepository;
+import jakarta.validation.Validator;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -18,9 +18,11 @@ public class ProductService {
 
     private final ProductRepository repository;
 
+    private Validator validator;
+
     @Transactional(readOnly = true)
     public Product findById(UUID id){
-        return repository.findById(id).orElseThrow(() -> new RuntimeException("Produto não encontrado!"));
+        return repository.findById(id).orElseThrow(() -> new BusinessException("Produto não encontrado!"));
     }
 
     @Transactional(readOnly = true)
@@ -35,52 +37,36 @@ public class ProductService {
     }
 
     @Transactional
-    public Product save(String name, BigDecimal basePrice, LocalDate validity, ProductType type){
+    public Product save(ProductRequestDTO dto){
 
-        if(name == null || name.isBlank()){
-            throw new IllegalArgumentException("Nome do produto é obrigatório");
+        var violations = validator.validate(dto);
+
+        if (!violations.isEmpty()) {
+            throw new BusinessException(violations.iterator().next().getMessage());
         }
 
-        if(basePrice == null){
-            throw new IllegalArgumentException("Preço base do produto é obrigatório");
-        }
-
-        if(validity == null){
-            throw new IllegalArgumentException("Validade do produto é obrigatório");
-        }
-
-        if(type == null){
-            throw new IllegalArgumentException("Tipo do produto é obrigatório");
-        }
-
-        Product newProduct = new Product();
-
-        newProduct.setName(name);
-        newProduct.setBasePrice(basePrice);
-        newProduct.setValidity(validity);
-        newProduct.setType(type);
-
-        return repository.save(newProduct);
+        Product product = dto.toModel();
+        return repository.save(product);
     }
 
     @Transactional
-    public void update(Product productDTO){
-        Product product = findById(productDTO.getId());
+    public void update(ProductRequestDTO dto){
+        Product product = findById(dto.toModel().getId());
 
-        if(productDTO.getName() != null && !productDTO.getName().isBlank()){
-            product.setName(productDTO.getName());
+        if(product.getName() != null && !product.getName().isBlank()){
+            product.setName(product.getName());
         }
 
-        if(productDTO.getBasePrice() != null){
-            product.setBasePrice(productDTO.getBasePrice());
+        if(product.getBasePrice() != null){
+            product.setBasePrice(product.getBasePrice());
         }
 
-        if(productDTO.getValidity() != null){
-            product.setValidity(productDTO.getValidity());
+        if(product.getValidity() != null){
+            product.setValidity(product.getValidity());
         }
 
-        if(productDTO.getType() != null){
-            product.setType(productDTO.getType());
+        if(product.getType() != null){
+            product.setType(product.getType());
         }
 
         repository.save(product);
