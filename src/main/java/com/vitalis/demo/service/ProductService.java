@@ -2,13 +2,18 @@ package com.vitalis.demo.service;
 
 import com.vitalis.demo.dto.request.ProductRequestDTO;
 import com.vitalis.demo.infra.exception.BusinessException;
+import com.vitalis.demo.model.Client;
+import com.vitalis.demo.model.ClientPrice;
 import com.vitalis.demo.model.Product;
 import com.vitalis.demo.model.enums.ProductType;
+import com.vitalis.demo.repository.ClientPriceRepository;
 import com.vitalis.demo.repository.ProductRepository;
 import jakarta.validation.Validator;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -17,6 +22,7 @@ import java.util.UUID;
 public class ProductService {
 
     private final ProductRepository repository;
+    private final ClientPriceRepository clientPriceRepository;
 
     private Validator validator;
 
@@ -53,26 +59,25 @@ public class ProductService {
     public void update(ProductRequestDTO dto){
         Product product = findById(dto.toModel().getId());
 
-        if(product.getName() != null && !product.getName().isBlank()){
-            product.setName(product.getName());
+        if (dto.name() != null && !dto.name().isBlank()) {
+            product.setName(dto.name());
         }
 
-        if(product.getBasePrice() != null){
-            product.setBasePrice(product.getBasePrice());
+        if (dto.basePrice() != null) {
+            product.setBasePrice(dto.basePrice());
         }
 
-        if(product.getValidity() != null){
-            product.setValidity(product.getValidity());
+        if (dto.validity() != null) {
+            product.setValidity(dto.validity());
         }
 
-        if(product.getType() != null){
-            product.setType(product.getType());
+        if (dto.type() != null) {
+            product.setType(dto.type());
         }
 
+        // 3. Salva a entidade atualizada
         repository.save(product);
 
     }
-
-
 
 }
