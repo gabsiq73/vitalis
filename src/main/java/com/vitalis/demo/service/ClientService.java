@@ -38,21 +38,21 @@ public class ClientService {
     }
 
     @Transactional
-    public Client save(String name, String address, ClientType clientType){
+    public Client save(Client client){
 
-        if(name == null || name.isBlank()){
+        if(client.getName() == null || client.getName().isBlank()){
             throw new IllegalArgumentException("Nome do cliente é obrigatório");
         }
 
-        if(clientType == null){
+        if(client.getClientType() == null){
             throw new IllegalArgumentException("Tipo do cliente é obrigatório");
         }
 
         Client newClient = new Client();
 
-        newClient.setName(name);
-        newClient.setAddress(address);
-        newClient.setClientType(clientType);
+        newClient.setName(client.getName());
+        newClient.setAddress(client.getAddress());
+        newClient.setClientType(client.getClientType());
 
         return repository.save(newClient);
 
