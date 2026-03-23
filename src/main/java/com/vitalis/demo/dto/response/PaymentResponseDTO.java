@@ -13,7 +13,7 @@ public record PaymentResponseDTO(
         BigDecimal amount,
         Method paymentMethod
 ) {
-    public PaymentResponseDTO fromEntity(Payment payment){
+    public static PaymentResponseDTO fromEntity(Payment payment){
         return new PaymentResponseDTO(payment.getId(), payment.getDate(), payment.getAmount(), payment.getMethod());
     }
 }

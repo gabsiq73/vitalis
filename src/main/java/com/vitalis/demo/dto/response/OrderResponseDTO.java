@@ -11,7 +11,7 @@ public record OrderResponseDTO(
         LocalDateTime deliveryDate,
         OrderStatus status
 ) {
-    public OrderResponseDTO fromEntity(Order order){
+    public static OrderResponseDTO fromEntity(Order order){
         return new OrderResponseDTO(order.getId(), order.getDeliveryDate(), order.getStatus());
     }
 }

@@ -59,13 +59,13 @@ public class ClientPriceServiceTest {
         ClientPrice clientPrice = new ClientPrice();
         clientPrice.setClient(client);
         clientPrice.setProduct(product);
-        clientPrice.setPrice(BigDecimal.valueOf(6.50));
+        clientPrice.setPrice(product.getBasePrice());
 
         repository.save(clientPrice);
 
         BigDecimal calculatedPrice = service.calculateEffectivePrice(client, product);
 
-        assertTrue(BigDecimal.valueOf(6.50).compareTo(calculatedPrice) == 0);
+        assertTrue(BigDecimal.valueOf(8.50).compareTo(calculatedPrice) == 0);
         System.out.println(calculatedPrice);
 
     }

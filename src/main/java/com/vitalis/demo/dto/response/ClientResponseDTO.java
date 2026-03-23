@@ -11,7 +11,7 @@ public record ClientResponseDTO(
         String address,
         ClientType clientType
 ) {
-    public ClientResponseDTO fromEntity(Client client){
+    public static ClientResponseDTO fromEntity(Client client){
         return new ClientResponseDTO(client.getId(), client.getName(), client.getAddress(), client.getClientType());
     }
 }
