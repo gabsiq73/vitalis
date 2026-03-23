@@ -1,6 +1,7 @@
 package com.vitalis.demo.model.enums;
 
 public enum OrderStatus {
+    PENDING("PENDING"),
     SHIPPED("SHIPPED"),
     DELIVERED("DELIVERED"),
     CANCELLED("CANCELLED");

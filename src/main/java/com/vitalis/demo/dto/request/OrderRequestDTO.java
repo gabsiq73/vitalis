@@ -14,9 +14,11 @@ public record OrderRequestDTO(
         @NotNull(message = "Campo obrigatório!")
         UUID clientId,
         @NotNull(message = "Campo obrigatório!")
-        @Past(message = "Não pode ser uma data futura!")
-        LocalDateTime deliveryDate,
+        UUID productId,
         @NotNull(message = "Campo obrigatório!")
-        OrderStatus status
+        Integer quantity,
+        @NotNull(message = "Campo obrigatório!")
+        @Past(message = "Não pode ser uma data futura!")
+        LocalDateTime deliveryDate
 ) {
 }
