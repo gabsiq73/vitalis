@@ -30,24 +30,23 @@ public class GasSettlementService {
     }
 
     @Transactional
-    public GasSettlement save(GasSupplier gasSupplier, BigDecimal amount, Boolean settled, SettlementType settlementType) {
-
+    public GasSettlement save(GasSupplier gasSupplier, GasSettlement gasSettlement) {
         if (gasSupplier == null) {
             throw new IllegalArgumentException("O fornecedor de gás é obrigatório");
         }
-        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+        if (gasSettlement.getAmount() == null || gasSettlement.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("O valor do acerto deve ser maior que zero");
         }
-        if (settlementType == null) {
+        if (gasSettlement.getSettlementType() == null) {
             throw new IllegalArgumentException("O tipo de acerto é obrigatório");
         }
 
         GasSettlement settlement = new GasSettlement();
 
         settlement.setGasSupplier(gasSupplier);
-        settlement.setAmount(amount);
-        settlement.setSettled(settled != null ? settled : false); // Default para false se vier null
-        settlement.setSettlementType(settlementType);
+        settlement.setAmount(gasSettlement.getAmount());
+        settlement.setSettled(gasSettlement.getSettled() != null ? gasSettlement.getSettled() : false); // Default para false se vier null
+        settlement.setSettlementType(gasSettlement.getSettlementType());
 
         return repository.save(settlement);
     }
