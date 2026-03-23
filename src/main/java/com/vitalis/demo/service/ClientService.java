@@ -1,6 +1,7 @@
 package com.vitalis.demo.service;
 
 import com.vitalis.demo.model.Client;
+import com.vitalis.demo.model.Order;
 import com.vitalis.demo.model.enums.ClientType;
 import com.vitalis.demo.repository.ClientRepository;
 import lombok.AllArgsConstructor;
@@ -73,6 +74,11 @@ public class ClientService {
 
         repository.save(clientUpdated);
 
+    }
+
+    @Transactional
+    public void calculateDebt(Client client, Order order){
+        order.set;
     }
 
 }
