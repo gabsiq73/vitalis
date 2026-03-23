@@ -41,10 +41,10 @@ public class Order {
     @JoinColumn(name = "CLI_id", nullable = false)
     private Client client;
 
-    @OneToMany(mappedBy = "order")
+    @OneToMany(mappedBy = "order", fetch = FetchType.LAZY)
     private List<Payment> payments;
 
-    @OneToMany(mappedBy = "order")
+    @OneToMany(mappedBy = "order", fetch = FetchType.LAZY)
     private List<OrderItem> items;
 
     @CreatedDate

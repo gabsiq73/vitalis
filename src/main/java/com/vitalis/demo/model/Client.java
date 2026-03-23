@@ -47,10 +47,10 @@ public class Client {
     @Column(nullable = false)
     private ClientStatus clientStatus;
 
-    @OneToMany(mappedBy = "client")
+    @OneToMany(mappedBy = "client", fetch = FetchType.LAZY)
     private List<LoanedBottle> loanedBottles;
 
-    @OneToMany(mappedBy = "client")
+    @OneToMany(mappedBy = "client", fetch = FetchType.LAZY)
     private List<Order> orders;
 
     @CreatedDate
