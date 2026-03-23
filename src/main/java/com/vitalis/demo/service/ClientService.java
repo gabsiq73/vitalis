@@ -1,13 +1,16 @@
 package com.vitalis.demo.service;
 
+import com.vitalis.demo.infra.exception.BusinessException;
 import com.vitalis.demo.model.Client;
 import com.vitalis.demo.model.Order;
+import com.vitalis.demo.model.enums.ClientStatus;
 import com.vitalis.demo.model.enums.ClientType;
 import com.vitalis.demo.repository.ClientRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -77,8 +80,22 @@ public class ClientService {
     }
 
     @Transactional
-    public void calculateDebt(Client client, Order order){
-        order.set;
+    public void calculateDebt(Client client, BigDecimal debt){
+
+        if(debt != null && debt.compareTo(BigDecimal.ZERO) < 0){
+            throw new BusinessException("O saldo devedor não pode ser menor que zero!");
+        }
+
+        BigDecimal currentDebt = (debt != null)? debt : BigDecimal.ZERO;
+
+        if(currentDebt.compareTo(BigDecimal.ZERO) == 0){
+            client.setClientStatus(ClientStatus.PAID);
+        }
+        else if(currentDebt.compareTo(BigDecimal.ZERO) > 0){
+            client.setClientStatus(ClientStatus.OVERDUE);
+        }
+
+        repository.save(client);
     }
 
 }

@@ -1,5 +1,6 @@
 package com.vitalis.demo.model;
 
+import com.vitalis.demo.model.enums.ClientStatus;
 import com.vitalis.demo.model.enums.ClientType;
 import jakarta.persistence.*;
 import lombok.*;
@@ -41,6 +42,10 @@ public class Client {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ClientType clientType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ClientStatus clientStatus;
 
     @OneToMany(mappedBy = "client")
     private List<LoanedBottle> loanedBottles;

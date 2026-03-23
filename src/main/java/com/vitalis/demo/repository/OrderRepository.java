@@ -15,5 +15,4 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     List<Order> findByStatus(OrderStatus status);
 
-    List<Order> findByMomentBetween(LocalDate start, LocalDate end);
 }

@@ -1,6 +1,7 @@
 package com.vitalis.demo.dto.request;
 
 import com.vitalis.demo.model.Client;
+import com.vitalis.demo.model.enums.ClientStatus;
 import com.vitalis.demo.model.enums.ClientType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -15,7 +16,9 @@ public record ClientRequestDTO(
         @Size(min = 5, max = 255, message = "Anotações devem ter entre 5 e 255 caracteres!")
         String notes,
         @NotNull(message = "Campo Obrigatório!")
-        ClientType clientType
+        ClientType clientType,
+        @NotNull
+        ClientStatus clientStatus
 ) {
     public Client toModel() {
         Client client = new Client();
@@ -23,6 +26,7 @@ public record ClientRequestDTO(
         client.setAddress(this.address());
         client.setNotes(this.notes());
         client.setClientType(this.clientType());
+        client.setClientStatus(this.clientStatus);
         return client;
     }
 }
