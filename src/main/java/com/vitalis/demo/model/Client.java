@@ -40,11 +40,11 @@ public class Client {
     private String notes;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "CLI_type",nullable = false)
     private ClientType clientType;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "CLI_status",nullable = false)
     private ClientStatus clientStatus;
 
     @OneToMany(mappedBy = "client", fetch = FetchType.LAZY)

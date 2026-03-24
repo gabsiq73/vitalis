@@ -47,7 +47,7 @@ public class LoanedBottle {
     private LocalDateTime returnDate;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "LB_status",nullable = false)
     private LoanStatus loanStatus;
 
     @CreatedDate

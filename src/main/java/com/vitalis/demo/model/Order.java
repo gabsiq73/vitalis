@@ -36,12 +36,12 @@ public class Order {
     private LocalDateTime deliveryDate;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "ORD_status", nullable = false)
     private OrderStatus status;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private PaymentStatus paymentStatus = PaymentStatus.PENDING;
+    @Column(name = "ORD_payment_status", nullable = false)
+    private PaymentStatus paymentStatus = PaymentStatus.PENDING; //Pedido começa por padrão como pendente
 
     @ManyToOne
     @JoinColumn(name = "CLI_id", nullable = false)

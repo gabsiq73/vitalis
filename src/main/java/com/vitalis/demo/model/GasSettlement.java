@@ -45,7 +45,7 @@ public class GasSettlement {
     private LocalDateTime settledDate;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "GAS_SUP_settlement_type",nullable = false)
     private SettlementType settlementType;
 
     @CreatedDate

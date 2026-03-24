@@ -41,7 +41,7 @@ public class Product {
     private LocalDate validity;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "PROD_type", nullable = false)
     private ProductType type;
 
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY)

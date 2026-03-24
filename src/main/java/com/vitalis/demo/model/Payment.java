@@ -40,7 +40,7 @@ public class Payment {
     private Order order;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "PAY_method", nullable = false)
     private Method method;
 
     @Column(name = "PAY_notes")
