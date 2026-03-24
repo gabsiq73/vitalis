@@ -42,7 +42,7 @@ public class Order {
     @JoinColumn(name = "CLI_id", nullable = false)
     private Client client;
 
-    @OneToMany(mappedBy = "order", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "order", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private List<Payment> payments;
 
     @OneToMany(mappedBy = "order", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
@@ -71,6 +71,14 @@ public class Order {
     public void removeItem(OrderItem item){
         items.remove(item);
         item.setOrder(null);
+    }
+
+    public void addPayment(Payment payment){
+        if(payments == null){
+            payments = new ArrayList<>()
+        }
+        payments.add(payment);
+        payment.setOrder(this);
     }
 
     
