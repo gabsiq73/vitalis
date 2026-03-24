@@ -79,4 +79,23 @@ public class OrderService {
         order.setStatus(newStatus);
         repository.save(order);
     }
+
+    @Transactional
+    public void cancelOrder(UUID id){
+        Order order = repository.findById(id)
+                .orElseThrow(() -> new BusinessException("Pedido não encontrado!"));
+
+        if(order.getStatus() == OrderStatus.CANCELLED){
+            throw new BusinessException("Este pedido já foi cancelado!");
+        }
+
+        if(order.getStatus() == OrderStatus.DELIVERED){
+            order.getItems().forEach(item -> {
+                stockService.increaseStock(item.getProduct(), item.getQuantity());
+            });
+        }
+
+        order.setStatus(OrderStatus.CANCELLED);
+        repository.save(order);
+    }
 }

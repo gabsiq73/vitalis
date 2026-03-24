@@ -37,8 +37,6 @@ public class OrderServiceTest {
     private OrderRepository repository;
     @Autowired
     private StockService stockService;
-    @Autowired
-    private OrderItemService orderItemService;
 
     @Test
     void shouldCreateOrderWithEspecialPriceAndPendingStatus(){
