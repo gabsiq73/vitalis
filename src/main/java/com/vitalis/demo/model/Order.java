@@ -1,6 +1,7 @@
 package com.vitalis.demo.model;
 
 import com.vitalis.demo.model.enums.OrderStatus;
+import com.vitalis.demo.model.enums.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -37,6 +38,10 @@ public class Order {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private OrderStatus status;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PaymentStatus paymentStatus = PaymentStatus.PENDING;
 
     @ManyToOne
     @JoinColumn(name = "CLI_id", nullable = false)
@@ -75,12 +80,12 @@ public class Order {
 
     public void addPayment(Payment payment){
         if(payments == null){
-            payments = new ArrayList<>()
+            payments = new ArrayList<>();
         }
         payments.add(payment);
         payment.setOrder(this);
     }
 
-    
+
 
 }
