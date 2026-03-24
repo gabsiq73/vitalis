@@ -26,28 +26,28 @@ public class GasSupplierService {
     }
 
     @Transactional
-    public GasSupplier save(GasSupplier gasSupplierDTO) {
+    public GasSupplier save(GasSupplier gasSupplier) {
 
-        if(gasSupplierDTO.getName() == null && gasSupplierDTO.getName().isBlank()){
+        if(gasSupplier.getName() == null && gasSupplier.getName().isBlank()){
             throw new IllegalArgumentException("O nome do fornecedor é obrigatório");
         }
 
         GasSupplier newGasSupplier = new GasSupplier();
-        newGasSupplier.setName(gasSupplierDTO.getName());
-        newGasSupplier.setNotes(gasSupplierDTO.getNotes());
+        newGasSupplier.setName(gasSupplier.getName());
+        newGasSupplier.setNotes(gasSupplier.getNotes());
 
         return repository.save(newGasSupplier);
     }
 
     @Transactional
-    public GasSupplier update(GasSupplier gasSupplierDTO) {
-        GasSupplier supplier = findById(gasSupplierDTO.getId());
+    public GasSupplier update(GasSupplier gasSupplier) {
+        GasSupplier supplier = findById(gasSupplier.getId());
 
-        if(gasSupplierDTO.getName() != null && !gasSupplierDTO.getName().isBlank()){
-            supplier.setName(gasSupplierDTO.getName());
+        if(gasSupplier.getName() != null && !gasSupplier.getName().isBlank()){
+            supplier.setName(gasSupplier.getName());
         }
-        if(gasSupplierDTO.getNotes() != null && !gasSupplierDTO.getNotes().isBlank()){
-            supplier.setNotes(gasSupplierDTO.getNotes());
+        if(gasSupplier.getNotes() != null && !gasSupplier.getNotes().isBlank()){
+            supplier.setNotes(gasSupplier.getNotes());
         }
 
         return repository.save(supplier);

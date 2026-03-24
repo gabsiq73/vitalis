@@ -9,6 +9,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -44,8 +45,8 @@ public class Order {
     @OneToMany(mappedBy = "order", fetch = FetchType.LAZY)
     private List<Payment> payments;
 
-    @OneToMany(mappedBy = "order", fetch = FetchType.LAZY)
-    private List<OrderItem> items;
+    @OneToMany(mappedBy = "order", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<OrderItem> items = new ArrayList<>();
 
     @CreatedDate
     @Column(name = "createDate", nullable = false, updatable = false)
@@ -58,6 +59,19 @@ public class Order {
     @LastModifiedBy
     @Column(name = "lastModifiedBy")
     private String lastModifiedBy;
+
+    public void addItem(OrderItem item) {
+        if (items == null) {
+            items = new ArrayList<>();
+        }
+        items.add(item);
+        item.setOrder(this);
+    }
+
+    public void removeItem(OrderItem item){
+        items.remove(item);
+        item.setOrder(null);
+    }
 
     
 

@@ -43,40 +43,46 @@ public class ProductService {
     }
 
     @Transactional
-    public Product save(ProductRequestDTO dto){
+    public Product save(Product product){
 
-        var violations = validator.validate(dto);
+        var violations = validator.validate(product);
 
         if (!violations.isEmpty()) {
             throw new BusinessException(violations.iterator().next().getMessage());
         }
 
-        Product product = dto.toModel();
-        return repository.save(product);
+        Product savedProduct = new Product();
+
+        savedProduct.setName(product.getName());
+        savedProduct.setBasePrice(product.getBasePrice());
+        savedProduct.setValidity(product.getValidity());
+        savedProduct.setType(product.getType());
+
+        return repository.save(savedProduct);
     }
 
     @Transactional
-    public void update(ProductRequestDTO dto){
-        Product product = findById(dto.toModel().getId());
+    public void update(Product product){
+        Product foundProduct = findById(product.getId());
 
-        if (dto.name() != null && !dto.name().isBlank()) {
-            product.setName(dto.name());
+        if (product.getName() != null && !product.getName().isBlank()) {
+            foundProduct.setName(product.getName());
         }
 
-        if (dto.basePrice() != null) {
-            product.setBasePrice(dto.basePrice());
+        if (product.getBasePrice() != null) {
+            foundProduct.setBasePrice(product.getBasePrice());
         }
 
-        if (dto.validity() != null) {
-            product.setValidity(dto.validity());
+        if (product.getValidity() != null) {
+            foundProduct.setValidity(product.getValidity());
         }
 
-        if (dto.type() != null) {
-            product.setType(dto.type());
+        if (product.getType() != null) {
+            foundProduct.setType(product.getType());
         }
 
         // 3. Salva a entidade atualizada
-        repository.save(product);
+        repository.save(foundProduct);
 
     }
 

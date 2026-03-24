@@ -15,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -27,12 +26,12 @@ public class OrderService {
     private final ProductService productService;
     private final ClientPriceService clientPriceService;
     private final OrderItemRepository orderItemRepository;
+    private final StockService stockService;
 
     @Transactional
     public Order createOrder(OrderRequestDTO dto){
         Client client = clientService.findById(dto.clientId());
         Product product = productService.findById(dto.productId());
-
         BigDecimal calculatedPrice = clientPriceService.calculateEffectivePrice(client, product);
 
         Order order = new Order();
@@ -40,19 +39,37 @@ public class OrderService {
         order.setStatus(OrderStatus.PENDING);
         order.setClient(client);
 
-        Order savedOrder = repository.save(order);
-
         OrderItem item = new OrderItem();
-        item.setQuantity(dto.quantity());
-        item.setUnitPrice(calculatedPrice);
-        item.setOrder(order);
         item.setProduct(product);
+        item.setUnitPrice(calculatedPrice);
+        item.setQuantity(dto.quantity());
 
-        orderItemRepository.save(item);
+        order.addItem(item);
 
-        return savedOrder;
-
+        return repository.save(order);
     }
+
+    @Transactional
+    public void confirmDelivery(UUID orderId){
+        Order order = repository.findById(orderId)
+                .orElseThrow(() -> new BusinessException("Pedido não encontrado!"));
+
+        if(order.getStatus() == OrderStatus.DELIVERED){
+            throw new BusinessException("Este pedido Já foi entregue!");
+        }
+
+        if(order.getItems() == null || order.getItems().isEmpty()){
+            throw new BusinessException("Não é possível entregar um pedido sem itens!");
+        }
+
+        order.getItems().forEach(item -> {
+            stockService.decreaseStock(item.getProduct(), item.getQuantity());
+        });
+
+        order.setStatus(OrderStatus.DELIVERED);
+        repository.save(order);
+    }
+
 
     @Transactional
     public void updateStatus(UUID orderId, OrderStatus newStatus){

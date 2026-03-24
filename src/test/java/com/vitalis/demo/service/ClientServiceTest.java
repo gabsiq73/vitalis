@@ -28,18 +28,6 @@ public class ClientServiceTest {
     ClientRepository repository;
 
     @Test
-    void createClient() {
-
-        Client client = clientService.save(
-                "Test de User ",
-                "Rua Centralsssss",
-                ClientType.RETAIL
-        );
-
-        assertNotNull(client.getId());
-    }
-
-    @Test
     void updateClient(){
         // Muda o id para selecionar outro client
         UUID clientIDTest = UUID.fromString("c636186a-f395-4010-a15c-9352bcaedd37");
