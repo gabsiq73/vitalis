@@ -56,14 +56,14 @@ public class PaymentService {
     }
 
     @Transactional
-    public BigDecimal calculateOrderTotalValue(Order order){
+    private BigDecimal calculateOrderTotalValue(Order order){
         return order.getItems().stream()
                 .map(item -> item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     @Transactional
-    public BigDecimal calculateTotalPayed(Order order){
+    private BigDecimal calculateTotalPayed(Order order){
         return order.getPayments().stream()
                 .map(Payment::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
