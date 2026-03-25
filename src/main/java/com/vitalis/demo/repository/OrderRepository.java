@@ -20,4 +20,5 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     List<Order> findByClientAndPaymentStatusNotOrderByCreateDateAsc(Client client, PaymentStatus status);
 
+
 }

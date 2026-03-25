@@ -1,6 +1,7 @@
 package com.vitalis.demo.service;
 
 import com.vitalis.demo.dto.request.PaymentRequestDTO;
+import com.vitalis.demo.dto.response.PaymentResponseDTO;
 import com.vitalis.demo.infra.exception.BusinessException;
 import com.vitalis.demo.model.Client;
 import com.vitalis.demo.model.Order;
@@ -129,6 +130,18 @@ public class PaymentService {
         }
 
         clientService.processCustomerDebitBalance(client.getId());
+    }
+
+    // Pega todos os pagamentos associados a um pedido especifico
+    public List<PaymentResponseDTO> getPaymentByOrderId(UUID orderId){
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new BusinessException("Pedido não encontrado!"));
+
+        List<Payment> paymentList = repository.findByOrder(order);
+
+        return paymentList.stream()
+                .map(PaymentResponseDTO::fromEntity)
+                .toList();
     }
 
 }
