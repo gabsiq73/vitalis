@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Past;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -19,6 +20,15 @@ public record OrderRequestDTO(
         Integer quantity,
         @NotNull(message = "Campo obrigatório!")
         @Past(message = "Não pode ser uma data futura!")
-        LocalDateTime deliveryDate
+        LocalDateTime deliveryDate,
+
+        //Campos Opcionais(GÀS)
+        UUID supplierid,
+        BigDecimal gasCostPrice,
+        Boolean receivedByUs
 ) {
+
+    public OrderRequestDTO(UUID clientId, UUID productId, Integer quantity, LocalDateTime deliveryDate){
+        this(clientId, productId, quantity, deliveryDate, null, null, null);
+    }
 }

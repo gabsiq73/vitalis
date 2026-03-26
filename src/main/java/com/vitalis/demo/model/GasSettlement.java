@@ -48,6 +48,10 @@ public class GasSettlement {
     @Column(name = "GAS_SUP_settlement_type",nullable = false)
     private SettlementType settlementType;
 
+    @OneToOne
+    @JoinColumn(name = "ORD_ITEM_id")
+    private OrderItem orderItem;
+
     @CreatedDate
     @Column(name = "createDate", nullable = false, updatable = false)
     private LocalDateTime createDate;

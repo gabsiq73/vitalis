@@ -2,11 +2,11 @@ package com.vitalis.demo.service;
 
 import com.vitalis.demo.dto.request.OrderRequestDTO;
 import com.vitalis.demo.infra.exception.BusinessException;
-import com.vitalis.demo.model.Client;
-import com.vitalis.demo.model.Order;
-import com.vitalis.demo.model.OrderItem;
-import com.vitalis.demo.model.Product;
+import com.vitalis.demo.model.*;
 import com.vitalis.demo.model.enums.OrderStatus;
+import com.vitalis.demo.model.enums.ProductType;
+import com.vitalis.demo.model.enums.SettlementType;
+import com.vitalis.demo.repository.GasSettlementRepository;
 import com.vitalis.demo.repository.OrderItemRepository;
 import com.vitalis.demo.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +27,8 @@ public class OrderService {
     private final ClientPriceService clientPriceService;
     private final OrderItemRepository orderItemRepository;
     private final StockService stockService;
+    private final GasSettlementRepository gasSettlementRepository;
+    private final GasSupplierService gasSupplierService;
 
     @Transactional
     public Order createOrder(OrderRequestDTO dto){
@@ -44,9 +46,20 @@ public class OrderService {
         item.setUnitPrice(calculatedPrice);
         item.setQuantity(dto.quantity());
 
+        if(product.getType() == ProductType.GAS){
+            if(dto.supplierid() == null){
+                throw new BusinessException("Fornecedor é obrigatório para venda de gás!");
+            }
+            item.setGasSupplier(gasSupplierService.findById(dto.supplierid()));
+        }
         order.addItem(item);
 
-        return repository.save(order);
+        // Pega o item salvo (que agora tem ID) para gerar o acerto
+        Order savedOrder = repository.save(order);
+        OrderItem savedItem = savedOrder.getItems().get(0);
+        processOrderItem(savedItem, dto.receivedByUs(), dto.gasCostPrice());
+
+        return savedOrder;
     }
 
     @Transactional
@@ -69,7 +82,6 @@ public class OrderService {
         order.setStatus(OrderStatus.DELIVERED);
         repository.save(order);
     }
-
 
     @Transactional
     public void updateStatus(UUID orderId, OrderStatus newStatus){
@@ -98,4 +110,38 @@ public class OrderService {
         order.setStatus(OrderStatus.CANCELLED);
         repository.save(order);
     }
+
+    @Transactional
+    public void automateGasSettlement(OrderItem item, Boolean receivedByUs, BigDecimal price){
+        GasSettlement settlement = new GasSettlement();
+        settlement.setOrderItem(item);
+        settlement.setGasSupplier(item.getGasSupplier());
+        settlement.setSettled(false); // O acerto começa por padrão como falso(não concluído)
+
+        BigDecimal costPrice = price;  // Preço de custo
+        BigDecimal salePrice = item.getUnitPrice(); // Preço de venda
+        BigDecimal profit = salePrice.subtract(costPrice);
+
+        if(receivedByUs){
+            settlement.setAmount(costPrice);
+            settlement.setSettlementType(SettlementType.YOU_OWE);
+        }
+        else{
+            settlement.setAmount(profit);
+            settlement.setSettlementType(SettlementType.SUPPLIER_OWE);
+        }
+
+        gasSettlementRepository.save(settlement);
+    }
+
+    @Transactional
+    public void processOrderItem(OrderItem item, Boolean receivedByUs, BigDecimal costPrice){
+        if(item.getProduct().getType() == ProductType.GAS){
+            if(receivedByUs == null || costPrice == null){
+                throw new BusinessException("Dados financeiros do gás são obrigatórios!");
+            }
+            automateGasSettlement(item, receivedByUs, costPrice);
+        }
+    }
+
 }
