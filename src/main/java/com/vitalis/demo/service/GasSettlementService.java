@@ -1,7 +1,9 @@
 package com.vitalis.demo.service;
 
+import com.vitalis.demo.infra.exception.BusinessException;
 import com.vitalis.demo.model.GasSettlement;
 import com.vitalis.demo.model.GasSupplier;
+import com.vitalis.demo.model.OrderItem;
 import com.vitalis.demo.model.enums.SettlementType;
 import com.vitalis.demo.repository.GasSettlementRepository;
 import lombok.AllArgsConstructor;
@@ -9,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,52 +33,35 @@ public class GasSettlementService {
     }
 
     @Transactional
-    public GasSettlement save(GasSupplier gasSupplier, GasSettlement gasSettlement) {
-        if (gasSupplier == null) {
-            throw new IllegalArgumentException("O fornecedor de gás é obrigatório");
-        }
-        if (gasSettlement.getAmount() == null || gasSettlement.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("O valor do acerto deve ser maior que zero");
-        }
-        if (gasSettlement.getSettlementType() == null) {
-            throw new IllegalArgumentException("O tipo de acerto é obrigatório");
-        }
-
+    public void createAutomatedSettlement(OrderItem item, boolean receivedByUs, BigDecimal costPrice){
         GasSettlement settlement = new GasSettlement();
+        settlement.setOrderItem(item);
+        settlement.setGasSupplier(item.getGasSupplier());
+        settlement.setSettled(false);
 
-        settlement.setGasSupplier(gasSupplier);
-        settlement.setAmount(gasSettlement.getAmount());
-        settlement.setSettled(gasSettlement.getSettled() != null ? gasSettlement.getSettled() : false); // Default para false se vier null
-        settlement.setSettlementType(gasSettlement.getSettlementType());
+        if (receivedByUs) {
+            // Dinheiro no depósito -> Devemos o custo
+            settlement.setAmount(costPrice);
+            settlement.setSettlementType(SettlementType.YOU_OWE);
+        }
+        else{
+            // Dinheiro com entregador -> Devemos receber o lucro
+            BigDecimal profit = item.getUnitPrice().subtract(costPrice);
+            settlement.setAmount(profit);
+            settlement.setSettlementType(SettlementType.SUPPLIER_OWE);
+        }
 
-        return repository.save(settlement);
+        repository.save(settlement);
     }
 
+    // Metodo para dar baixa no acerto do gás
     @Transactional
-    public void update(GasSettlement settlement) {
-        GasSettlement settlementUpdated = findById(settlement.getId());
-        
-        if (settlement.getGasSupplier() != null) {
-            settlementUpdated.setGasSupplier(settlement.getGasSupplier());
-        }
-
-        if (settlement.getAmount() != null && settlement.getAmount().compareTo(BigDecimal.ZERO) > 0) {
-            settlementUpdated.setAmount(settlement.getAmount());
-        }
-
-        if (settlement.getSettled() != null) {
-            settlementUpdated.setSettled(settlement.getSettled());
-        }
-
-        if (settlement.getSettledDate() != null) {
-            settlementUpdated.setSettledDate(settlement.getSettledDate());
-        }
-
-        if (settlement.getSettlementType() != null) {
-            settlementUpdated.setSettlementType(settlement.getSettlementType());
-        }
-
-        repository.save(settlementUpdated);
+    public void markAsSettled(UUID settlementId){
+        GasSettlement settlement = repository.findById(settlementId)
+                .orElseThrow(() -> new BusinessException("Acerto não encontrado!"));
+        settlement.setSettled(true);
+        settlement.setSettledDate(LocalDateTime.now());
+        repository.save(settlement);
     }
 
     @Transactional

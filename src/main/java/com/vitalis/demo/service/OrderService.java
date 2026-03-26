@@ -29,6 +29,7 @@ public class OrderService {
     private final StockService stockService;
     private final GasSettlementRepository gasSettlementRepository;
     private final GasSupplierService gasSupplierService;
+    private final GasSettlementService gasSettlementService;
 
     @Transactional
     public Order createOrder(OrderRequestDTO dto){
@@ -112,35 +113,12 @@ public class OrderService {
     }
 
     @Transactional
-    public void automateGasSettlement(OrderItem item, Boolean receivedByUs, BigDecimal price){
-        GasSettlement settlement = new GasSettlement();
-        settlement.setOrderItem(item);
-        settlement.setGasSupplier(item.getGasSupplier());
-        settlement.setSettled(false); // O acerto começa por padrão como falso(não concluído)
-
-        BigDecimal costPrice = price;  // Preço de custo
-        BigDecimal salePrice = item.getUnitPrice(); // Preço de venda
-        BigDecimal profit = salePrice.subtract(costPrice);
-
-        if(receivedByUs){
-            settlement.setAmount(costPrice);
-            settlement.setSettlementType(SettlementType.YOU_OWE);
-        }
-        else{
-            settlement.setAmount(profit);
-            settlement.setSettlementType(SettlementType.SUPPLIER_OWE);
-        }
-
-        gasSettlementRepository.save(settlement);
-    }
-
-    @Transactional
     public void processOrderItem(OrderItem item, Boolean receivedByUs, BigDecimal costPrice){
         if(item.getProduct().getType() == ProductType.GAS){
             if(receivedByUs == null || costPrice == null){
                 throw new BusinessException("Dados financeiros do gás são obrigatórios!");
             }
-            automateGasSettlement(item, receivedByUs, costPrice);
+            gasSettlementService.createAutomatedSettlement(item, receivedByUs, costPrice);
         }
     }
 
