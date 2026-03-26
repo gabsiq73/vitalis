@@ -3,16 +3,16 @@ package com.vitalis.demo.dto.response;
 import java.math.BigDecimal;
 
 public record FinancialReportDTO(
-        BigDecimal totalAmount, // Soma total do que saiu de mercadoria
+        BigDecimal totalInvoiced, // Soma total do que saiu de mercadoria
         BigDecimal totalReceived, // Soma total do que foi recebido de dinheiro
         BigDecimal getBalance // Recebido - Faturado
 ) {
 
-    public FinancialReportDTO(BigDecimal totalAmount, BigDecimal totalReceived){
+    public FinancialReportDTO(BigDecimal totalInvoiced, BigDecimal totalReceived){
         this(
-                totalAmount,
+                totalInvoiced,
                 totalReceived,
-                totalReceived.subtract(totalAmount)
+                totalReceived.subtract(totalInvoiced)
         );
     }
 }
