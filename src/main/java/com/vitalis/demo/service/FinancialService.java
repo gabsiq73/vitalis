@@ -2,6 +2,7 @@ package com.vitalis.demo.service;
 
 import com.vitalis.demo.dto.response.FinancialReportDTO;
 import com.vitalis.demo.model.enums.OrderStatus;
+import com.vitalis.demo.repository.GasSettlementRepository;
 import com.vitalis.demo.repository.OrderRepository;
 import com.vitalis.demo.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ public class FinancialService {
 
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
+    private final GasSettlementRepository gasSettlementRepository;
 
     public FinancialReportDTO getDailyReport(LocalDate date) {
 
@@ -37,6 +39,10 @@ public class FinancialService {
                 paymentRepository.sumTotalReceived(start, end)
         ).orElse(BigDecimal.ZERO);
 
-        return new FinancialReportDTO(invoiced, received);
+        BigDecimal gasProfit = Optional.ofNullable(
+                gasSettlementRepository.sumTotalProfit(start, end)
+        ).orElse(BigDecimal.ZERO);
+
+        return new FinancialReportDTO(invoiced, received, gasProfit);
     }
 }
