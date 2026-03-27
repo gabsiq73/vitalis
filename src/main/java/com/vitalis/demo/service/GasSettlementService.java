@@ -54,6 +54,7 @@ public class GasSettlementService {
         repository.save(settlement);
     }
 
+
     @Transactional(readOnly = true)
     public GasSupplierReportDTO generateReportBySupplier(UUID supplierId, LocalDateTime start, LocalDateTime end){
        List<GasSettlement> settlements = repository.findByGasSupplier_IdAndSettledFalseAndCreateDateBetween(supplierId, start, end);

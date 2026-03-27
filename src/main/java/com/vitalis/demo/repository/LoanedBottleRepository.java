@@ -13,4 +13,6 @@ public interface LoanedBottleRepository extends JpaRepository<LoanedBottle, UUID
     List<LoanedBottle> findByClient(Client client);
 
     List<LoanedBottle> findByLoanStatus(LoanStatus status);
+
+    List<LoanedBottle> findByClient_IdAndLoanStatus(UUID clientId, LoanStatus status);
 }
