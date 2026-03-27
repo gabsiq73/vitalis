@@ -33,4 +33,8 @@ public interface GasSettlementRepository extends JpaRepository<GasSettlement, UU
     BigDecimal sumTotalProfit(LocalDateTime start, LocalDateTime end);
 
     Optional<GasSettlement> findByOrderItem(OrderItem item);
+
+    List<GasSettlement> findBySettledFalse();
+
+    List<GasSettlement> findByGasSupplier_IdAndSettledFalseAndCreateDateBetween(UUID supplierId, LocalDateTime start, LocalDateTime end);
 }

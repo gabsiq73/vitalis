@@ -1,12 +1,11 @@
 package com.vitalis.demo.service;
 
+import com.vitalis.demo.dto.response.GasSupplierReportDTO;
 import com.vitalis.demo.infra.exception.BusinessException;
 import com.vitalis.demo.model.GasSettlement;
-import com.vitalis.demo.model.GasSupplier;
 import com.vitalis.demo.model.OrderItem;
 import com.vitalis.demo.model.enums.SettlementType;
 import com.vitalis.demo.repository.GasSettlementRepository;
-import com.vitalis.demo.repository.OrderItemRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,6 +52,45 @@ public class GasSettlementService {
         }
 
         repository.save(settlement);
+    }
+
+    @Transactional(readOnly = true)
+    public GasSupplierReportDTO generateReportBySupplier(UUID supplierId, LocalDateTime start, LocalDateTime end){
+       List<GasSettlement> settlements = repository.findByGasSupplier_IdAndSettledFalseAndCreateDateBetween(supplierId, start, end);
+
+       if(settlements.isEmpty()){
+           throw new BusinessException("Não há acertos pendentes para esta distribuidora!");
+       }
+
+       String supplierName = settlements.getFirst().getGasSupplier().getName();
+       BigDecimal toPay = BigDecimal.ZERO;
+       BigDecimal toReceive = BigDecimal.ZERO;
+
+       for(GasSettlement gs: settlements){
+           if(gs.getSettlementType() == SettlementType.YOU_OWE){
+               toPay = toPay.add(gs.getAmount());
+           }
+           else{
+               toReceive = toReceive.add(gs.getAmount());
+           }
+       }
+
+       BigDecimal netBalance = toPay.subtract(toReceive);
+
+       return new GasSupplierReportDTO(supplierName, toPay, toReceive, netBalance, settlements);
+    }
+
+    // Método para dar baixar em todos os acertos de uma vez só
+    @Transactional
+    public void settledAllBySupplier(UUID supplierId, LocalDateTime start, LocalDateTime end){
+        List<GasSettlement> settlements = repository.findByGasSupplier_IdAndSettledFalseAndCreateDateBetween(supplierId, start, end);
+
+        if(settlements.isEmpty()){
+            throw new BusinessException("Não há acertos pendentes para esta distribuidora!");
+        }
+
+        settlements.forEach(s -> s.setSettled(true));
+        repository.saveAll(settlements);
     }
 
     // Metodo para dar baixa no acerto do gás
