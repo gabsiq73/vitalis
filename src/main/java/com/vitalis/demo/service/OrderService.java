@@ -5,7 +5,6 @@ import com.vitalis.demo.infra.exception.BusinessException;
 import com.vitalis.demo.model.*;
 import com.vitalis.demo.model.enums.OrderStatus;
 import com.vitalis.demo.model.enums.ProductType;
-import com.vitalis.demo.model.enums.SettlementType;
 import com.vitalis.demo.repository.GasSettlementRepository;
 import com.vitalis.demo.repository.OrderItemRepository;
 import com.vitalis.demo.repository.OrderRepository;
@@ -94,8 +93,8 @@ public class OrderService {
     }
 
     @Transactional
-    public void cancelOrder(UUID id){
-        Order order = repository.findById(id)
+    public void cancelOrder(UUID orderId){
+        Order order = repository.findById(orderId)
                 .orElseThrow(() -> new BusinessException("Pedido não encontrado!"));
 
         if(order.getStatus() == OrderStatus.CANCELLED){
@@ -105,9 +104,12 @@ public class OrderService {
         if(order.getStatus() == OrderStatus.DELIVERED){
             order.getItems().forEach(item -> {
                 stockService.increaseStock(item.getProduct(), item.getQuantity());
+
+                if(item.getProduct().getType() == ProductType.GAS){
+                    gasSettlementService.deleteByOrderItem(item);
+                }
             });
         }
-
         order.setStatus(OrderStatus.CANCELLED);
         repository.save(order);
     }

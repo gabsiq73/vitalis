@@ -6,6 +6,7 @@ import com.vitalis.demo.model.GasSupplier;
 import com.vitalis.demo.model.OrderItem;
 import com.vitalis.demo.model.enums.SettlementType;
 import com.vitalis.demo.repository.GasSettlementRepository;
+import com.vitalis.demo.repository.OrderItemRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -67,6 +68,14 @@ public class GasSettlementService {
     @Transactional
     public void delete(UUID id) {
         GasSettlement settlement = findById(id);
+        repository.delete(settlement);
+    }
+
+    @Transactional
+    public void deleteByOrderItem(OrderItem item){
+        GasSettlement settlement = repository.findByOrderItem(item)
+                .orElseThrow(() -> new BusinessException("Item de pedido não encontrado!"));
+
         repository.delete(settlement);
     }
 
