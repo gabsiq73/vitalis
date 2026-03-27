@@ -1,8 +1,10 @@
 package com.vitalis.demo.service;
 
 import com.vitalis.demo.dto.request.OrderRequestDTO;
+import com.vitalis.demo.dto.response.DailyReportDTO;
 import com.vitalis.demo.infra.exception.BusinessException;
 import com.vitalis.demo.model.*;
+import com.vitalis.demo.model.enums.Method;
 import com.vitalis.demo.model.enums.OrderStatus;
 import com.vitalis.demo.model.enums.ProductType;
 import com.vitalis.demo.repository.GasSettlementRepository;
@@ -13,7 +15,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -122,6 +127,55 @@ public class OrderService {
             }
             gasSettlementService.createAutomatedSettlement(item, receivedByUs, costPrice);
         }
+    }
+
+    // Método para instanciar o resumo diário de vendas
+    @Transactional(readOnly = true)
+    public DailyReportDTO getDailySummary(){
+        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        LocalDateTime endOfDay = LocalDate.now().atTime(LocalTime.MAX);
+
+        //Busca todos os pedidos criar hoje
+        List<Order> dailyOrders = repository.findByCreateDateBetween(startOfDay, endOfDay);
+
+        BigDecimal totalPix = BigDecimal.ZERO;
+        BigDecimal totalCash = BigDecimal.ZERO;
+        BigDecimal totalDebt = BigDecimal.ZERO;
+        Integer totalWater = 0;
+        Integer totalGas = 0;
+
+        for(Order order: dailyOrders){
+
+            //Somar pagamentos
+            for(Payment p : order.getPayments()){
+                if(p.getMethod() == Method.PIX){
+                    totalPix = totalPix.add(p.getAmount());
+                }
+                else if(p.getMethod() == Method.DINHEIRO){
+                    totalCash = totalCash.add(p.getAmount());
+                }
+            }
+
+            //Calcular fiados
+            BigDecimal totalPaid = order.getPayments().stream()
+                    .map(Payment::getAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal orderDebt = order.getTotalValue().subtract(totalPaid);
+            totalDebt = totalDebt.add(orderDebt);
+
+            // Contar as quantidades de produtos vendidos
+            for(OrderItem item : order.getItems()){
+                if(item.getProduct().getType() == ProductType.WATER){
+                    totalWater += item.getQuantity();
+                }
+                else if(item.getProduct().getType() == ProductType.GAS){
+                    totalGas += item.getQuantity();
+                }
+            }
+        }
+
+        return new DailyReportDTO(totalPix, totalCash, totalDebt, totalWater, totalGas);
     }
 
 }

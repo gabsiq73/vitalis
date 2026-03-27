@@ -57,6 +57,7 @@ public class LoanedBottleService {
         repository.save(lb);
     }
 
+    // Lista os garrafões emprestados que um cliente especifico tem
     @Transactional(readOnly = true)
     public List<LoanedBottle> listPendingLoansByClient(UUID clientId){
         return repository.findByClient_IdAndLoanStatus(clientId, LoanStatus.LOANED);

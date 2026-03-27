@@ -24,6 +24,7 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     List<Order> findByClientAndPaymentStatusNotOrderByCreateDateAsc(Client client, PaymentStatus status);
 
+    List<Order> findByCreateDateBetween(LocalDateTime start, LocalDateTime end);
 
     @Query("SELECT SUM(i.unitPrice * i.quantity) " +
             "FROM Order o JOIN o.items i " +
