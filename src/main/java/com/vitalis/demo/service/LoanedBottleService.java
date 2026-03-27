@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -59,6 +60,16 @@ public class LoanedBottleService {
     @Transactional(readOnly = true)
     public List<LoanedBottle> listPendingLoansByClient(UUID clientId){
         return repository.findByClient_IdAndLoanStatus(clientId, LoanStatus.LOANED);
+    }
+
+    // Lista de todos os garrafões emprestados
+    @Transactional(readOnly = true)
+    public List<LoanedBottle> findAllPendingReturns(){
+        List<LoanedBottle> pendingBottles =  repository.findByReturnDateIsNull();
+        if(pendingBottles.isEmpty()){
+            return Collections.emptyList();
+        }
+        return pendingBottles;
     }
 
 }
