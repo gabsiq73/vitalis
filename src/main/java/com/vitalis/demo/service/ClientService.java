@@ -1,5 +1,7 @@
 package com.vitalis.demo.service;
 
+import com.vitalis.demo.dto.request.ClientRequestDTO;
+import com.vitalis.demo.dto.response.ClientResponseDTO;
 import com.vitalis.demo.infra.exception.BusinessException;
 import com.vitalis.demo.model.Client;
 import com.vitalis.demo.model.Order;
@@ -14,8 +16,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
@@ -30,8 +34,13 @@ public class ClientService {
     }
 
     @Transactional(readOnly = true)
-    public List<Client> listClient(){
-        return repository.findAll();
+    public List<ClientResponseDTO> listClient(){
+
+        List<Client> clientList = repository.findAll();
+
+        return clientList.stream()
+                .map(ClientResponseDTO::fromEntity)
+                .collect(Collectors.toList());
     }
 
     @Transactional
@@ -42,24 +51,10 @@ public class ClientService {
     }
 
     @Transactional
-    public Client save(Client client){
-
-        if(client.getName() == null || client.getName().isBlank()){
-            throw new IllegalArgumentException("Nome do cliente é obrigatório");
-        }
-
-        if(client.getClientType() == null){
-            throw new IllegalArgumentException("Tipo do cliente é obrigatório");
-        }
-
-        Client newClient = new Client();
-
-        newClient.setName(client.getName());
-        newClient.setAddress(client.getAddress());
-        newClient.setClientType(client.getClientType());
-
-        return repository.save(newClient);
-
+    public ClientResponseDTO save(ClientRequestDTO requestDTO) {
+        Client clientToSave = requestDTO.toModel();
+        Client savedClient = repository.save(clientToSave);
+        return ClientResponseDTO.fromEntity(savedClient);
     }
 
     @Transactional
