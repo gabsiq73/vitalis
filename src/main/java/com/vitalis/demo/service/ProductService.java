@@ -44,13 +44,6 @@ public class ProductService {
 
     @Transactional
     public Product save(Product product){
-
-        var violations = validator.validate(product);
-
-        if (!violations.isEmpty()) {
-            throw new BusinessException(violations.iterator().next().getMessage());
-        }
-
         Product savedProduct = new Product();
 
         savedProduct.setName(product.getName());
