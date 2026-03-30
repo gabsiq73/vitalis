@@ -9,12 +9,31 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class ClientPriceService {
 
     private final ClientPriceRepository clientPriceRepository;
+    private final ClientService service;
+    private final ProductService productService;
+
+    @Transactional
+    public ClientPrice save(UUID clientId, UUID productId, BigDecimal customPrice) {
+        Client client = service.findById(clientId);
+        Product product = productService.findById(productId);
+
+        // Busca se já existe um preço especial para esse par Cliente/Produto
+        ClientPrice cp = clientPriceRepository.findByClientAndProduct(client, product)
+                .orElse(new ClientPrice()); // Se não existir, cria um novo
+
+        cp.setClient(client);
+        cp.setProduct(product);
+        cp.setPrice(customPrice);
+
+        return clientPriceRepository.save(cp);
+    }
 
     @Transactional(readOnly = true)
     public BigDecimal calculateEffectivePrice(Client client, Product product){

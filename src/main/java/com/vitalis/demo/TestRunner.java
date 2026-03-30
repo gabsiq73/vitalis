@@ -1,9 +1,6 @@
 package com.vitalis.demo;
 
-import com.vitalis.demo.dto.request.ClientRequestDTO;
-import com.vitalis.demo.dto.request.OrderRequestDTO;
-import com.vitalis.demo.dto.request.PaymentRequestDTO;
-import com.vitalis.demo.dto.request.ProductRequestDTO;
+import com.vitalis.demo.dto.request.*;
 import com.vitalis.demo.dto.response.ClientResponseDTO;
 import com.vitalis.demo.model.Client;
 import com.vitalis.demo.model.GasSupplier;
@@ -32,6 +29,7 @@ public class TestRunner implements CommandLineRunner {
     private final OrderService orderService;
     private final PaymentService paymentService;
     private final GasSupplierService gasSupplierService;
+    private final ClientPriceService clientPriceService;
 
     @Override
     public void run(String... args) throws Exception {
@@ -72,16 +70,18 @@ public class TestRunner implements CommandLineRunner {
         gasSupplier.setNotes("Gás dourado");
         var supplierSalvo = gasSupplierService.save(gasSupplier);
 
+        clientPriceService.save(clienteSalvo.id(), produtoSalvo.getId(), BigDecimal.valueOf(7.00));
+
         Order order = new Order();
 
         OrderRequestDTO orderRequestDTO = new OrderRequestDTO(
                 clienteSalvo.id(),
-                produtoSalvo2.getId(),
+                produtoSalvo.getId(),
                 1,
-                LocalDateTime.now(),
-                supplierSalvo.getId(),
-                produtoSalvo2.getBasePrice(),
-                true
+                LocalDateTime.now()
+                //supplierSalvo.getId(),
+                //produtoSalvo.getBasePrice(),
+                //true
         );
 
         var pedidoSalvo = orderService.createOrder(orderRequestDTO);
