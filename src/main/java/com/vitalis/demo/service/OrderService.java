@@ -41,8 +41,14 @@ public class OrderService {
         Product product = productService.findById(dto.productId());
         BigDecimal calculatedPrice = clientPriceService.calculateEffectivePrice(client, product);
 
+        boolean isDelivery = dto.isDelivery() != null && dto.isDelivery();
+
+        if(!isDelivery){
+            calculatedPrice = calculatedPrice.subtract(BigDecimal.valueOf(0.5));
+        }
+
         Order order = new Order();
-        order.setDeliveryDate(LocalDateTime.now());
+        order.setDeliveryDate(dto.deliveryDate());
         order.setStatus(OrderStatus.PENDING);
         order.setClient(client);
 

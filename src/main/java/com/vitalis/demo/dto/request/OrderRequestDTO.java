@@ -21,6 +21,7 @@ public record OrderRequestDTO(
         @NotNull(message = "Campo obrigatório!")
         @Past(message = "Não pode ser uma data futura!")
         LocalDateTime deliveryDate,
+        Boolean isDelivery,
 
         //Campos Opcionais(GÀS)
         UUID supplierid,
@@ -28,7 +29,7 @@ public record OrderRequestDTO(
         Boolean receivedByUs
 ) {
 
-    public OrderRequestDTO(UUID clientId, UUID productId, Integer quantity, LocalDateTime deliveryDate){
-        this(clientId, productId, quantity, deliveryDate, null, null, null);
+    public OrderRequestDTO(UUID clientId, UUID productId, Integer quantity, LocalDateTime deliveryDate, Boolean isDelivery){
+        this(clientId, productId, quantity, deliveryDate, isDelivery, null, null, null);
     }
 }
