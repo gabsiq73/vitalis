@@ -18,7 +18,6 @@ public record PaymentRequestDTO(
         UUID orderId,
         @NotNull(message = "Campo obrigatório!")
         Method paymentMethod,
-        @NotBlank
         @Size(min = 5, max = 255, message = "Anotações devem ter entre 5 e 255 caracteres!")
         String notes
 ) { }

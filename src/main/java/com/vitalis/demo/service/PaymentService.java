@@ -31,7 +31,7 @@ public class PaymentService {
     private final ClientService clientService;
 
     @Transactional
-    public Payment save(PaymentRequestDTO dto){
+    public Payment registerPayment(PaymentRequestDTO dto){
         Order order = orderRepository.findById(dto.orderId())
                 .orElseThrow(() -> new BusinessException("Pedido não encontrado!"));
 

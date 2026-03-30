@@ -26,7 +26,7 @@ public record ClientRequestDTO(
         client.setAddress(this.address());
         client.setNotes(this.notes());
         client.setClientType(this.clientType());
-        client.setClientStatus(this.clientStatus);
+        client.setClientStatus(this.clientStatus());
         return client;
     }
 }

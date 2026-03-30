@@ -18,8 +18,6 @@ public record ProductRequestDTO(
         @NotBlank(message = "Preço base do produto é obrigatório!")
         @Positive(message = "O preço deve ser maior que zero")
         BigDecimal basePrice,
-        @NotBlank(message = "Validade do produto é obrigatório")
-        @FutureOrPresent(message = "A validade não pode ser no passado")
         LocalDate validity,
         @NotBlank(message = "Tipo do produto é obrigatório!")
         ProductType type) {
