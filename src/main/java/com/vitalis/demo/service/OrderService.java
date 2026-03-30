@@ -4,6 +4,7 @@ import com.vitalis.demo.dto.request.OrderRequestDTO;
 import com.vitalis.demo.dto.response.DailyReportDTO;
 import com.vitalis.demo.infra.exception.BusinessException;
 import com.vitalis.demo.model.*;
+import com.vitalis.demo.model.enums.ClientType;
 import com.vitalis.demo.model.enums.Method;
 import com.vitalis.demo.model.enums.OrderStatus;
 import com.vitalis.demo.model.enums.ProductType;
@@ -39,13 +40,7 @@ public class OrderService {
     public Order createOrder(OrderRequestDTO dto){
         Client client = clientService.findById(dto.clientId());
         Product product = productService.findById(dto.productId());
-        BigDecimal calculatedPrice = clientPriceService.calculateEffectivePrice(client, product);
-
-        boolean isDelivery = dto.isDelivery() != null && dto.isDelivery();
-
-        if(!isDelivery){
-            calculatedPrice = calculatedPrice.subtract(BigDecimal.valueOf(0.5));
-        }
+        BigDecimal finalUnitPrice = calculateFinalPrice(client, product, dto.isDelivery());
 
         Order order = new Order();
         order.setDeliveryDate(dto.deliveryDate());
@@ -54,7 +49,7 @@ public class OrderService {
 
         OrderItem item = new OrderItem();
         item.setProduct(product);
-        item.setUnitPrice(calculatedPrice);
+        item.setUnitPrice(finalUnitPrice);
         item.setQuantity(dto.quantity());
 
         if(product.getType() == ProductType.GAS){
@@ -182,6 +177,28 @@ public class OrderService {
         }
 
         return new DailyReportDTO(totalPix, totalCash, totalDebt, totalWater, totalGas);
+    }
+
+    //Metodo para calcular o preço final que o cliente vai pagar, com base no tipo de cliente, tipo de produto e se é entrega ou retirada
+    public BigDecimal calculateFinalPrice(Client client, Product product, Boolean isDeliveryDTO){
+
+        // Preço base (Varejo ou revenda especial)
+        BigDecimal price = clientPriceService.calculateEffectivePrice(client, product);
+
+        //Define se é entrega (Padrão true se for null ou se for gás)
+        boolean isDelivery = (isDeliveryDTO == null) || isDeliveryDTO;
+        if(product.getType() == ProductType.GAS){
+            isDelivery = true;
+        }
+
+        //Ve se o cliente ja possui um ClientPrice com um preço especial definido pra ele
+        boolean hasSpecialPrice = price.compareTo(product.getBasePrice()) < 0;
+
+        if(!isDelivery && client.getClientType() == ClientType.RETAIL && !hasSpecialPrice){
+            price = price.subtract(BigDecimal.valueOf(0.5));
+        }
+
+        return price;
     }
 
 }

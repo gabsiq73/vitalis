@@ -32,4 +32,9 @@ public record OrderRequestDTO(
     public OrderRequestDTO(UUID clientId, UUID productId, Integer quantity, LocalDateTime deliveryDate, Boolean isDelivery){
         this(clientId, productId, quantity, deliveryDate, isDelivery, null, null, null);
     }
+
+    public OrderRequestDTO(UUID clientId, UUID productId, Integer quantity, LocalDateTime deliveryDate){
+        this(clientId, productId, quantity, deliveryDate, null, null, null, null);
+    }
+
 }

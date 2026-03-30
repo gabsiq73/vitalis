@@ -59,3 +59,4 @@ public class Product {
     @Column(name = "lastModifiedBy")
     private String lastModifiedBy;
 }
+
