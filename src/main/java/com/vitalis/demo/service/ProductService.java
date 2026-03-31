@@ -29,9 +29,9 @@ public class ProductService {
 
 
     @Transactional(readOnly = true)
-    public Product findById(UUID id){
-        return repository.findById(id)
-                .orElseThrow(() -> new BusinessException("Produto não encontrado!"));
+    public ProductResponseDTO findById(UUID id){
+        Product product = findEntityById(id);
+        return ProductResponseDTO.fromEntity(product);
     }
 
     @Transactional(readOnly = true)
@@ -43,7 +43,7 @@ public class ProductService {
 
     @Transactional
     public void delete(UUID id){
-        Product product = findById(id);
+        Product product = findEntityById(id);
         repository.delete(product);
     }
 
@@ -63,7 +63,7 @@ public class ProductService {
 
     @Transactional
     public void update(UUID id, ProductRequestDTO dto){
-        Product foundProduct = findById(id);
+        Product foundProduct = findEntityById(id);
 
         if (dto.name() != null && !dto.name().isBlank()) {
             foundProduct.setName(dto.name());
@@ -80,6 +80,11 @@ public class ProductService {
         // 3. Salva a entidade atualizada
         repository.save(foundProduct);
 
+    }
+
+    private Product findEntityById(UUID id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new BusinessException("Produto não encontrado!"));
     }
 
 }
