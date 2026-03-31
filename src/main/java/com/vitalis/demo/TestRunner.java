@@ -55,7 +55,6 @@ public class TestRunner implements CommandLineRunner {
         Product product = new Product();
         product.setName("Serra Grande");
         product.setBasePrice(BigDecimal.valueOf(8.5));
-        product.setValidity(LocalDate.of(2028, 8, 10));
         product.setType(ProductType.WATER);
 
         Product produtoSalvo = productService.save(product);
@@ -87,7 +86,7 @@ public class TestRunner implements CommandLineRunner {
 
         // 3. Cenário: Gás no Balcão
         // Base 110.00 -> Esperado: 110.00 (Gás nunca tem desconto de retirada)
-        OrderRequestDTO case3 = new OrderRequestDTO(clienteComum.id(), produtoSalvo2.getId(), 1, LocalDateTime.now(), false, supplierSalvo.getId(), BigDecimal.valueOf(90), true);
+        OrderRequestDTO case3 = new OrderRequestDTO(clienteComum.id(), produtoSalvo2.getId(), 1, LocalDateTime.now(), false, null, supplierSalvo.getId(), BigDecimal.valueOf(90), true);
         var pedido3 = orderService.createOrder(case3);
         System.out.println("Cenário 3 (Gás Balcão): R$ " + pedido3.getItems().getFirst().getUnitPrice());
 

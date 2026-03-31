@@ -62,13 +62,11 @@ public class OrderServiceTest {
         clientPriceRepository.save(clientPrice);
 
         OrderRequestDTO dto = new OrderRequestDTO(
-              client.getId(),
+                client.getId(),
                 product.getId(),
                 10,
                 LocalDateTime.now(),
-                null,
-                null,
-                null
+                true
         );
 
         //Order savedOrder = service.createOrder(dto);
@@ -112,9 +110,7 @@ public class OrderServiceTest {
                 product.getId(),
                 10,
                 LocalDateTime.now(),
-                null,
-                null,
-                null
+                false
         );
 
         Order order = service.createOrder(dto);

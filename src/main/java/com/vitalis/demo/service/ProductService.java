@@ -48,7 +48,6 @@ public class ProductService {
 
         savedProduct.setName(product.getName());
         savedProduct.setBasePrice(product.getBasePrice());
-        savedProduct.setValidity(product.getValidity());
         savedProduct.setType(product.getType());
 
         return repository.save(savedProduct);
@@ -64,10 +63,6 @@ public class ProductService {
 
         if (product.getBasePrice() != null) {
             foundProduct.setBasePrice(product.getBasePrice());
-        }
-
-        if (product.getValidity() != null) {
-            foundProduct.setValidity(product.getValidity());
         }
 
         if (product.getType() != null) {

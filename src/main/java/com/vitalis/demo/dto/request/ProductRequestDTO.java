@@ -18,7 +18,6 @@ public record ProductRequestDTO(
         @NotBlank(message = "Preço base do produto é obrigatório!")
         @Positive(message = "O preço deve ser maior que zero")
         BigDecimal basePrice,
-        LocalDate validity,
         @NotBlank(message = "Tipo do produto é obrigatório!")
         ProductType type) {
 
@@ -26,7 +25,6 @@ public record ProductRequestDTO(
         Product product = new Product();
         product.setName(this.name);
         product.setBasePrice(this.basePrice);
-        product.setValidity(this.validity);
         product.setType(this.type);
         return product;
     }

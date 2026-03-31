@@ -51,6 +51,7 @@ public class OrderService {
         item.setProduct(product);
         item.setUnitPrice(finalUnitPrice);
         item.setQuantity(dto.quantity());
+        item.setBottleExpiration(dto.bottleExpiration());
 
         if(product.getType() == ProductType.GAS){
             if(dto.supplierid() == null){

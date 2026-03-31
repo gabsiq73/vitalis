@@ -37,9 +37,6 @@ public class Product {
     @Column(name = "PROD_basePrice", precision = 10, scale = 2)
     private BigDecimal basePrice;
 
-    @Column(name = "PROD_validity")
-    private LocalDate validity;
-
     @Enumerated(EnumType.STRING)
     @Column(name = "PROD_type", nullable = false)
     private ProductType type;

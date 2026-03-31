@@ -6,6 +6,7 @@ import com.vitalis.demo.model.Client;
 import com.vitalis.demo.service.ClientService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -18,7 +19,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @RestController
-@AllArgsConstructor
+@RequiredArgsConstructor
 @RequestMapping("/client")
 public class ClientController {
 

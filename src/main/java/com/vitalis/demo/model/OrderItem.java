@@ -8,6 +8,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -33,6 +34,9 @@ public class OrderItem {
 
     @Column(name = "ORD_ITEM_unitPrice", precision = 10, scale = 2, nullable = false)
     private BigDecimal unitPrice;
+
+    @Column(name = "ORD_ITEM_bottleExpiration")
+    private LocalDate bottleExpiration;
 
     @ManyToOne
     @JoinColumn(name = "ORD_id", nullable = false)
