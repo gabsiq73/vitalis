@@ -1,10 +1,12 @@
 package com.vitalis.demo.service;
 
 import com.vitalis.demo.dto.request.ProductRequestDTO;
+import com.vitalis.demo.dto.response.ProductResponseDTO;
 import com.vitalis.demo.infra.exception.BusinessException;
 import com.vitalis.demo.model.Client;
 import com.vitalis.demo.model.ClientPrice;
 import com.vitalis.demo.model.Product;
+import com.vitalis.demo.model.Stock;
 import com.vitalis.demo.model.enums.ProductType;
 import com.vitalis.demo.repository.ClientPriceRepository;
 import com.vitalis.demo.repository.ProductRepository;
@@ -23,17 +25,20 @@ public class ProductService {
 
     private final ProductRepository repository;
     private final ClientPriceRepository clientPriceRepository;
+    private final StockService stockService;
 
-    private Validator validator;
 
     @Transactional(readOnly = true)
     public Product findById(UUID id){
-        return repository.findById(id).orElseThrow(() -> new BusinessException("Produto não encontrado!"));
+        return repository.findById(id)
+                .orElseThrow(() -> new BusinessException("Produto não encontrado!"));
     }
 
     @Transactional(readOnly = true)
-    public List<Product> findAll(){
-        return repository.findAll();
+    public List<ProductResponseDTO> findAll(){
+        return repository.findAll().stream()
+                .map(ProductResponseDTO::fromEntity)
+                .toList();
     }
 
     @Transactional
@@ -43,30 +48,33 @@ public class ProductService {
     }
 
     @Transactional
-    public Product save(Product product){
-        Product savedProduct = new Product();
+    public ProductResponseDTO save(ProductRequestDTO dto){
+        Product product = new Product();
+        product.setName(dto.name());
+        product.setBasePrice(dto.basePrice());
+        product.setType(dto.type());
 
-        savedProduct.setName(product.getName());
-        savedProduct.setBasePrice(product.getBasePrice());
-        savedProduct.setType(product.getType());
+        Product savedProduct = repository.save(product);
 
-        return repository.save(savedProduct);
+        stockService.createInitialStock(product);
+
+        return ProductResponseDTO.fromEntity(savedProduct);
     }
 
     @Transactional
-    public void update(Product product){
-        Product foundProduct = findById(product.getId());
+    public void update(UUID id, ProductRequestDTO dto){
+        Product foundProduct = findById(id);
 
-        if (product.getName() != null && !product.getName().isBlank()) {
-            foundProduct.setName(product.getName());
+        if (dto.name() != null && !dto.name().isBlank()) {
+            foundProduct.setName(dto.name());
         }
 
-        if (product.getBasePrice() != null) {
-            foundProduct.setBasePrice(product.getBasePrice());
+        if (dto.basePrice() != null) {
+            foundProduct.setBasePrice(dto.basePrice());
         }
 
-        if (product.getType() != null) {
-            foundProduct.setType(product.getType());
+        if (dto.type() != null) {
+            foundProduct.setType(dto.type());
         }
 
         // 3. Salva a entidade atualizada

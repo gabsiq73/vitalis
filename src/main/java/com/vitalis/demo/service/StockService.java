@@ -42,6 +42,16 @@ public class StockService {
     }
 
     @Transactional
+    public void createInitialStock(Product product){
+        Stock initalStock = new Stock();
+        initalStock.setProduct(product);
+        initalStock.setMinimumStock(5);
+        initalStock.setQuantityInStock(0);
+
+        repository.save(initalStock);
+    }
+
+    @Transactional
     public void decreaseStock(Product product, Integer quantity){
         Stock stock = findByProduct(product);
         if(stock.getQuantityInStock() < quantity){
