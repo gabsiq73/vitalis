@@ -3,19 +3,13 @@ package com.vitalis.demo.service;
 import com.vitalis.demo.dto.request.ProductRequestDTO;
 import com.vitalis.demo.dto.response.ProductResponseDTO;
 import com.vitalis.demo.infra.exception.BusinessException;
-import com.vitalis.demo.model.Client;
-import com.vitalis.demo.model.ClientPrice;
 import com.vitalis.demo.model.Product;
-import com.vitalis.demo.model.Stock;
-import com.vitalis.demo.model.enums.ProductType;
 import com.vitalis.demo.repository.ClientPriceRepository;
 import com.vitalis.demo.repository.ProductRepository;
-import jakarta.validation.Validator;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -82,7 +76,7 @@ public class ProductService {
 
     }
 
-    private Product findEntityById(UUID id) {
+    protected Product findEntityById(UUID id) {
         return repository.findById(id)
                 .orElseThrow(() -> new BusinessException("Produto não encontrado!"));
     }
