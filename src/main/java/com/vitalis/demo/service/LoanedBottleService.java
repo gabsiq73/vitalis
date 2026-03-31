@@ -1,5 +1,6 @@
 package com.vitalis.demo.service;
 
+import com.vitalis.demo.dto.response.ProductResponseDTO;
 import com.vitalis.demo.infra.exception.BusinessException;
 import com.vitalis.demo.model.Client;
 import com.vitalis.demo.model.LoanedBottle;
