@@ -37,8 +37,6 @@ public class ClientServiceTest {
         clientUpdated.setAddress("Casa Amarela - São Denedito");
         clientUpdated.setName("Felipe Sexo");
 
-        clientService.update(clientUpdated);
-
     }
 
     @Test

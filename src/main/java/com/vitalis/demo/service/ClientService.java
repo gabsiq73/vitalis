@@ -12,6 +12,8 @@ import com.vitalis.demo.model.enums.OrderStatus;
 import com.vitalis.demo.repository.ClientRepository;
 import com.vitalis.demo.repository.OrderRepository;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,13 +36,10 @@ public class ClientService {
     }
 
     @Transactional(readOnly = true)
-    public List<ClientResponseDTO> listClient(){
+    public Page<ClientResponseDTO> listClient(Pageable pageable){
 
-        List<Client> clientList = repository.findAll();
-
-        return clientList.stream()
-                .map(ClientResponseDTO::fromEntity)
-                .collect(Collectors.toList());
+        return repository.findAll(pageable)
+                .map(ClientResponseDTO::fromEntity);
     }
 
     @Transactional
@@ -58,20 +57,23 @@ public class ClientService {
     }
 
     @Transactional
-    public void update(Client client){
-        Client clientUpdated = findById(client.getId());
+    public void update(UUID id,ClientRequestDTO dto){
+        Client clientUpdated = this.findById(id);
 
-        if(client.getName() != null && !client.getName().isBlank()){
-            clientUpdated.setName(client.getName());
+        if(dto.name() != null && !dto.name().isBlank()){
+            clientUpdated.setName(dto.name());
         }
-        if(client.getAddress() != null && !client.getAddress().isBlank()){
-            clientUpdated.setAddress(client.getAddress());
+        if(dto.address() != null && !dto.address().isBlank()){
+            clientUpdated.setAddress(dto.address());
         }
-        if(client.getNotes() != null && !client.getNotes().isBlank()){
-            clientUpdated.setNotes(client.getNotes());
+        if(dto.notes() != null && !dto.notes().isBlank()){
+            clientUpdated.setNotes(dto.notes());
         }
-        if(client.getClientType() != null) {
-            clientUpdated.setClientType(client.getClientType() );
+        if(dto.clientType() != null) {
+            clientUpdated.setClientType(dto.clientType() );
+        }
+        if(dto.clientStatus() != null){
+            clientUpdated.setClientStatus(dto.clientStatus());
         }
 
         repository.save(clientUpdated);
