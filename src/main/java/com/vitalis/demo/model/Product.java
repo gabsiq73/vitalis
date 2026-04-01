@@ -3,6 +3,7 @@ package com.vitalis.demo.model;
 import com.vitalis.demo.model.enums.ProductType;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.DynamicUpdate;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -23,6 +24,7 @@ import java.util.UUID;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @EntityListeners(AuditingEntityListener.class)
 @ToString
+@DynamicUpdate
 public class Product {
 
     @EqualsAndHashCode.Include
