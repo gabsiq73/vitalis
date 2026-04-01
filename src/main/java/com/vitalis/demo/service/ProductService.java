@@ -76,7 +76,7 @@ public class ProductService {
 
     }
 
-    protected Product findEntityById(UUID id) {
+    public Product findEntityById(UUID id) {
         return repository.findById(id)
                 .orElseThrow(() -> new BusinessException("Produto não encontrado!"));
     }

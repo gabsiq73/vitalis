@@ -5,6 +5,8 @@ import com.vitalis.demo.model.Product;
 import com.vitalis.demo.model.Stock;
 import com.vitalis.demo.repository.StockRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,8 +39,8 @@ public class StockService {
     }
 
     @Transactional(readOnly = true)
-    public List<Stock> findAll(){
-        return repository.findAll();
+    public Page<Stock> findAll(Pageable pageable){
+        return repository.findAll(pageable);
     }
 
     @Transactional
