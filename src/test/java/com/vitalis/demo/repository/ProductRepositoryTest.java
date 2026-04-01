@@ -25,7 +25,7 @@ class ProductRepositoryTest {
         Product product = new Product();
         product.setName("Serra Grande");
         product.setBasePrice(BigDecimal.valueOf(8.50));
-        product.setValidity(LocalDate.of(2026, 5, 1));
+//        product.setValidity(LocalDate.of(2026, 5, 1));
         product.setType(ProductType.WATER);
 
         Product saved = productRepository.save(product);
@@ -61,13 +61,13 @@ class ProductRepositoryTest {
         Product product1 = new Product();
         product1.setName("Serra Grande");
         product1.setBasePrice(BigDecimal.valueOf(8.50));
-        product1.setValidity(LocalDate.of(2026, 5, 1));
+//        product1.setValidity(LocalDate.of(2026, 5, 1));
         product1.setType(ProductType.WATER);
 
         Product product2 = new Product();
         product2.setName("Gás");
         product2.setBasePrice(BigDecimal.valueOf(18.00));
-        product2.setValidity(LocalDate.of(2026, 6, 1));
+//        product2.setValidity(LocalDate.of(2026, 6, 1));
         product2.setType(ProductType.GAS);
 
         productRepository.save(product1);
@@ -90,13 +90,13 @@ class ProductRepositoryTest {
         Product product1 = new Product();
         product1.setName("Água");
         product1.setBasePrice(BigDecimal.valueOf(8.50));
-        product1.setValidity(LocalDate.of(2026, 5, 1));
+//        product1.setValidity(LocalDate.of(2026, 5, 1));
         product1.setType(ProductType.WATER);
 
         Product product2 = new Product();
         product2.setName("Gás");
         product2.setBasePrice(BigDecimal.valueOf(18.00));
-        product2.setValidity(LocalDate.of(2026, 6, 1));
+//        product2.setValidity(LocalDate.of(2026, 6, 1));
         product2.setType(ProductType.GAS);
 
         productRepository.save(product1);

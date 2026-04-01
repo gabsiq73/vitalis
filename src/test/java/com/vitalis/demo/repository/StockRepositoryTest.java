@@ -28,7 +28,7 @@ public class StockRepositoryTest {
         Product product = new Product();
         product.setName("Serra Grande");
         product.setBasePrice(BigDecimal.valueOf(8.50));
-        product.setValidity(LocalDate.of(2026, 5, 1));
+        //product.setValidity(LocalDate.of(2026, 5, 1));
         product.setType(ProductType.WATER);
 
         productRepository.save(product);
@@ -77,7 +77,7 @@ public class StockRepositoryTest {
         Product product = new Product();
         product.setName("Nieta");
         product.setBasePrice(BigDecimal.valueOf(7.50));
-        product.setValidity(LocalDate.of(2028, 5, 1));
+//        product.setValidity(LocalDate.of(2028, 5, 1));
         product.setType(ProductType.WATER);
 
         productRepository.save(product);

@@ -2,6 +2,8 @@ package com.vitalis.demo.controller;
 
 import com.vitalis.demo.dto.request.ClientRequestDTO;
 import com.vitalis.demo.dto.response.ClientResponseDTO;
+import com.vitalis.demo.dto.update.ClientUpdateDTO;
+import com.vitalis.demo.mapper.ClientMapper;
 import com.vitalis.demo.model.Client;
 import com.vitalis.demo.service.ClientService;
 import jakarta.validation.Valid;
@@ -21,29 +23,36 @@ import java.util.UUID;
 public class ClientController {
 
     private final ClientService clientService;
+    private final ClientMapper clientMapper;
 
     @GetMapping
     public ResponseEntity<Page<ClientResponseDTO>> listClient(
             @PageableDefault(size = 10, sort = "name") Pageable pageable){
-        Page<ClientResponseDTO> pageClient = clientService.listClient(pageable);
-        return ResponseEntity.ok(pageClient);
+        Page<Client> pageEntity = clientService.listClient(pageable);
+        Page<ClientResponseDTO> pageDTO = pageEntity.map(clientMapper::toResponseDTO);
+        return ResponseEntity.ok(pageDTO);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<ClientResponseDTO> getById(@PathVariable("id") UUID id){
-        Client client = clientService.findById(id);
-        ClientResponseDTO dto = ClientResponseDTO.fromEntity(client);
-        return ResponseEntity.ok(dto);
+        return clientService
+                .findByIdController(id)
+                .map(client -> {
+                    ClientResponseDTO dto = clientMapper.toResponseDTO(client);
+                    return ResponseEntity.ok(dto);
+                }).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping
     public ResponseEntity<ClientResponseDTO> create(@Valid @RequestBody ClientRequestDTO requestDTO) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(clientService.save(requestDTO));
+        Client client = clientService.save(clientMapper.toEntity(requestDTO));
+        ClientResponseDTO responseDTO = clientMapper.toResponseDTO(client);
+        return ResponseEntity.status(HttpStatus.CREATED).body(responseDTO);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Void> update(@PathVariable("id") UUID id, @RequestBody @Valid ClientRequestDTO dto){
-        clientService.update(id, dto);
+    public ResponseEntity<Void> update(@PathVariable("id") UUID id, @RequestBody @Valid ClientUpdateDTO dto){
+        clientService.update(id,dto);
         return ResponseEntity.noContent().build();
     }
 

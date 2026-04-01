@@ -13,7 +13,5 @@ public record ClientResponseDTO(
         ClientType clientType,
         ClientStatus clientStatus
 ) {
-    public static ClientResponseDTO fromEntity(Client client){
-        return new ClientResponseDTO(client.getId(), client.getName(), client.getAddress(), client.getClientType(), client.getClientStatus());
-    }
+
 }

@@ -42,7 +42,7 @@ public class ClientPriceServiceTest {
         Product product = new Product();
         product.setName("Serra Grande");
         product.setBasePrice(BigDecimal.valueOf(8.50));
-        product.setValidity(LocalDate.of(2026, 5, 1));
+//        product.setValidity(LocalDate.of(2026, 5, 1));
         product.setType(ProductType.WATER);
 
         productRepository.save(product);
@@ -67,7 +67,7 @@ public class ClientPriceServiceTest {
         Product product = new Product();
         product.setName("Serra Grande");
         product.setBasePrice(BigDecimal.valueOf(8.50));
-        product.setValidity(LocalDate.of(2026, 5, 1));
+//        product.setValidity(LocalDate.of(2026, 5, 1));
         product.setType(ProductType.WATER);
 
         productRepository.save(product);

@@ -31,7 +31,7 @@ public class LoanedBottleService {
         }
 
         Client client = clientService.findById(clientId);
-        Product product = productService.findById(productId);
+        Product product = productService.findEntityById(productId);
 
         LoanedBottle lb = new LoanedBottle();
         lb.setProduct(product);

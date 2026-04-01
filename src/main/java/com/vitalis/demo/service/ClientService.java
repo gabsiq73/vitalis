@@ -1,16 +1,16 @@
 package com.vitalis.demo.service;
 
-import com.vitalis.demo.dto.request.ClientRequestDTO;
-import com.vitalis.demo.dto.response.ClientResponseDTO;
+import com.vitalis.demo.dto.update.ClientUpdateDTO;
 import com.vitalis.demo.infra.exception.BusinessException;
+import com.vitalis.demo.mapper.ClientMapper;
 import com.vitalis.demo.model.Client;
 import com.vitalis.demo.model.Order;
 import com.vitalis.demo.model.Payment;
 import com.vitalis.demo.model.enums.ClientStatus;
-import com.vitalis.demo.model.enums.ClientType;
 import com.vitalis.demo.model.enums.OrderStatus;
 import com.vitalis.demo.repository.ClientRepository;
 import com.vitalis.demo.repository.OrderRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -18,10 +18,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
@@ -29,17 +28,16 @@ public class ClientService {
 
     private final ClientRepository repository;
     private final OrderRepository orderRepository;
+    private final ClientMapper clientMapper;
 
     @Transactional(readOnly = true)
-    public Client findById(UUID id){
-        return repository.findById(id).orElseThrow(() -> new RuntimeException("Cliente não encontrado!"));
+    public Optional<Client> findByIdController(UUID id){
+        return repository.findById(id);
     }
 
     @Transactional(readOnly = true)
-    public Page<ClientResponseDTO> listClient(Pageable pageable){
-
-        return repository.findAll(pageable)
-                .map(ClientResponseDTO::fromEntity);
+    public Page<Client> listClient(Pageable pageable){
+        return repository.findAll(pageable);
     }
 
     @Transactional
@@ -50,34 +48,15 @@ public class ClientService {
     }
 
     @Transactional
-    public ClientResponseDTO save(ClientRequestDTO requestDTO) {
-        Client clientToSave = requestDTO.toModel();
-        Client savedClient = repository.save(clientToSave);
-        return ClientResponseDTO.fromEntity(savedClient);
+    public Client save(Client client) {
+       return repository.save(client);
     }
 
     @Transactional
-    public void update(UUID id,ClientRequestDTO dto){
-        Client clientUpdated = this.findById(id);
-
-        if(dto.name() != null && !dto.name().isBlank()){
-            clientUpdated.setName(dto.name());
-        }
-        if(dto.address() != null && !dto.address().isBlank()){
-            clientUpdated.setAddress(dto.address());
-        }
-        if(dto.notes() != null && !dto.notes().isBlank()){
-            clientUpdated.setNotes(dto.notes());
-        }
-        if(dto.clientType() != null) {
-            clientUpdated.setClientType(dto.clientType() );
-        }
-        if(dto.clientStatus() != null){
-            clientUpdated.setClientStatus(dto.clientStatus());
-        }
-
-        repository.save(clientUpdated);
-
+    public void update(UUID id, ClientUpdateDTO dto) {
+        Client client = findById(id);
+        clientMapper.updateEntityFromDto(dto, client);
+        repository.save(client);
     }
 
     @Transactional
@@ -130,6 +109,12 @@ public class ClientService {
         return order.getItems().stream()
                 .map(item -> item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+//    Método atalho para uso interno no Service (Update, Delete, etc)
+    public Client findById(UUID id) {
+        return findByIdController(id).orElseThrow(() ->
+                new EntityNotFoundException("Cliente com ID " + id + " não encontrado"));
     }
 
 }

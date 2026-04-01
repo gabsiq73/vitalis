@@ -36,7 +36,7 @@ public class LoanedBottleRepositoryTest {
         Product product = new Product();
         product.setName("Serra Grande");
         product.setBasePrice(BigDecimal.valueOf(8.50));
-        product.setValidity(LocalDate.of(2026, 5, 1));
+//        product.setValidity(LocalDate.of(2026, 5, 1));
         product.setType(ProductType.WATER);
 
         Product productSaved = productRepository.save(product);
@@ -100,7 +100,7 @@ public class LoanedBottleRepositoryTest {
         Product product = new Product();
         product.setName("Nieta");
         product.setBasePrice(BigDecimal.valueOf(7.50));
-        product.setValidity(LocalDate.of(2026, 5, 1));
+//        product.setValidity(LocalDate.of(2026, 5, 1));
         product.setType(ProductType.WATER);
 
         productRepository.save(product);
@@ -140,7 +140,7 @@ public class LoanedBottleRepositoryTest {
         Product product = new Product();
         product.setName("Pinheiro");
         product.setBasePrice(BigDecimal.valueOf(7.50));
-        product.setValidity(LocalDate.of(2026, 10, 1));
+//        product.setValidity(LocalDate.of(2026, 10, 1));
         product.setType(ProductType.WATER);
 
         productRepository.save(product);
