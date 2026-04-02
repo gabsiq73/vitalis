@@ -33,7 +33,7 @@ public class LoanedBottleController {
         LoanedBottle entity = loanedBottleMapper.toEntity(dto);
 
         entity.setClient(clientService.findById(dto.clientId()));
-        entity.setProduct(productService.findEntityById(dto.productId()));
+        entity.setProduct(productService.findById(dto.productId()));
 
         LoanedBottle savedEntity = loanedBottleService.save(entity);
         return ResponseEntity.status(HttpStatus.CREATED).body(loanedBottleMapper.toResponseDTO(savedEntity));

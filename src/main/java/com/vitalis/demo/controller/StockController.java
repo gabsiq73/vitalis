@@ -12,7 +12,6 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -35,7 +34,7 @@ public class StockController {
 
     @PatchMapping("/products/{productId}")
     public  ResponseEntity<Void> updateQuantity(@PathVariable("productId")UUID productId,@RequestBody Integer quantity){
-        var product = productService.findEntityById(productId);
+        var product = productService.findById(productId);
 
         if(quantity >= 0){
             service.increaseStock(product, quantity);

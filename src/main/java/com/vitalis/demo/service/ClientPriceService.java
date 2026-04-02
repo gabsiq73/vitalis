@@ -22,7 +22,7 @@ public class ClientPriceService {
     @Transactional
     public ClientPrice save(UUID clientId, UUID productId, BigDecimal customPrice) {
         Client client = service.findById(clientId);
-        Product product = productService.findEntityById(productId);
+        Product product = productService.findById(productId);
 
         // Busca se já existe um preço especial para esse par Cliente/Produto
         ClientPrice cp = clientPriceRepository.findByClientAndProduct(client, product)

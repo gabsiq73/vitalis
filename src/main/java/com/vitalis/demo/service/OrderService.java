@@ -39,7 +39,7 @@ public class OrderService {
     @Transactional
     public Order createOrder(OrderRequestDTO dto){
         Client client = clientService.findById(dto.clientId());
-        Product product = productService.findEntityById(dto.productId());
+        Product product = productService.findById(dto.productId());
         BigDecimal finalUnitPrice = calculateFinalPrice(client, product, dto.isDelivery());
 
         Order order = new Order();

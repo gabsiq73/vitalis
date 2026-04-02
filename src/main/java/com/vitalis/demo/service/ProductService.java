@@ -1,13 +1,12 @@
 package com.vitalis.demo.service;
 
-import com.vitalis.demo.dto.request.ProductRequestDTO;
-import com.vitalis.demo.dto.response.ProductResponseDTO;
 import com.vitalis.demo.dto.update.ProductUpdateDTO;
 import com.vitalis.demo.infra.exception.BusinessException;
 import com.vitalis.demo.mapper.ProductMapper;
 import com.vitalis.demo.model.Product;
 import com.vitalis.demo.repository.ClientPriceRepository;
 import com.vitalis.demo.repository.ProductRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -48,21 +47,21 @@ public class ProductService {
 
     @Transactional
     public void delete(UUID id){
-        Product product = findEntityById(id);
+        Product product = findById(id);
         repository.delete(product);
     }
 
 
     @Transactional
     public void update(UUID id, ProductUpdateDTO dto){
-        Product product = findEntityById(id);
+        Product product = findById(id);
         productMapper.updateEntityFromDto(dto, product);
         repository.save(product);
     }
 
-    public Product findEntityById(UUID id) {
-        return repository.findById(id)
-                .orElseThrow(() -> new BusinessException("Produto não encontrado!"));
+    public Product findById(UUID id) {
+        return findByIdController(id)
+                .orElseThrow(() -> new EntityNotFoundException("Produto com ID: " +id+ " não encontrado!"));
     }
 
 }
