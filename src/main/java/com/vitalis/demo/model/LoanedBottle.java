@@ -29,14 +29,14 @@ public class LoanedBottle {
     @Column(name = "LB_id")
     private UUID id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "PROD_id", nullable = false)
     private Product product;
 
     @Column(name = "LB_qtd")
     private Integer quantity;
     
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "CLI_id", nullable = false)
     private Client client;
 
