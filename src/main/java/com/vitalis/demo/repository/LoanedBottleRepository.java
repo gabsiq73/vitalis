@@ -3,6 +3,8 @@ package com.vitalis.demo.repository;
 import com.vitalis.demo.model.Client;
 import com.vitalis.demo.model.LoanedBottle;
 import com.vitalis.demo.model.enums.LoanStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -14,7 +16,7 @@ public interface LoanedBottleRepository extends JpaRepository<LoanedBottle, UUID
 
     List<LoanedBottle> findByLoanStatus(LoanStatus status);
 
-    List<LoanedBottle> findByClient_IdAndLoanStatus(UUID clientId, LoanStatus status);
+    Page<LoanedBottle> findByClient_IdAndLoanStatus(UUID clientId, LoanStatus status, Pageable pageable);
 
-    List<LoanedBottle> findByReturnDateIsNull();
+    Page<LoanedBottle> findByReturnDateIsNull(Pageable pageable);
 }

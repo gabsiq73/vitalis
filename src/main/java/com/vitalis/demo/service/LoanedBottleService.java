@@ -1,19 +1,17 @@
 package com.vitalis.demo.service;
 
-import com.vitalis.demo.dto.response.ProductResponseDTO;
 import com.vitalis.demo.infra.exception.BusinessException;
-import com.vitalis.demo.model.Client;
 import com.vitalis.demo.model.LoanedBottle;
-import com.vitalis.demo.model.Product;
 import com.vitalis.demo.model.enums.LoanStatus;
 import com.vitalis.demo.repository.LoanedBottleRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -37,7 +35,7 @@ public class LoanedBottleService {
     }
 
     @Transactional
-    public void save(LoanedBottle loanedBottle){
+    public LoanedBottle save(LoanedBottle loanedBottle){
         if(loanedBottle.getQuantity() != null && loanedBottle.getQuantity() <= 0){
             throw new BusinessException("A quantidade deve ser maior que zero!");
         }
@@ -49,7 +47,7 @@ public class LoanedBottleService {
             }
         }
 
-        repository.save(loanedBottle);
+        return repository.save(loanedBottle);
     }
 
     @Transactional
@@ -68,18 +66,25 @@ public class LoanedBottleService {
 
     // Lista os garrafões emprestados que um cliente especifico tem
     @Transactional(readOnly = true)
-    public List<LoanedBottle> listPendingLoansByClient(UUID clientId){
-        return repository.findByClient_IdAndLoanStatus(clientId, LoanStatus.LOANED);
+    public Page<LoanedBottle> listPendingByClient(UUID clientId, Pageable pageable){
+        return repository.findByClient_IdAndLoanStatus(clientId, LoanStatus.LOANED, pageable);
     }
 
     // Lista de todos os garrafões emprestados
     @Transactional(readOnly = true)
-    public List<LoanedBottle> findAllPendingReturns(){
-        List<LoanedBottle> pendingBottles =  repository.findByReturnDateIsNull();
-        if(pendingBottles.isEmpty()){
-            return Collections.emptyList();
+    public Page<LoanedBottle> findAllPendingReturns(Pageable pageable){
+        return repository.findByReturnDateIsNull(pageable);
+    }
+
+    @Transactional
+    public void delete(UUID id){
+        LoanedBottle lb = findById(id);
+
+        if(lb.getLoanStatus() == LoanStatus.RETURNED){
+            throw new BusinessException("Não é possível deletar um registro que já foi devolvido!");
         }
-        return pendingBottles;
+
+        repository.delete(lb);
     }
 
 }
