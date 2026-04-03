@@ -1,40 +1,28 @@
 package com.vitalis.demo.mapper;
 
 
+import com.vitalis.demo.dto.request.OrderRequestDTO;
 import com.vitalis.demo.dto.response.OrderResponseDTO;
 import com.vitalis.demo.model.Order;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.Named;
+import java.util.List;
 
-import java.math.BigDecimal;
-
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = {OrderItemMapper.class})
 public interface OrderMapper {
 
-    @Mapping(target = "clientName", source = "client.name")
-    @Mapping(target = "productName", source = "order", qualifiedByName = "getProductName")
-    @Mapping(target = "quantity", source = "order", qualifiedByName = "getQuantity")
-    @Mapping(target = "unitPrice", source = "order", qualifiedByName = "getUnitPrice")
+    // Converte a Entity para o DTO de Resposta (GET)
     @Mapping(target = "totalValue", expression = "java(order.getTotalValue())")
+    @Mapping(target = "clientId", source = "client.id")
+    @Mapping(target = "clientName", source = "client.name")
     OrderResponseDTO toResponseDTO(Order order);
 
+    // Converte o DTO de Criação para a Entity (POST)
+    // O MapStruct usará o OrderItemMapper automaticamente para a lista de itens
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "items", source = "items")
+    Order toEntity(OrderRequestDTO dto);
 
-    @Named("getProductName")
-    default String getProductName(Order order) {
-        if (order.getItems() == null || order.getItems().isEmpty()) return null;
-        return order.getItems().get(0).getProduct().getName();
-    }
-
-    @Named("getQuantity")
-    default Integer getQuantity(Order order) {
-        if (order.getItems() == null || order.getItems().isEmpty()) return null;
-        return order.getItems().get(0).getQuantity();
-    }
-
-    @Named("getUnitPrice")
-    default BigDecimal getUnitPrice(Order order) {
-        if (order.getItems() == null || order.getItems().isEmpty()) return null;
-        return order.getItems().get(0).getUnitPrice();
-    }
+    // Converte listas inteiras de uma vez
+    List<OrderResponseDTO> toResponseDTOList(List<Order> orders);
 }
