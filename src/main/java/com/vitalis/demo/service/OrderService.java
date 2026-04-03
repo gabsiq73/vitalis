@@ -22,6 +22,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -37,6 +38,12 @@ public class OrderService {
     private final GasSettlementRepository gasSettlementRepository;
     private final GasSupplierService gasSupplierService;
     private final GasSettlementService gasSettlementService;
+
+    @Transactional(readOnly = true)
+    public Optional<Order> findById(UUID id) {
+        return repository.findById(id);
+    }
+
 
     @Transactional(readOnly = true)
     public Page<Order> listOrders(Pageable pageable) {
@@ -93,6 +100,7 @@ public class OrderService {
             stockService.decreaseStock(item.getProduct(), item.getQuantity());
         });
 
+        order.setDeliveryDate(LocalDateTime.now());
         order.setStatus(OrderStatus.DELIVERED);
         repository.save(order);
     }

@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.UUID;
+
 
 @RestController
 @RequiredArgsConstructor
@@ -22,6 +24,15 @@ public class OrderController {
 
     private final OrderService orderService;
     private final OrderMapper orderMapper;
+
+    @GetMapping("{id}")
+    public ResponseEntity<OrderResponseDTO> getById(@PathVariable("id") UUID id){
+        return orderService.findById(id)
+                .map(order -> {
+                    OrderResponseDTO dto = orderMapper.toResponseDTO(order);
+                    return ResponseEntity.ok(dto);
+                }).orElseGet(() -> ResponseEntity.notFound().build());
+    }
 
     @GetMapping
     public ResponseEntity<Page<OrderResponseDTO>> listOrders(
@@ -36,5 +47,11 @@ public class OrderController {
         Order order = orderService.createOrder(dto);
         OrderResponseDTO response = orderMapper.toResponseDTO(order);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PatchMapping("/{id}/confirm-delivery")
+    public ResponseEntity<Void> confirmDelivery(@PathVariable UUID id){
+        orderService.confirmDelivery(id);
+        return ResponseEntity.noContent().build();
     }
 }

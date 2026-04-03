@@ -14,7 +14,6 @@ public record OrderRequestDTO(
         UUID productId,
         @NotNull(message = "Campo obrigatório!")
         Integer quantity,
-        @NotNull(message = "Campo obrigatório!")
         LocalDateTime deliveryDate,
         Boolean isDelivery,
         LocalDate bottleExpiration,
