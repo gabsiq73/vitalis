@@ -15,6 +15,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -35,6 +37,11 @@ public class OrderService {
     private final GasSettlementRepository gasSettlementRepository;
     private final GasSupplierService gasSupplierService;
     private final GasSettlementService gasSettlementService;
+
+    @Transactional(readOnly = true)
+    public Page<Order> listOrders(Pageable pageable) {
+        return repository.findAll(pageable);
+    }
 
     @Transactional
     public Order createOrder(OrderRequestDTO dto){
