@@ -1,13 +1,14 @@
 package com.vitalis.demo.service;
 
+import com.vitalis.demo.dto.request.OrderItemRequestDTO;
 import com.vitalis.demo.dto.request.OrderRequestDTO;
+import com.vitalis.demo.dto.request.OrderRequestDTOv2;
 import com.vitalis.demo.dto.response.DailyReportDTO;
+import com.vitalis.demo.dto.response.OrderResponseDTO;
 import com.vitalis.demo.infra.exception.BusinessException;
+import com.vitalis.demo.mapper.OrderMapper;
 import com.vitalis.demo.model.*;
-import com.vitalis.demo.model.enums.ClientType;
-import com.vitalis.demo.model.enums.Method;
-import com.vitalis.demo.model.enums.OrderStatus;
-import com.vitalis.demo.model.enums.ProductType;
+import com.vitalis.demo.model.enums.*;
 import com.vitalis.demo.repository.GasSettlementRepository;
 import com.vitalis.demo.repository.OrderItemRepository;
 import com.vitalis.demo.repository.OrderRepository;
@@ -21,9 +22,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -38,6 +38,7 @@ public class OrderService {
     private final GasSettlementRepository gasSettlementRepository;
     private final GasSupplierService gasSupplierService;
     private final GasSettlementService gasSettlementService;
+    private final OrderMapper orderMapper;
 
     @Transactional(readOnly = true)
     public Optional<Order> findById(UUID id) {
@@ -81,6 +82,74 @@ public class OrderService {
         processOrderItem(savedItem, dto.receivedByUs(), dto.gasCostPrice());
 
         return savedOrder;
+    }
+
+    @Transactional
+    public List<OrderResponseDTO> createOrders(OrderRequestDTOv2 dto) {
+        Client client = clientService.findById(dto.clientId());
+
+        // TRUE para Gás, FALSE para o resto
+        Map<Boolean, List<OrderItemRequestDTO>> partitionedItems = dto.items().stream()
+                .collect(Collectors.partitioningBy(item ->
+                        productService.findById(item.productId()).getType() == ProductType.GAS
+                ));
+
+        List<Order> ordersToSave = new ArrayList<>();
+
+        // Produtos normais (Água, etc)
+        if (!partitionedItems.get(false).isEmpty()) {
+            ordersToSave.add(prepareSubOrder(client, dto, partitionedItems.get(false), false));
+        }
+
+        // Somente Gás
+        if (!partitionedItems.get(true).isEmpty()) {
+            ordersToSave.add(prepareSubOrder(client, dto, partitionedItems.get(true), true));
+        }
+
+        List<Order> savedOrders = ordersToSave.stream().map(order -> {
+            Order saved = repository.save(order);
+
+            saved.getItems().forEach(item -> {
+                OrderItemRequestDTO originalDto = dto.items().stream()
+                        .filter(i -> i.productId().equals(item.getProduct().getId()))
+                        .findFirst()
+                        .orElseThrow();
+
+                processOrderItem(item, originalDto.receivedByUs(), originalDto.gasCostPrice());
+            });
+
+            return saved;
+        }).toList();
+
+        return orderMapper.toResponseDTOList(savedOrders);
+    }
+
+    private Order prepareSubOrder(Client client, OrderRequestDTOv2 dto, List<OrderItemRequestDTO> items, boolean isGas) {
+        Order order = new Order();
+        order.setClient(client);
+        order.setDeliveryDate(dto.deliveryDate());
+        order.setStatus(OrderStatus.PENDING);
+        order.setPaymentStatus(PaymentStatus.PENDING);
+
+        for (OrderItemRequestDTO itemDto : items) {
+            Product product = productService.findById(itemDto.productId());
+            BigDecimal finalPrice = calculateFinalPrice(client, product, dto.isDelivery());
+
+            OrderItem item = new OrderItem();
+            item.setProduct(product);
+            item.setQuantity(itemDto.quantity());
+            item.setUnitPrice(finalPrice);
+            item.setBottleExpiration(itemDto.bottleExpiration());
+
+            if (isGas) {
+                if (itemDto.supplierId() == null) throw new BusinessException("Fornecedor obrigatório para gás!");
+                item.setGasSupplier(gasSupplierService.findById(itemDto.supplierId()));
+            }
+
+            order.addItem(item); // O seu método addItem já seta item.setOrder(this)
+        }
+
+        return order;
     }
 
     @Transactional

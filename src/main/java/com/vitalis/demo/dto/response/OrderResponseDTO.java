@@ -5,18 +5,19 @@ import com.vitalis.demo.model.enums.PaymentStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 public record OrderResponseDTO(
         UUID id,
-        String clientName,
-        String productName,
-        Integer quantity,
-        BigDecimal unitPrice,
-        BigDecimal totalValue,
+        LocalDateTime deliveryDate,
         OrderStatus status,
         PaymentStatus paymentStatus,
-        LocalDateTime deliveryDate,
+        UUID clientId,
+        String clientName,
+
+        List<OrderItemResponseDTO> items,
+
+        BigDecimal totalValue,
         LocalDateTime createDate
 ) {}
-
