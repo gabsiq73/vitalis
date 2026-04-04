@@ -12,8 +12,8 @@ public record OrderRequestDTOv2(
         UUID clientId,
         @NotEmpty(message = "Campo obrigatório!")
         List<OrderItemRequestDTO> items,
-        @NotNull(message = "Campo obrigatório!")
         LocalDateTime deliveryDate,
+        @NotNull(message = "Campo obrigatório!")
         Boolean isDelivery
 ) {
 }
