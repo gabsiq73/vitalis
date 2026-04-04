@@ -45,11 +45,16 @@ public class OrderService {
         return repository.findById(id);
     }
 
-
     @Transactional(readOnly = true)
     public Page<Order> listOrders(Pageable pageable) {
         return repository.findAll(pageable);
     }
+
+    @Transactional(readOnly = true)
+    public List<Order> listActiveOrders(){
+        return repository.findByStatus(OrderStatus.SHIPPED);
+    }
+
 
     @Transactional
     public Order createOrder(OrderRequestDTO dto){
@@ -124,6 +129,7 @@ public class OrderService {
         return orderMapper.toResponseDTOList(savedOrders);
     }
 
+    // Método para instanciar pedido
     private Order prepareSubOrder(Client client, OrderRequestDTOv2 dto, List<OrderItemRequestDTO> items, boolean isGas) {
         Order order = new Order();
         order.setClient(client);

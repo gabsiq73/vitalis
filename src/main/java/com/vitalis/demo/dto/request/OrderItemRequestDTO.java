@@ -10,11 +10,11 @@ import java.util.UUID;
 public record OrderItemRequestDTO(
         @NotNull(message = "Campo obrigatório!")
         UUID productId,
-        @Min(value = 1, message = "voc~e deve adicionar pelo menos 1 item" )
+        @Min(value = 1, message = "você deve adicionar pelo menos 1 item" )
         Integer quantity,
         LocalDate bottleExpiration,
 
         UUID supplierId,            // Se for gás
         BigDecimal gasCostPrice,    // Se for gás
-        boolean receivedByUs        // Lógica do seu acerto
+        Boolean receivedByUs        // Lógica do seu acerto
 ) {}

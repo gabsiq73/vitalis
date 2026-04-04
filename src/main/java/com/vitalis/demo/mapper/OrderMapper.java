@@ -2,6 +2,7 @@ package com.vitalis.demo.mapper;
 
 
 import com.vitalis.demo.dto.request.OrderRequestDTO;
+import com.vitalis.demo.dto.request.OrderRequestDTOv2;
 import com.vitalis.demo.dto.response.OrderResponseDTO;
 import com.vitalis.demo.model.Order;
 import org.mapstruct.Mapper;
@@ -21,7 +22,7 @@ public interface OrderMapper {
     // O MapStruct usará o OrderItemMapper automaticamente para a lista de itens
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "items", source = "items")
-    Order toEntity(OrderRequestDTO dto);
+    Order toEntity(OrderRequestDTOv2 dto);
 
     // Converte listas inteiras de uma vez
     List<OrderResponseDTO> toResponseDTOList(List<Order> orders);

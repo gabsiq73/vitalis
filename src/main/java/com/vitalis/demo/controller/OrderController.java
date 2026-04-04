@@ -1,9 +1,10 @@
 package com.vitalis.demo.controller;
 
-import com.vitalis.demo.dto.request.OrderRequestDTO;
+import com.vitalis.demo.dto.request.OrderRequestDTOv2;
 import com.vitalis.demo.dto.response.OrderResponseDTO;
 import com.vitalis.demo.mapper.OrderMapper;
 import com.vitalis.demo.model.Order;
+import com.vitalis.demo.model.enums.OrderStatus;
 import com.vitalis.demo.service.OrderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
 import java.util.UUID;
 
 
@@ -42,15 +44,28 @@ public class OrderController {
         return ResponseEntity.ok(pageDTO);
     }
 
+    @GetMapping("/active")
+    public ResponseEntity<List<OrderResponseDTO>> listOrdersDelivered(){
+        List<Order> orderList = orderService.listActiveOrders();
+        List<OrderResponseDTO> dto = orderList.stream().map(orderMapper::toResponseDTO).toList();
+        return ResponseEntity.ok(dto);
+    }
+
     @PostMapping
-    public ResponseEntity<OrderResponseDTO> create(@RequestBody @Valid OrderRequestDTO dto) {
-        Order order = orderService.createOrder(dto);
-        OrderResponseDTO response = orderMapper.toResponseDTO(order);
+    public ResponseEntity<List<OrderResponseDTO>> create(@RequestBody @Valid OrderRequestDTOv2 dto) {
+        List<OrderResponseDTO> response = orderService.createOrders(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<Void> updateStatus(@PathVariable("id") UUID id, @RequestBody String status){
+        orderService.updateStatus(id, OrderStatus.valueOf(status));
+        return ResponseEntity.noContent().build();
+    }
+
+
     @PatchMapping("/{id}/confirm-delivery")
-    public ResponseEntity<Void> confirmDelivery(@PathVariable UUID id){
+    public ResponseEntity<Void> confirmDelivery(@PathVariable("id") UUID id){
         orderService.confirmDelivery(id);
         return ResponseEntity.noContent().build();
     }
