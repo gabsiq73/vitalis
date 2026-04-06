@@ -1,7 +1,9 @@
 package com.vitalis.demo.service;
 
 import com.vitalis.demo.dto.response.GasSettlementReportDTO;
+import com.vitalis.demo.dto.response.GasSettlementResponseDTO;
 import com.vitalis.demo.infra.exception.BusinessException;
+import com.vitalis.demo.mapper.GasSettlementMapper;
 import com.vitalis.demo.model.GasSettlement;
 import com.vitalis.demo.model.OrderItem;
 import com.vitalis.demo.model.enums.SettlementType;
@@ -23,6 +25,7 @@ import java.util.UUID;
 public class GasSettlementService {
 
     private final GasSettlementRepository repository;
+    private final GasSettlementMapper mapper;
 
     @Transactional(readOnly = true)
     public List<GasSettlement> findAll() {
@@ -39,7 +42,6 @@ public class GasSettlementService {
         return findByIdController(id)
                 .orElseThrow(() -> new BusinessException("Acerto de gás não encontrado!"));
     }
-    
 
     @Transactional
     public void createAutomatedSettlement(OrderItem item, boolean receivedByUs, BigDecimal costPrice){
@@ -90,7 +92,8 @@ public class GasSettlementService {
 
         BigDecimal netBalance = toPay.subtract(toReceive);
 
-        return new GasSettlementReportDTO(supplierName, toPay, toReceive, netBalance, settlements);
+        List<GasSettlementResponseDTO> detailsDTO = mapper.toResponseDTOList(settlements);
+        return new GasSettlementReportDTO(supplierName, toPay, toReceive, netBalance, detailsDTO);
     }
 
     // Método para dar baixa em todos os acertos de uma vez só
