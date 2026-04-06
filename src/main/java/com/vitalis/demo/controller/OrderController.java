@@ -45,7 +45,7 @@ public class OrderController {
     }
 
     @GetMapping("/active")
-    public ResponseEntity<List<OrderResponseDTO>> listOrdersDelivered(){
+    public ResponseEntity<List<OrderResponseDTO>> listActiveOrders(){
         List<Order> orderList = orderService.listActiveOrders();
         List<OrderResponseDTO> dto = orderList.stream().map(orderMapper::toResponseDTO).toList();
         return ResponseEntity.ok(dto);

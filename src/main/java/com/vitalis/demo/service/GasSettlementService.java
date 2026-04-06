@@ -1,6 +1,6 @@
 package com.vitalis.demo.service;
 
-import com.vitalis.demo.dto.response.GasSupplierReportDTO;
+import com.vitalis.demo.dto.response.GasSettlementReportDTO;
 import com.vitalis.demo.infra.exception.BusinessException;
 import com.vitalis.demo.model.GasSettlement;
 import com.vitalis.demo.model.OrderItem;
@@ -56,7 +56,7 @@ public class GasSettlementService {
 
 
     @Transactional(readOnly = true)
-    public GasSupplierReportDTO generateReportBySupplier(UUID supplierId, LocalDateTime start, LocalDateTime end){
+    public GasSettlementReportDTO generateReportBySupplier(UUID supplierId, LocalDateTime start, LocalDateTime end){
        List<GasSettlement> settlements = repository.findByGasSupplier_IdAndSettledFalseAndCreateDateBetween(supplierId, start, end);
 
        if(settlements.isEmpty()){
@@ -78,7 +78,7 @@ public class GasSettlementService {
 
        BigDecimal netBalance = toPay.subtract(toReceive);
 
-       return new GasSupplierReportDTO(supplierName, toPay, toReceive, netBalance, settlements);
+       return new GasSettlementReportDTO(supplierName, toPay, toReceive, netBalance, settlements);
     }
 
     // Método para dar baixar em todos os acertos de uma vez só

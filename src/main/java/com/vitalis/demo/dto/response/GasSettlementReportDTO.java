@@ -5,7 +5,7 @@ import com.vitalis.demo.model.GasSettlement;
 import java.math.BigDecimal;
 import java.util.List;
 
-public record GasSupplierReportDTO(
+public record GasSettlementReportDTO(
         String supplierName,
         BigDecimal totalToPay,  // Soma de todos os acertos com status de YOU_OWE
         BigDecimal totalToReceive, // Soma de todos os acertos com status de SUPPLIER_OWE
@@ -13,3 +13,4 @@ public record GasSupplierReportDTO(
         List<GasSettlement> details // Lista detalhada para conferencia
 ) {
 }
+
