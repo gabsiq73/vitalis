@@ -48,4 +48,10 @@ public class GasSettlementController {
         settlementService.settledAllBySupplier(supplierId, start, end);
         return ResponseEntity.noContent().build();
     }
+
+    @PatchMapping("/{id}/settle")
+    public ResponseEntity<Void> settleOne(@PathVariable UUID id){
+        settlementService.markAsSettled(id);
+        return ResponseEntity.noContent().build();
+    }
 }

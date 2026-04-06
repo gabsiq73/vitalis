@@ -123,6 +123,10 @@ public class GasSettlementService {
         GasSettlement settlement = repository.findById(settlementId)
                 .orElseThrow(() -> new BusinessException("Acerto não encontrado!"));
 
+        if(Boolean.TRUE.equals(settlement.getSettled())){
+            throw new BusinessException("Este acerto já foi liquidado!");
+        }
+
         settlement.setSettled(true);
         settlement.setSettledDate(LocalDateTime.now());
         repository.save(settlement);
