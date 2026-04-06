@@ -11,8 +11,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -27,10 +30,16 @@ public class GasSettlementService {
     }
 
     @Transactional(readOnly = true)
-    public GasSettlement findById(UUID id) {
-        return repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Acerto de Gás não encontrado"));
+    public Optional<GasSettlement> findByIdController(UUID id){
+        return repository.findById(id);
     }
+
+    @Transactional(readOnly = true)
+    public GasSettlement findById(UUID id) {
+        return findByIdController(id)
+                .orElseThrow(() -> new BusinessException("Acerto de gás não encontrado!"));
+    }
+    
 
     @Transactional
     public void createAutomatedSettlement(OrderItem item, boolean receivedByUs, BigDecimal costPrice){
@@ -40,12 +49,12 @@ public class GasSettlementService {
         settlement.setSettled(false);
 
         if (receivedByUs) {
-            // Dinheiro no depósito -> Devemos o custo
+            // Dinheiro no depósito -> Devemos o custo ao fornecedor
             settlement.setAmount(costPrice);
             settlement.setSettlementType(SettlementType.YOU_OWE);
         }
         else{
-            // Dinheiro com entregador -> Devemos receber o lucro
+            // Dinheiro com entregador -> Devemos receber o lucro (comissão)
             BigDecimal profit = item.getUnitPrice().subtract(costPrice);
             settlement.setAmount(profit);
             settlement.setSettlementType(SettlementType.SUPPLIER_OWE);
@@ -54,51 +63,63 @@ public class GasSettlementService {
         repository.save(settlement);
     }
 
-
     @Transactional(readOnly = true)
-    public GasSettlementReportDTO generateReportBySupplier(UUID supplierId, LocalDateTime start, LocalDateTime end){
-       List<GasSettlement> settlements = repository.findByGasSupplier_IdAndSettledFalseAndCreateDateBetween(supplierId, start, end);
+    public GasSettlementReportDTO generateReportBySupplier(UUID supplierId, LocalDate start, LocalDate end){
+        // Garante que o intervalo pegue do primeiro segundo do início ao último segundo do fim
+        LocalDateTime startDt = start.atStartOfDay();
+        LocalDateTime endDt = end.atTime(LocalTime.MAX);
 
-       if(settlements.isEmpty()){
-           throw new BusinessException("Não há acertos pendentes para esta distribuidora!");
-       }
-
-       String supplierName = settlements.getFirst().getGasSupplier().getName();
-       BigDecimal toPay = BigDecimal.ZERO;
-       BigDecimal toReceive = BigDecimal.ZERO;
-
-       for(GasSettlement gs: settlements){
-           if(gs.getSettlementType() == SettlementType.YOU_OWE){
-               toPay = toPay.add(gs.getAmount());
-           }
-           else{
-               toReceive = toReceive.add(gs.getAmount());
-           }
-       }
-
-       BigDecimal netBalance = toPay.subtract(toReceive);
-
-       return new GasSettlementReportDTO(supplierName, toPay, toReceive, netBalance, settlements);
-    }
-
-    // Método para dar baixar em todos os acertos de uma vez só
-    @Transactional
-    public void settledAllBySupplier(UUID supplierId, LocalDateTime start, LocalDateTime end){
-        List<GasSettlement> settlements = repository.findByGasSupplier_IdAndSettledFalseAndCreateDateBetween(supplierId, start, end);
+        List<GasSettlement> settlements = repository.findByGasSupplier_IdAndSettledFalseAndCreateDateBetween(supplierId, startDt, endDt);
 
         if(settlements.isEmpty()){
-            throw new BusinessException("Não há acertos pendentes para esta distribuidora!");
+            throw new BusinessException("Não há acertos pendentes para esta distribuidora neste período!");
         }
 
-        settlements.forEach(s -> s.setSettled(true));
+        String supplierName = settlements.getFirst().getGasSupplier().getName();
+        BigDecimal toPay = BigDecimal.ZERO;
+        BigDecimal toReceive = BigDecimal.ZERO;
+
+        for(GasSettlement gs: settlements){
+            if(gs.getSettlementType() == SettlementType.YOU_OWE){
+                toPay = toPay.add(gs.getAmount());
+            }
+            else{
+                toReceive = toReceive.add(gs.getAmount());
+            }
+        }
+
+        BigDecimal netBalance = toPay.subtract(toReceive);
+
+        return new GasSettlementReportDTO(supplierName, toPay, toReceive, netBalance, settlements);
+    }
+
+    // Método para dar baixa em todos os acertos de uma vez só
+    @Transactional
+    public void settledAllBySupplier(UUID supplierId, LocalDate start, LocalDate end){
+        LocalDateTime startDt = start.atStartOfDay();
+        LocalDateTime endDt = end.atTime(LocalTime.MAX);
+
+        List<GasSettlement> settlements = repository.findByGasSupplier_IdAndSettledFalseAndCreateDateBetween(supplierId, startDt, endDt);
+
+        if(settlements.isEmpty()){
+            throw new BusinessException("Não há acertos pendentes para liquidar neste período!");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        settlements.forEach(s -> {
+            s.setSettled(true);
+            s.setSettledDate(now); // Registro da data do acerto
+        });
+
         repository.saveAll(settlements);
     }
 
-    // Metodo para dar baixa no acerto do gás
+    // Método para dar baixa individual no acerto do gás
     @Transactional
     public void markAsSettled(UUID settlementId){
         GasSettlement settlement = repository.findById(settlementId)
                 .orElseThrow(() -> new BusinessException("Acerto não encontrado!"));
+
         settlement.setSettled(true);
         settlement.setSettledDate(LocalDateTime.now());
         repository.save(settlement);
@@ -113,9 +134,8 @@ public class GasSettlementService {
     @Transactional
     public void deleteByOrderItem(OrderItem item){
         GasSettlement settlement = repository.findByOrderItem(item)
-                .orElseThrow(() -> new BusinessException("Item de pedido não encontrado!"));
+                .orElseThrow(() -> new BusinessException("Acerto vinculado a este item não encontrado!"));
 
         repository.delete(settlement);
     }
-
 }
