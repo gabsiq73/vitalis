@@ -1,12 +1,18 @@
 package com.vitalis.demo.service;
 
+import com.vitalis.demo.dto.update.GasSupplierUpdateDTO;
+import com.vitalis.demo.infra.exception.BusinessException;
+import com.vitalis.demo.mapper.GasSupplierMapper;
 import com.vitalis.demo.model.GasSupplier;
 import com.vitalis.demo.repository.GasSupplierRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -14,15 +20,21 @@ import java.util.UUID;
 public class GasSupplierService {
 
     private final GasSupplierRepository repository;
+    private final GasSupplierMapper gasSupplierMapper;
 
     @Transactional(readOnly = true)
-    public List<GasSupplier> findAll() {
-        return repository.findAll();
+    public Page<GasSupplier> findAll(Pageable pageable) {
+        return repository.findAll(pageable);
     }
     @Transactional(readOnly = true)
     public GasSupplier findById(UUID id) {
-        return repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Fornecedor de Gás não encontrado"));
+        return findByIdController(id)
+                .orElseThrow(() -> new BusinessException("Fornecedor não encontrado"));
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<GasSupplier> findByIdController(UUID id){
+        return repository.findById(id);
     }
 
     @Transactional
@@ -40,16 +52,9 @@ public class GasSupplierService {
     }
 
     @Transactional
-    public GasSupplier update(GasSupplier gasSupplier) {
-        GasSupplier supplier = findById(gasSupplier.getId());
-
-        if(gasSupplier.getName() != null && !gasSupplier.getName().isBlank()){
-            supplier.setName(gasSupplier.getName());
-        }
-        if(gasSupplier.getNotes() != null && !gasSupplier.getNotes().isBlank()){
-            supplier.setNotes(gasSupplier.getNotes());
-        }
-
+    public GasSupplier update(UUID id, GasSupplierUpdateDTO updateDTO) {
+        GasSupplier supplier = findById(id);
+        gasSupplierMapper.updateEntityFromDto(updateDTO, supplier);
         return repository.save(supplier);
     }
 

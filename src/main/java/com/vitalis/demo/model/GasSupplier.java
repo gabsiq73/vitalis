@@ -2,6 +2,7 @@ package com.vitalis.demo.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.DynamicUpdate;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -19,6 +20,7 @@ import java.util.UUID;
 @ToString
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @EntityListeners(AuditingEntityListener.class)
+@DynamicUpdate
 public class GasSupplier {
 
     @EqualsAndHashCode.Include
