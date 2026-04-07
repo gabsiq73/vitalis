@@ -1,5 +1,6 @@
 package com.vitalis.demo.mapper;
 
+import com.vitalis.demo.dto.request.PaymentRequestDTO;
 import com.vitalis.demo.dto.request.ProductRequestDTO;
 import com.vitalis.demo.dto.response.PaymentResponseDTO;
 import com.vitalis.demo.dto.response.ProductResponseDTO;
@@ -19,5 +20,5 @@ public interface PaymentMapper {
     @Mapping(source = "paymentMethod", target = "method")
     @Mapping(target = "order", ignore = true)
     @Mapping(target = "id", ignore = true)
-    Payment toEntity(ProductRequestDTO dto);
+    Payment toEntity(PaymentRequestDTO dto);
 }

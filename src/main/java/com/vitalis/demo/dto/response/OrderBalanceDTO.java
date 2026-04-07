@@ -1,0 +1,12 @@
+package com.vitalis.demo.dto.response;
+
+import java.math.BigDecimal;
+import java.util.UUID;
+
+public record OrderBalanceDTO(
+        UUID orderId,
+        BigDecimal totalValue,
+        BigDecimal paidValue,
+        BigDecimal remainingBalance
+) {
+}

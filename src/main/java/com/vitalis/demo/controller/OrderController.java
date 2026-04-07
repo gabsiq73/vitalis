@@ -29,7 +29,7 @@ public class OrderController {
 
     @GetMapping("{id}")
     public ResponseEntity<OrderResponseDTO> getById(@PathVariable("id") UUID id){
-        return orderService.findById(id)
+        return orderService.findByIdController(id)
                 .map(order -> {
                     OrderResponseDTO dto = orderMapper.toResponseDTO(order);
                     return ResponseEntity.ok(dto);

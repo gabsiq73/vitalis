@@ -6,6 +6,7 @@ import com.vitalis.demo.dto.update.GasSupplierUpdateDTO;
 import com.vitalis.demo.mapper.GasSupplierMapper;
 import com.vitalis.demo.model.GasSupplier;
 import com.vitalis.demo.service.GasSupplierService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,7 +26,7 @@ public class GasSupplierController {
     private final GasSupplierMapper gasSupplierMapper;
 
     @PostMapping
-    public ResponseEntity<GasSupplierResponseDTO> save(@RequestBody GasSupplierRequestDTO dto){
+    public ResponseEntity<GasSupplierResponseDTO> save(@RequestBody @Valid GasSupplierRequestDTO dto){
         GasSupplier gasSupplier = gasSupplierService.save(gasSupplierMapper.toEntity(dto));
         GasSupplierResponseDTO responseDTO = gasSupplierMapper.toResponseDTO(gasSupplier);
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDTO);
@@ -50,7 +51,7 @@ public class GasSupplierController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Void> update(@PathVariable UUID id,@RequestBody GasSupplierUpdateDTO updateDto){
+    public ResponseEntity<Void> update(@PathVariable UUID id,@RequestBody @Valid GasSupplierUpdateDTO updateDto){
         gasSupplierService.update(id, updateDto);
         return ResponseEntity.noContent().build();
     }

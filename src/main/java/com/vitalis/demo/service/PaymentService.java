@@ -1,5 +1,6 @@
 package com.vitalis.demo.service;
 
+import com.vitalis.demo.dto.response.OrderBalanceDTO;
 import com.vitalis.demo.dto.response.PaymentResponseDTO;
 import com.vitalis.demo.infra.exception.BusinessException;
 import com.vitalis.demo.mapper.PaymentMapper;
@@ -110,6 +111,22 @@ public class PaymentService {
         return repository.findByOrder_Id(orderId).stream()
                 .map(mapper::toResponseDTO)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public OrderBalanceDTO getOrderBalance(UUID orderId){
+        Order order = orderService.findById(orderId);
+
+        BigDecimal totalValue = calculateOrderTotalValue(order);
+        BigDecimal totalPaid = calculateTotalPaid(order);
+        BigDecimal remainingBalance = totalValue.subtract(totalPaid);
+
+        return new OrderBalanceDTO(
+                order.getId(),
+                totalValue,
+                totalPaid,
+                remainingBalance
+        );
     }
 
     private void processOrderFinancials(Order order) {
