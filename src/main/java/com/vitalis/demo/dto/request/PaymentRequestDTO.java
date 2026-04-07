@@ -1,5 +1,6 @@
 package com.vitalis.demo.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.vitalis.demo.model.enums.Method;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -11,6 +12,7 @@ import java.util.UUID;
 
 public record PaymentRequestDTO(
         @NotNull(message = "Campo obrigatório!")
+        @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
         LocalDateTime paymentDate,
         @NotNull(message = "Campo obrigatório!")
         BigDecimal amount,
