@@ -1,6 +1,5 @@
 package com.vitalis.demo.dto.response;
 
-import com.vitalis.demo.model.Payment;
 import com.vitalis.demo.model.enums.Method;
 
 import java.math.BigDecimal;
@@ -9,11 +8,10 @@ import java.util.UUID;
 
 public record PaymentResponseDTO(
         UUID id,
+        UUID orderId,
         LocalDateTime paymentDate,
         BigDecimal amount,
-        Method paymentMethod
+        Method paymentMethod,
+        String notes
 ) {
-    public static PaymentResponseDTO fromEntity(Payment payment){
-        return new PaymentResponseDTO(payment.getId(), payment.getDate(), payment.getAmount(), payment.getMethod());
-    }
 }

@@ -44,11 +44,7 @@ public class GasSupplierService {
             throw new IllegalArgumentException("O nome do fornecedor é obrigatório");
         }
 
-        GasSupplier newGasSupplier = new GasSupplier();
-        newGasSupplier.setName(gasSupplier.getName());
-        newGasSupplier.setNotes(gasSupplier.getNotes());
-
-        return repository.save(newGasSupplier);
+        return repository.save(gasSupplier);
     }
 
     @Transactional
@@ -60,8 +56,10 @@ public class GasSupplierService {
 
     @Transactional
     public void delete(UUID id) {
-        GasSupplier supplier = findById(id);
-        repository.delete(supplier);
+        if(!repository.existsById(id)){
+            throw new BusinessException("Fornecedor não encontrado!");
+        }
+        repository.deleteById(id);
     }
 
 }

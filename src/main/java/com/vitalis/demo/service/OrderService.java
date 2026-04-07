@@ -41,8 +41,14 @@ public class OrderService {
     private final OrderMapper orderMapper;
 
     @Transactional(readOnly = true)
-    public Optional<Order> findById(UUID id) {
+    public Optional<Order> findByIdController(UUID id) {
         return repository.findById(id);
+    }
+
+    @Transactional(readOnly = true)
+    public Order findById(UUID id){
+        return findByIdController(id)
+                .orElseThrow(() -> new BusinessException("Pedido com ID: "+ id +" não encontrado!"));
     }
 
     @Transactional(readOnly = true)
@@ -160,8 +166,7 @@ public class OrderService {
 
     @Transactional
     public void confirmDelivery(UUID orderId){
-        Order order = repository.findById(orderId)
-                .orElseThrow(() -> new BusinessException("Pedido não encontrado!"));
+        Order order = findById(orderId);
 
         if(order.getStatus() == OrderStatus.DELIVERED){
             throw new BusinessException("Este pedido Já foi entregue!");
@@ -182,8 +187,7 @@ public class OrderService {
 
     @Transactional
     public void updateStatus(UUID orderId, OrderStatus newStatus){
-        Order order = repository.findById(orderId)
-                .orElseThrow(() -> new BusinessException("Pedido não encontrado!"));
+        Order order = findById(orderId);
 
         order.setStatus(newStatus);
         repository.save(order);
@@ -191,8 +195,7 @@ public class OrderService {
 
     @Transactional
     public void cancelOrder(UUID orderId){
-        Order order = repository.findById(orderId)
-                .orElseThrow(() -> new BusinessException("Pedido não encontrado!"));
+        Order order = findById(orderId);
 
         if(order.getStatus() == OrderStatus.CANCELLED){
             throw new BusinessException("Este pedido já foi cancelado!");
