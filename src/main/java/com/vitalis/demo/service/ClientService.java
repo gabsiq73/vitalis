@@ -35,6 +35,12 @@ public class ClientService {
         return repository.findById(id);
     }
 
+    //Método atalho para uso interno no Service (Update, Delete, etc)
+    public Client findById(UUID id) {
+        return findByIdController(id)
+                .orElseThrow(() -> new EntityNotFoundException("Cliente com ID " + id + " não encontrado"));
+    }
+
     @Transactional(readOnly = true)
     public Page<Client> listClient(Pageable pageable){
         return repository.findAll(pageable);
@@ -42,8 +48,7 @@ public class ClientService {
 
     @Transactional
     public void delete(UUID id){
-        Client client = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("This Client ID doesnt exist"));
+        Client client = findById(id);
         repository.delete(client);
     }
 
@@ -78,6 +83,7 @@ public class ClientService {
         repository.save(client);
     }
 
+    @Transactional
     public BigDecimal processCustomerDebitBalance(UUID clientId){
         Client client = repository.findById(clientId)
                 .orElseThrow(() -> new BusinessException("Cliente não encontrado!"));
@@ -111,10 +117,5 @@ public class ClientService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-//    Método atalho para uso interno no Service (Update, Delete, etc)
-    public Client findById(UUID id) {
-        return findByIdController(id).orElseThrow(() ->
-                new EntityNotFoundException("Cliente com ID " + id + " não encontrado"));
-    }
 
 }
