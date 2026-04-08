@@ -1,6 +1,9 @@
 package com.vitalis.demo.service;
 
+import com.vitalis.demo.dto.update.UserUpdateDTO;
 import com.vitalis.demo.exceptions.VitalisException;
+import com.vitalis.demo.infra.exception.BusinessException;
+import com.vitalis.demo.mapper.UserMapper;
 import com.vitalis.demo.model.User;
 import com.vitalis.demo.model.enums.Role;
 import com.vitalis.demo.repository.UserRepository;
@@ -17,6 +20,7 @@ import java.util.UUID;
 public class UserService {
 
     private final UserRepository repository;
+    private final UserMapper mapper;
 
     @Transactional
     public User save(User user){
@@ -24,10 +28,14 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public User findById(String id){
-        UUID uuid = UUID.fromString(id);
-        return repository.findById(uuid)
-                .orElseThrow(() -> new VitalisException("Id de usuário não encontrado!"));
+    public User findById(UUID id){
+        return findByIdController(id)
+                .orElseThrow(() -> new BusinessException("Usuário de ID: "+ id+" não encontrado!"));
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<User> findByIdController(UUID id){
+        return repository.findById(id);
     }
 
     @Transactional(readOnly = true)
@@ -36,25 +44,15 @@ public class UserService {
     }
 
     @Transactional
-    public void update(User user){
-        if(user.getId() == null){
-            throw new VitalisException("ID não pode ser nulo em uma atualização!");
-        }
-
-        if(!repository.existsById(user.getId())){
-            throw new VitalisException("Usuário não encontrado!");
-        }
-
-       repository.save(user);
-
+    public void update(UUID id, UserUpdateDTO dto){
+        User user = findById(id);
+        mapper.updateEntityFromDto(dto, user);
+        repository.save(user);
     }
 
     @Transactional
     public void delete(UUID id){
-
-        User user = repository.findById(id)
-                .orElseThrow(() -> new VitalisException("Usuário não encontrado!"));
-
+        User user = findById(id);
         repository.delete(user);
     }
 
