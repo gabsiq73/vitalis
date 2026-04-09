@@ -1,8 +1,11 @@
 package com.vitalis.demo.controller;
 
+import com.vitalis.demo.dto.response.DailyReportDTO;
 import com.vitalis.demo.dto.response.FinancialReportDTO;
+import com.vitalis.demo.dto.response.InventoryFlowDTO;
 import com.vitalis.demo.service.FinancialService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,15 +21,26 @@ public class FinancialReportController {
 
     private final FinancialService financialService;
 
-    @GetMapping("/daily-summary")
-    public ResponseEntity<FinancialReportDTO> getDailyReport(@RequestParam LocalDate date){
-        FinancialReportDTO reportDTO = financialService.getDailyReport(date);
-        return ResponseEntity.ok(reportDTO);
+    @GetMapping("/performance")
+    public ResponseEntity<FinancialReportDTO> getPerformance(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)LocalDate start
+            , @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end){
+        return ResponseEntity.ok(financialService.getReport(start, end));
     }
 
-    @GetMapping
-    public ResponseEntity<FinancialReportDTO> getReport(@RequestParam LocalDate start, @RequestParam LocalDate end){
-        FinancialReportDTO reportDTO = financialService.getReport(start, end);
-        return ResponseEntity.ok(reportDTO);
+    @GetMapping("/performance/daily")
+    public ResponseEntity<FinancialReportDTO> getDailyPerformance(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date){
+        return ResponseEntity.ok(financialService.getDailyFinancialPerformance(date));
     }
+
+    @GetMapping("/inventory")
+    public ResponseEntity<InventoryFlowDTO> getInventoryFlow(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date){
+        return ResponseEntity.ok(financialService.getInventoryFlow(date));
+    }
+
+    @GetMapping("/operational")
+    public ResponseEntity<DailyReportDTO> getOperational(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start
+            , @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end){
+        return ResponseEntity.ok(financialService.getOperationalSummary(start, end));
+    }
+
 }
