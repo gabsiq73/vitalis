@@ -3,6 +3,7 @@ package com.vitalis.demo.repository;
 import com.vitalis.demo.model.Client;
 import com.vitalis.demo.model.enums.ClientType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 import java.util.Optional;

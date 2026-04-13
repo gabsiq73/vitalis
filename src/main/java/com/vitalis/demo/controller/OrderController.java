@@ -1,5 +1,6 @@
 package com.vitalis.demo.controller;
 
+import com.vitalis.demo.dto.request.GasFinancialInfoRequest;
 import com.vitalis.demo.dto.request.OrderRequestDTOv2;
 import com.vitalis.demo.dto.response.OrderResponseDTO;
 import com.vitalis.demo.mapper.OrderMapper;
@@ -16,6 +17,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 
@@ -53,10 +55,12 @@ public class OrderController {
 
     @PostMapping
     public ResponseEntity<List<OrderResponseDTO>> create(@RequestBody @Valid OrderRequestDTOv2 dto) {
-        List<OrderResponseDTO> response = orderService.createOrders(dto);
+        Order prototype = orderMapper.toEntity(dto);
+        Map<UUID, GasFinancialInfoRequest> financialMap = orderMapper.extractFinancialInfo(dto);
+
+        List<OrderResponseDTO> response = orderService.createOrders(prototype, financialMap, dto.isDelivery());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
-
     @PatchMapping("/{id}/status")
     public ResponseEntity<Void> updateStatus(@PathVariable("id") UUID id, @RequestBody String status){
         orderService.updateStatus(id, OrderStatus.valueOf(status));
