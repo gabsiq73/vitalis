@@ -6,6 +6,7 @@ import com.vitalis.demo.dto.request.OrderItemRequestDTO;
 import com.vitalis.demo.dto.request.OrderRequestDTOv2;
 import com.vitalis.demo.dto.response.OrderResponseDTO;
 import com.vitalis.demo.model.Order;
+import com.vitalis.demo.model.OrderItem;
 import com.vitalis.demo.repository.ClientRepository;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.Mapper;
@@ -31,6 +32,13 @@ public abstract class OrderMapper {
     public abstract Order toEntity(OrderRequestDTOv2 dto);
 
     public abstract List<OrderResponseDTO> toResponseDTOList(List<Order> orders);
+
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "items", ignore = true)
+    @Mapping(target = "client", ignore = true)
+    @Mapping(target = "status", ignore = true)
+    @Mapping(target = "createDate", ignore = true)
+    public abstract void updateEntityFromDto(OrderRequestDTOv2 dto, @MappingTarget Order order);
 
     // Isso garante a integridade do relacionamento bi-direcional
     @AfterMapping

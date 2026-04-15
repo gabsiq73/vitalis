@@ -3,8 +3,10 @@ package com.vitalis.demo.controller;
 import com.vitalis.demo.dto.request.GasFinancialInfoRequest;
 import com.vitalis.demo.dto.request.OrderRequestDTOv2;
 import com.vitalis.demo.dto.response.OrderResponseDTO;
+import com.vitalis.demo.mapper.OrderItemMapper;
 import com.vitalis.demo.mapper.OrderMapper;
 import com.vitalis.demo.model.Order;
+import com.vitalis.demo.model.OrderItem;
 import com.vitalis.demo.model.enums.OrderStatus;
 import com.vitalis.demo.service.OrderService;
 import jakarta.validation.Valid;
@@ -28,6 +30,7 @@ public class OrderController {
 
     private final OrderService orderService;
     private final OrderMapper orderMapper;
+    private final OrderItemMapper orderItemMapper;
 
     @GetMapping("{id}")
     public ResponseEntity<OrderResponseDTO> getById(@PathVariable("id") UUID id){
@@ -61,6 +64,29 @@ public class OrderController {
         List<OrderResponseDTO> response = orderService.createOrders(prototype, financialMap, dto.isDelivery());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<OrderResponseDTO> update(
+            @PathVariable UUID id,
+            @RequestBody @Valid OrderRequestDTOv2 dto) {
+
+        // 1. Busca a ordem do banco (ela vem com a lista original rastreada pelo Hibernate)
+        Order existingOrder = orderService.findById(id);
+
+        // 2. Mapper atualiza campos básicos (Data, Entrega, etc.)
+        orderMapper.updateEntityFromDto(dto, existingOrder);
+
+        List<OrderItem> newItems = dto.items().stream()
+                .map(itemDto -> orderItemMapper.toEntity(itemDto))
+                .toList();
+
+        Map<UUID, GasFinancialInfoRequest> financialMap = orderMapper.extractFinancialInfo(dto);
+
+        OrderResponseDTO response = orderService.updateOrders(existingOrder, newItems, financialMap, dto.isDelivery());
+
+        return ResponseEntity.ok(response);
+    }
+
     @PatchMapping("/{id}/status")
     public ResponseEntity<Void> updateStatus(@PathVariable("id") UUID id, @RequestBody String status){
         orderService.updateStatus(id, OrderStatus.valueOf(status));

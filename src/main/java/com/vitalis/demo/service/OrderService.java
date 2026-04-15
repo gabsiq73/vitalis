@@ -124,6 +124,45 @@ public class OrderService {
         return orderMapper.toResponseDTOList(savedOrders);
     }
 
+    @Transactional
+    public OrderResponseDTO updateOrders(Order existingOrder, List<OrderItem> newItems,
+                                         Map<UUID, GasFinancialInfoRequest> financialMap, Boolean isDelivery) {
+
+        if (existingOrder.getStatus() != OrderStatus.PENDING) {
+            throw new BusinessException("Não é permitido editar pedidos com status: " + existingOrder.getStatus());
+        }
+
+        List<OrderItem> currentItems = existingOrder.getItems();
+
+        currentItems.clear();
+
+        for (OrderItem newItem : newItems) {
+            // Recalcular preço unitário
+            BigDecimal finalPrice = calculateFinalPrice(existingOrder.getClient(), newItem.getProduct(), isDelivery);
+            newItem.setUnitPrice(finalPrice);
+
+            // Validação de Gás
+            if (newItem.getProduct().getType() == ProductType.GAS && newItem.getGasSupplier() == null) {
+                throw new BusinessException("Fornecedor obrigatório para itens de gás!");
+            }
+
+            existingOrder.addItem(newItem);
+        }
+
+        Order savedOrder = repository.save(existingOrder);
+
+        savedOrder.getItems().forEach(item -> {
+            if (item.getProduct().getType() == ProductType.GAS) {
+                GasFinancialInfoRequest info = financialMap.get(item.getProduct().getId());
+                if (info != null) {
+                    processOrderItem(item, info.receivedByUs(), info.gasCostPrice());
+                }
+            }
+        });
+
+        return orderMapper.toResponseDTO(savedOrder);
+    }
+
     private Order prepareSubOrderRefactored(Order prototype, List<OrderItem> items, boolean isGas, Boolean isDelivery) {
         Order subOrder = new Order();
         subOrder.setClient(prototype.getClient());
