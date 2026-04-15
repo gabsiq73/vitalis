@@ -20,6 +20,14 @@ public abstract class OrderItemMapper {
     @Autowired
     protected GasSupplierRepository gasSupplierRepository;
 
+    // --- MAPEAMENTO DE SAÍDA (Para o JSON de resposta) ---
+    @Mapping(target = "productId", source = "product.id")
+    @Mapping(target = "productName", source = "product.name")
+    @Mapping(target = "supplierId", source = "gasSupplier.id")
+    @Mapping(target = "supplierName", source = "gasSupplier.name")
+    @Mapping(target = "subTotal", expression = "java(item.getUnitPrice().multiply(java.math.BigDecimal.valueOf(item.getQuantity())))")
+    public abstract OrderItemResponseDTO toResponseDTO(OrderItem item);
+
     @Mapping(target = "order", ignore = true)
     @Mapping(target = "product", expression = "java(fetchProduct(dto.productId()))")
     @Mapping(target = "gasSupplier", expression = "java(dto.supplierId() != null ? gasSupplierRepository.findById(dto.supplierId()).orElse(null) : null)")
