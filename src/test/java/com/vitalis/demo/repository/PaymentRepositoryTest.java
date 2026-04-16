@@ -120,7 +120,7 @@ public class PaymentRepositoryTest {
 
         paymentRepository.save(payment);
 
-        List<Payment> result = paymentRepository.findByOrder(order);
+        List<Payment> result = paymentRepository.findByOrder_Id(order.getId());
 
         if(result.isEmpty()){
             throw new RuntimeException("Order was not found!");

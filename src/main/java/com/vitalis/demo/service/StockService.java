@@ -3,6 +3,7 @@ package com.vitalis.demo.service;
 import com.vitalis.demo.exceptions.VitalisException;
 import com.vitalis.demo.model.Product;
 import com.vitalis.demo.model.Stock;
+import com.vitalis.demo.model.enums.ProductType;
 import com.vitalis.demo.repository.StockRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -45,12 +46,18 @@ public class StockService {
 
     @Transactional
     public void createInitialStock(Product product){
-        Stock initalStock = new Stock();
-        initalStock.setProduct(product);
-        initalStock.setMinimumStock(5);
-        initalStock.setQuantityInStock(0);
+        Stock initialStock = new Stock();
+        initialStock.setProduct(product);
+        initialStock.setQuantityInStock(0);
 
-        repository.save(initalStock);
+        if(product.getType() == ProductType.GAS){
+            initialStock.setMinimumStock(0);
+        }
+        else {
+            initialStock.setMinimumStock(5);
+        }
+
+        repository.save(initialStock);
     }
 
     @Transactional
