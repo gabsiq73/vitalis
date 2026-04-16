@@ -14,7 +14,7 @@ public class SecurityService {
 
     private final UserService userService;
 
-    private SystemUser getUserLogged(){
+    public SystemUser getUserLogged(){
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if(authentication == null || !authentication.isAuthenticated()) {
