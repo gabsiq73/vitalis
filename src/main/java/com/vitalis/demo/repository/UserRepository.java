@@ -1,14 +1,14 @@
 package com.vitalis.demo.repository;
 
-import com.vitalis.demo.model.User;
+import com.vitalis.demo.model.SystemUser;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 import java.util.UUID;
 
-public interface UserRepository extends JpaRepository<User, UUID> {
+public interface UserRepository extends JpaRepository<SystemUser, UUID> {
 
-    Optional<User> findByUsername(String username);
+    Optional<SystemUser> findByUsername(String username);
 
     boolean existsByEmail(String email);
 

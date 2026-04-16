@@ -1,6 +1,6 @@
 package com.vitalis.demo.repository;
 
-import com.vitalis.demo.model.User;
+import com.vitalis.demo.model.SystemUser;
 import com.vitalis.demo.model.enums.Role;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,35 +11,35 @@ import java.util.Optional;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
-public class UserRepositoryTest {
+public class SystemUserRepositoryTest {
 
     @Autowired
     private UserRepository userRepository;
 
     @Test
     public void shouldSaveAndFindById(){
-        User user = new User();
+        SystemUser systemUser = new SystemUser();
 
-        user.setFirstName("Felipe");
-        user.setLastName("Levi");
-        user.setUsername("felipeLevi");
-        user.setEmail("felipe@gmail.com");
-        user.setPassword("felipe123");
-        user.setUserRole(Role.ADMIN);
+        systemUser.setFirstName("Felipe");
+        systemUser.setLastName("Levi");
+        systemUser.setUsername("felipeLevi");
+        systemUser.setEmail("felipe@gmail.com");
+        systemUser.setPassword("felipe123");
+        systemUser.setUserRole(Role.ADMIN);
 
-        userRepository.save(user);
+        userRepository.save(systemUser);
 
-        if(user.getId() == null){
+        if(systemUser.getId() == null){
             throw new RuntimeException("User was not saved");
         }
 
-        Optional<User> optional = userRepository.findById(user.getId());
+        Optional<SystemUser> optional = userRepository.findById(systemUser.getId());
 
         if(optional.isEmpty()){
             throw new RuntimeException("User was not found");
         }
 
-        User found = optional.get();
+        SystemUser found = optional.get();
 
         if(!found.getFirstName().equals("Felipe")){
             throw new RuntimeException("Wrong name found!");

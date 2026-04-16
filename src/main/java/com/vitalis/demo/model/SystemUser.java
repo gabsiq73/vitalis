@@ -23,7 +23,7 @@ import java.util.UUID;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @EntityListeners(AuditingEntityListener.class)
 @DynamicUpdate
-public class User {
+public class SystemUser {
 
     @EqualsAndHashCode.Include
     @Id
@@ -48,7 +48,7 @@ public class User {
     private String password;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "user_role", nullable = false, length = 20)
+    @Column(name = "user_role", nullable = false)
     private Role userRole;
 
     @CreatedDate

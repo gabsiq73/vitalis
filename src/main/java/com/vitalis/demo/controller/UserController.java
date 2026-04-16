@@ -4,7 +4,7 @@ import com.vitalis.demo.dto.request.UserRequestDTO;
 import com.vitalis.demo.dto.response.UserResponseDTO;
 import com.vitalis.demo.dto.update.UserUpdateDTO;
 import com.vitalis.demo.mapper.UserMapper;
-import com.vitalis.demo.model.User;
+import com.vitalis.demo.model.SystemUser;
 import com.vitalis.demo.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,14 +25,14 @@ public class UserController {
 
     @PostMapping
     public ResponseEntity<UserResponseDTO> create(@Valid @RequestBody UserRequestDTO dto){
-        User user = userService.save(userMapper.toEntity(dto));
-        UserResponseDTO responseDTO = userMapper.toResponseDTO(user);
+        SystemUser systemUser = userService.save(userMapper.toEntity(dto));
+        UserResponseDTO responseDTO = userMapper.toResponseDTO(systemUser);
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDTO);
     }
 
     @GetMapping
     public ResponseEntity<List<UserResponseDTO>> findAll(){
-        List<User> entityList = userService.findAll();
+        List<SystemUser> entityList = userService.findAll();
         List<UserResponseDTO> responseDTOList = entityList
                 .stream().map(userMapper::toResponseDTO).toList();
         return ResponseEntity.ok(responseDTOList);
@@ -40,8 +40,8 @@ public class UserController {
 
     @GetMapping("/{id}")
     public ResponseEntity<UserResponseDTO> getById(@PathVariable UUID id){
-        User user = userService.findById(id);
-        UserResponseDTO responseDTO = userMapper.toResponseDTO(user);
+        SystemUser systemUser = userService.findById(id);
+        UserResponseDTO responseDTO = userMapper.toResponseDTO(systemUser);
         return ResponseEntity.ok(responseDTO);
     }
 

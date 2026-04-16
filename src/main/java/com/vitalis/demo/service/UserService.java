@@ -4,7 +4,7 @@ import com.vitalis.demo.dto.update.UserUpdateDTO;
 import com.vitalis.demo.exceptions.VitalisException;
 import com.vitalis.demo.infra.exception.BusinessException;
 import com.vitalis.demo.mapper.UserMapper;
-import com.vitalis.demo.model.User;
+import com.vitalis.demo.model.SystemUser;
 import com.vitalis.demo.model.enums.Role;
 import com.vitalis.demo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,47 +23,47 @@ public class UserService {
     private final UserMapper mapper;
 
     @Transactional
-    public User save(User user){
-        return repository.save(user);
+    public SystemUser save(SystemUser systemUser){
+        return repository.save(systemUser);
     }
 
     @Transactional(readOnly = true)
-    public User findById(UUID id){
+    public SystemUser findById(UUID id){
         return findByIdController(id)
                 .orElseThrow(() -> new BusinessException("Usuário de ID: "+ id+" não encontrado!"));
     }
 
     @Transactional(readOnly = true)
-    public Optional<User> findByIdController(UUID id){
+    public Optional<SystemUser> findByIdController(UUID id){
         return repository.findById(id);
     }
 
     @Transactional(readOnly = true)
-    public List<User> findAll(){
+    public List<SystemUser> findAll(){
         return repository.findAll();
     }
 
     @Transactional
     public void update(UUID id, UserUpdateDTO dto){
-        User user = findById(id);
-        mapper.updateEntityFromDto(dto, user);
-        repository.save(user);
+        SystemUser systemUser = findById(id);
+        mapper.updateEntityFromDto(dto, systemUser);
+        repository.save(systemUser);
     }
 
     @Transactional
     public void delete(UUID id){
-        User user = findById(id);
-        repository.delete(user);
+        SystemUser systemUser = findById(id);
+        repository.delete(systemUser);
     }
 
-    public void validateAdminRole(User user){
-        if(user == null || !user.getUserRole().equals(Role.ADMIN)){
+    public void validateAdminRole(SystemUser systemUser){
+        if(systemUser == null || !systemUser.getUserRole().equals(Role.ADMIN)){
             throw new VitalisException("Operação Restrita para administradores");
         }
     }
 
     // Autenticação básica
-    public User authenticate(String username, String password){
+    public SystemUser authenticate(String username, String password){
         // Lógica de busca e comparação de senha
         return repository.findByUsername(username)
                 .filter(user -> user.getPassword().equals(password))
