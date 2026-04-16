@@ -21,9 +21,8 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
-@EntityListeners(AuditingEntityListener.class)
-public class GasSettlement {
+@EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
+public class GasSettlement extends BaseEntity{
 
     @EqualsAndHashCode.Include
     @Id
@@ -52,15 +51,4 @@ public class GasSettlement {
     @JoinColumn(name = "ORD_ITEM_id")
     private OrderItem orderItem;
 
-    @CreatedDate
-    @Column(name = "createDate", nullable = false, updatable = false)
-    private LocalDateTime createDate;
-
-    @LastModifiedDate
-    @Column(name = "lastModifiedDate", nullable = false)
-    private LocalDateTime lastModifiedDate;
-
-    @LastModifiedBy
-    @Column(name = "lastModifiedBy")
-    private String lastModifiedBy;
 }

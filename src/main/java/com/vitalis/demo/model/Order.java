@@ -22,10 +22,8 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
-@EntityListeners(AuditingEntityListener.class)
-
-public class Order {
+@EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
+public class Order extends BaseEntity{
 
     @EqualsAndHashCode.Include
     @Id
@@ -53,18 +51,6 @@ public class Order {
 
     @OneToMany(mappedBy = "order", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> items = new ArrayList<>();
-
-    @CreatedDate
-    @Column(name = "createDate", nullable = false, updatable = false)
-    private LocalDateTime createDate;
-
-    @LastModifiedDate
-    @Column(name = "lastModifiedDate", nullable = false)
-    private LocalDateTime lastModifiedDate;
-
-    @LastModifiedBy
-    @Column(name = "lastModifiedBy")
-    private String lastModifiedBy;
 
     public void addItem(OrderItem item) {
         if (items == null) {

@@ -19,9 +19,8 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
-@EntityListeners(AuditingEntityListener.class)
-public class OrderItem {
+@EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
+public class OrderItem extends BaseEntity{
 
     @EqualsAndHashCode.Include
     @Id
@@ -50,16 +49,5 @@ public class OrderItem {
     @JoinColumn(name = "GAS_SUP_id")
     private GasSupplier gasSupplier;
 
-    @CreatedDate
-    @Column(name = "createDate", nullable = false, updatable = false)
-    private LocalDateTime createDate;
-
-    @LastModifiedDate
-    @Column(name = "lastModifiedDate", nullable = false)
-    private LocalDateTime lastModifiedDate;
-
-    @LastModifiedBy
-    @Column(name = "lastModifiedBy")
-    private String lastModifiedBy;
 
 }

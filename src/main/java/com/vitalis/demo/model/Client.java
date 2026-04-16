@@ -21,10 +21,9 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
-@EntityListeners(AuditingEntityListener.class)
+@EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 @DynamicUpdate
-public class Client {
+public class Client extends BaseEntity {
 
     @EqualsAndHashCode.Include
     @Id
@@ -55,16 +54,5 @@ public class Client {
     @OneToMany(mappedBy = "client", fetch = FetchType.LAZY)
     private List<Order> orders;
 
-    @CreatedDate
-    @Column(name = "createDate", nullable = false, updatable = false)
-    private LocalDateTime createDate;
-
-    @LastModifiedDate
-    @Column(name = "lastModifiedDate", nullable = false)
-    private LocalDateTime lastModifiedDate;
-
-    @LastModifiedBy
-    @Column(name = "lastModifiedBy")
-    private String lastModifiedBy;
 
 }

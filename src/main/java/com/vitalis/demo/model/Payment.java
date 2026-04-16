@@ -19,9 +19,8 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
-@EntityListeners(AuditingEntityListener.class)
-public class Payment {
+@EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
+public class Payment extends BaseEntity {
 
     @EqualsAndHashCode.Include
     @Id
@@ -46,15 +45,4 @@ public class Payment {
     @Column(name = "PAY_notes")
     private String notes;
 
-    @CreatedDate
-    @Column(name = "createDate", nullable = false, updatable = false)
-    private LocalDateTime createDate;
-
-    @LastModifiedDate
-    @Column(name = "lastModifiedDate", nullable = false)
-    private LocalDateTime lastModifiedDate;
-
-    @LastModifiedBy
-    @Column(name = "lastModifiedBy")
-    private String lastModifiedBy;
 }

@@ -23,7 +23,7 @@ import java.util.UUID;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @EntityListeners(AuditingEntityListener.class)
 @DynamicUpdate
-public class SystemUser {
+public class SystemUser  {
 
     @EqualsAndHashCode.Include
     @Id

@@ -19,9 +19,8 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
-@EntityListeners(AuditingEntityListener.class)
-public class LoanedBottle {
+@EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
+public class LoanedBottle extends BaseEntity {
 
     @EqualsAndHashCode.Include
     @Id
@@ -35,7 +34,7 @@ public class LoanedBottle {
 
     @Column(name = "LB_qtd")
     private Integer quantity;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "CLI_id", nullable = false)
     private Client client;
@@ -47,20 +46,9 @@ public class LoanedBottle {
     private LocalDateTime returnDate;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "LB_status",nullable = false)
+    @Column(name = "LB_status", nullable = false)
     private LoanStatus loanStatus;
 
-    @CreatedDate
-    @Column(name = "createDate", nullable = false, updatable = false)
-    private LocalDateTime createDate;
-
-    @LastModifiedDate
-    @Column(name = "lastModifiedDate", nullable = false)
-    private LocalDateTime lastModifiedDate;
-
-    @LastModifiedBy
-    @Column(name = "lastModifiedBy")
-    private String lastModifiedBy;
 }
 
 

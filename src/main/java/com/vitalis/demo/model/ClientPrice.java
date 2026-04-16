@@ -18,9 +18,8 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
-@EntityListeners(AuditingEntityListener.class)
-public class ClientPrice {
+@EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
+public class ClientPrice extends BaseEntity {
 
     @EqualsAndHashCode.Include
     @Id
@@ -39,16 +38,5 @@ public class ClientPrice {
     @Column(name = "CP_price", precision = 10, scale = 2)
     private BigDecimal price;
 
-    @CreatedDate
-    @Column(name = "createDate", nullable = false, updatable = false)
-    private LocalDateTime createDate;
-
-    @LastModifiedDate
-    @Column(name = "lastModifiedDate", nullable = false)
-    private LocalDateTime lastModifiedDate;
-
-    @LastModifiedBy
-    @Column(name = "lastModifiedBy")
-    private String lastModifiedBy;
 
 }

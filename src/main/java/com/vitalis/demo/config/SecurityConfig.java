@@ -33,13 +33,6 @@ public class SecurityConfig {
                 .build();
     }
 
-    @Configuration
-    @EnableJpaAuditing
-    public class AuditConfig {
-
-    }
-
-
     @Bean
     public PasswordEncoder passwordEncoder(){
         return new BCryptPasswordEncoder(10);
