@@ -8,6 +8,7 @@ import com.vitalis.demo.model.SystemUser;
 import com.vitalis.demo.model.enums.Role;
 import com.vitalis.demo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,10 +22,18 @@ public class UserService {
 
     private final UserRepository repository;
     private final UserMapper mapper;
+    private final PasswordEncoder encoder;
 
     @Transactional
     public SystemUser save(SystemUser systemUser){
+        var password = systemUser.getPassword();
+        systemUser.setPassword(encoder.encode(password));
         return repository.save(systemUser);
+    }
+
+    @Transactional(readOnly = true)
+    public SystemUser getByLogin(String username){
+        return repository.findByUsername(username);
     }
 
     @Transactional(readOnly = true)
@@ -54,20 +63,6 @@ public class UserService {
     public void delete(UUID id){
         SystemUser systemUser = findById(id);
         repository.delete(systemUser);
-    }
-
-    public void validateAdminRole(SystemUser systemUser){
-        if(systemUser == null || !systemUser.getUserRole().equals(Role.ADMIN)){
-            throw new VitalisException("Operação Restrita para administradores");
-        }
-    }
-
-    // Autenticação básica
-    public SystemUser authenticate(String username, String password){
-        // Lógica de busca e comparação de senha
-        return repository.findByUsername(username)
-                .filter(user -> user.getPassword().equals(password))
-                .orElseThrow(() -> new VitalisException("Usuario ou senha invalidos!"));
     }
 
 
