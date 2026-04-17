@@ -10,7 +10,6 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.Optional;
 
 import static com.vitalis.demo.model.enums.ClientType.RESELLER;
@@ -170,7 +169,7 @@ public class ClientPriceRepositoryTest {
             throw new RuntimeException("ClientPrice was not saved!");
         }
 
-        Optional<ClientPrice> optional = repository.findByClient(client);
+        Optional<ClientPrice> optional = repository.findByClientId(client.getId());
 
         if(optional.isEmpty()){
             throw new RuntimeException("ClientPrice was not found!");
