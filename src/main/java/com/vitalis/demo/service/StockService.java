@@ -1,6 +1,7 @@
 package com.vitalis.demo.service;
 
 import com.vitalis.demo.exceptions.VitalisException;
+import com.vitalis.demo.infra.exception.BusinessException;
 import com.vitalis.demo.model.Product;
 import com.vitalis.demo.model.Stock;
 import com.vitalis.demo.model.enums.ProductType;
@@ -11,7 +12,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -27,9 +27,8 @@ public class StockService {
     }
 
     @Transactional(readOnly = true)
-    public Stock findById(String id){
-        UUID uuid = UUID.fromString(id);
-        return repository.findById(uuid)
+    public Stock findById(UUID id){
+        return repository.findById(id)
                 .orElseThrow(() -> new VitalisException("Id de estoque não encontrado!"));
     }
 
@@ -77,6 +76,23 @@ public class StockService {
         stock.setQuantityInStock(stock.getQuantityInStock() + quantity);
         repository.save(stock);
     }
+
+    public void validateStockAvailability(Product product, Integer requestedQuantity){
+        Stock stock = findByProduct(product);
+
+        // Ignora se for gás
+        if (product.getType() == ProductType.GAS) return;
+
+        Integer available = stock.getQuantityInStock();
+
+        if (requestedQuantity > available) {
+            throw new BusinessException(String.format(
+                    "Estoque insuficiente para o produto: %s. Disponível: %d, Solicitado: %d.",
+                    product.getName(), available, requestedQuantity
+            ));
+        }
+    }
+
     private void validateStock(Stock stock) {
         if (stock.getQuantityInStock() < 0) throw new VitalisException("O saldo não pode ser negativo!");
         if (stock.getMinimumStock() < 0) throw new VitalisException("O estoque mínimo não pode ser negativo.");

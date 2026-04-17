@@ -1,21 +1,23 @@
 package com.vitalis.demo.service;
 
 import com.vitalis.demo.dto.request.GasFinancialInfoRequest;
-import com.vitalis.demo.dto.request.OrderRequestDTO;
 import com.vitalis.demo.dto.response.OrderResponseDTO;
 import com.vitalis.demo.infra.exception.BusinessException;
 import com.vitalis.demo.mapper.OrderMapper;
 import com.vitalis.demo.model.*;
-import com.vitalis.demo.model.enums.*;
+import com.vitalis.demo.model.enums.ClientType;
+import com.vitalis.demo.model.enums.OrderStatus;
+import com.vitalis.demo.model.enums.PaymentStatus;
+import com.vitalis.demo.model.enums.ProductType;
 import com.vitalis.demo.repository.GasSettlementRepository;
 import com.vitalis.demo.repository.OrderItemRepository;
 import com.vitalis.demo.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -48,6 +50,12 @@ public class OrderService {
     }
 
     @Transactional(readOnly = true)
+    public Page<Order> findOrderByClient(UUID id, Pageable pageable){
+        Client client = clientService.findById(id);
+        return repository.findByClient(client, pageable);
+    }
+
+    @Transactional(readOnly = true)
     public Page<Order> listOrders(Pageable pageable) {
         return repository.findAll(pageable);
     }
@@ -71,7 +79,7 @@ public class OrderService {
         // 2. Processa Sub-Pedidos (Água e Gás separadamente)
         partitionedItems.forEach((isGas, items) -> {
             if (!items.isEmpty()) {
-                Order subOrder = prepareSubOrderRefactored(prototype, items, isGas, isDelivery);
+                Order subOrder = prepareSubOrder(prototype, items, isGas, isDelivery);
                 Order saved = repository.save(subOrder);
 
                 // 3. Processa a liquidação (Financials) do Gás
@@ -129,7 +137,7 @@ public class OrderService {
         return orderMapper.toResponseDTO(savedOrder);
     }
 
-    private Order prepareSubOrderRefactored(Order prototype, List<OrderItem> items, boolean isGas, Boolean isDelivery) {
+    private Order prepareSubOrder(Order prototype, List<OrderItem> items, boolean isGas, Boolean isDelivery) {
         Order subOrder = new Order();
         subOrder.setClient(prototype.getClient());
         subOrder.setDeliveryDate(prototype.getDeliveryDate());
@@ -137,7 +145,8 @@ public class OrderService {
         subOrder.setPaymentStatus(PaymentStatus.PENDING);
 
         for (OrderItem item : items) {
-            // Usa sua regra de preço existente
+            stockService.validateStockAvailability(item.getProduct(), item.getQuantity());
+
             BigDecimal finalPrice = calculateFinalPrice(subOrder.getClient(), item.getProduct(), isDelivery);
             item.setUnitPrice(finalPrice);
 
@@ -177,7 +186,7 @@ public class OrderService {
         if (newStatus == OrderStatus.DELIVERED || newStatus == OrderStatus.CANCELLED) {
             throw new BusinessException("Para este status, utilize os endpoints específicos de confirmação ou cancelamento.");
         }
-        
+
         Order order = findById(orderId);
         order.setStatus(newStatus);
         repository.save(order);

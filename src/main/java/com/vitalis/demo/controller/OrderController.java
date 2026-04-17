@@ -49,6 +49,16 @@ public class OrderController {
         return ResponseEntity.ok(pageDTO);
     }
 
+    @GetMapping("client/{id}")
+    public ResponseEntity<Page<OrderResponseDTO>> getOrderByClient(
+            @PathVariable("id") UUID id,
+            @PageableDefault(size = 10, sort = "createDate", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable){
+        Page<Order> pageEntity = orderService.findOrderByClient(id, pageable);
+        Page<OrderResponseDTO> pageDTO = pageEntity.map(orderMapper::toResponseDTO);
+        return ResponseEntity.ok(pageDTO);
+
+    }
+
     @GetMapping("/active")
     public ResponseEntity<List<OrderResponseDTO>> listActiveOrders(){
         List<Order> orderList = orderService.listActiveOrders();
