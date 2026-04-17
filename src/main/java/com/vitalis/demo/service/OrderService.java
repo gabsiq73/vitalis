@@ -57,40 +57,6 @@ public class OrderService {
         return repository.findByStatus(OrderStatus.SHIPPED);
     }
 
-
-//    @Transactional
-//    public Order createOrder(OrderRequestDTO dto){
-//        Client client = clientService.findById(dto.clientId());
-//        Product product = productService.findById(dto.productId());
-//        BigDecimal finalUnitPrice = calculateFinalPrice(client, product, dto.isDelivery());
-//
-//        Order order = new Order();
-//        order.setDeliveryDate(dto.deliveryDate());
-//        order.setStatus(OrderStatus.PENDING);
-//        order.setClient(client);
-//
-//        OrderItem item = new OrderItem();
-//        item.setProduct(product);
-//        item.setUnitPrice(finalUnitPrice);
-//        item.setQuantity(dto.quantity());
-//        item.setBottleExpiration(dto.bottleExpiration());
-//
-//        if(product.getType() == ProductType.GAS){
-//            if(dto.supplierid() == null){
-//                throw new BusinessException("Fornecedor é obrigatório para venda de gás!");
-//            }
-//            item.setGasSupplier(gasSupplierService.findById(dto.supplierid()));
-//        }
-//        order.addItem(item);
-//
-//        // Pega o item salvo (que agora tem ID) para gerar o acerto
-//        Order savedOrder = repository.save(order);
-//        OrderItem savedItem = savedOrder.getItems().get(0);
-//        processOrderItem(savedItem, dto.receivedByUs(), dto.gasCostPrice());
-//
-//        return savedOrder;
-//    }
-
     @Transactional
     public List<OrderResponseDTO> createOrders(Order prototype, Map<UUID, GasFinancialInfoRequest> financialMap, Boolean isDelivery) {
 
@@ -208,8 +174,11 @@ public class OrderService {
 
     @Transactional
     public void updateStatus(UUID orderId, OrderStatus newStatus){
+        if (newStatus == OrderStatus.DELIVERED || newStatus == OrderStatus.CANCELLED) {
+            throw new BusinessException("Para este status, utilize os endpoints específicos de confirmação ou cancelamento.");
+        }
+        
         Order order = findById(orderId);
-
         order.setStatus(newStatus);
         repository.save(order);
     }
@@ -244,7 +213,6 @@ public class OrderService {
             gasSettlementService.createAutomatedSettlement(item, receivedByUs, costPrice);
         }
     }
-
 
     //Metodo para calcular o preço final que o cliente vai pagar, com base no tipo de cliente, tipo de produto e se é entrega ou retirada
     public BigDecimal calculateFinalPrice(Client client, Product product, Boolean isDeliveryDTO){

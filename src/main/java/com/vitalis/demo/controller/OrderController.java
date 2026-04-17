@@ -65,6 +65,12 @@ public class OrderController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> cancel(@PathVariable UUID id) {
+        orderService.cancelOrder(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<OrderResponseDTO> update(
             @PathVariable UUID id,
@@ -88,11 +94,13 @@ public class OrderController {
     }
 
     @PatchMapping("/{id}/status")
-    public ResponseEntity<Void> updateStatus(@PathVariable("id") UUID id, @RequestBody String status){
-        orderService.updateStatus(id, OrderStatus.valueOf(status));
+    public ResponseEntity<Void> updateStatus(
+            @PathVariable("id") UUID id,
+            @RequestParam OrderStatus status) { // URL: ?status=SHIPPED
+
+        orderService.updateStatus(id, status);
         return ResponseEntity.noContent().build();
     }
-
 
     @PatchMapping("/{id}/confirm-delivery")
     public ResponseEntity<Void> confirmDelivery(@PathVariable("id") UUID id){
