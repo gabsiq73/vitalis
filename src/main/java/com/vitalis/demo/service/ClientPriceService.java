@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -18,12 +19,12 @@ import java.util.UUID;
 public class ClientPriceService {
 
     private final ClientPriceRepository clientPriceRepository;
-    private final ClientService service;
+    private final ClientService clientService;
     private final ProductService productService;
 
     @Transactional
     public ClientPrice save(UUID clientId, UUID productId, BigDecimal customPrice) {
-        Client client = service.findById(clientId);
+        Client client = clientService.findById(clientId);
         Product product = productService.findById(productId);
 
         // Busca se já existe um preço especial para esse par Cliente/Produto
@@ -49,14 +50,15 @@ public class ClientPriceService {
     }
 
     @Transactional(readOnly = true)
-    public ClientPrice findByClientId(UUID clientId){
-        return clientPriceRepository.findByClientId(clientId)
-                .orElseThrow(() -> new EntityNotFoundException("Preço especial para cliente de ID: " + clientId + "não encontrado!"));
+    public List<ClientPrice> findAllByClientId(UUID clientId){
+        clientService.findById(clientId);
+        return clientPriceRepository.findByClientId(clientId);
     }
 
     @Transactional
     public void delete(UUID id){
-        clientPriceRepository.deleteById(id);
+        ClientPrice clientPrice = findById(id);
+        clientPriceRepository.delete(clientPrice);
     }
 
     @Transactional(readOnly = true)

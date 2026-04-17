@@ -7,7 +7,6 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 public record ClientPriceRequestDTO(
-        @org.hibernate.validator.constraints.UUID(message = "Formato de ID inválido!")
         @NotNull(message = "Campo obrigatório!")
         UUID productId,
         @NotNull(message = "Preço customizado obrigatório!")
