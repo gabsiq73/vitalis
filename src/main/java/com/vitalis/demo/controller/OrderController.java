@@ -66,6 +66,15 @@ public class OrderController {
         return ResponseEntity.ok(dto);
     }
 
+    @GetMapping("client/{id}/open")
+    public ResponseEntity<List<OrderResponseDTO>> getOpenOrdersByClient(@PathVariable UUID id){
+        List<Order> listOrder = orderService.findOpenOrdersByClient(id);
+        List<OrderResponseDTO> listDTO = listOrder.stream()
+                .map(orderMapper::toResponseDTO)
+                .toList();
+        return ResponseEntity.ok(listDTO);
+    }
+
     @PostMapping
     public ResponseEntity<List<OrderResponseDTO>> create(@RequestBody @Valid OrderRequestDTOv2 dto) {
         Order prototype = orderMapper.toEntity(dto);

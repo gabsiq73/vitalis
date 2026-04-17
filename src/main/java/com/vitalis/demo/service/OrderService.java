@@ -223,6 +223,12 @@ public class OrderService {
         }
     }
 
+    @Transactional(readOnly = true)
+    public List<Order> findOpenOrdersByClient(UUID id){
+        Client client = clientService.findById(id);
+        return repository.findByClientAndPaymentStatusNotOrderByCreateDateAsc(client, PaymentStatus.PAID);
+    }
+
     //Metodo para calcular o preço final que o cliente vai pagar, com base no tipo de cliente, tipo de produto e se é entrega ou retirada
     public BigDecimal calculateFinalPrice(Client client, Product product, Boolean isDeliveryDTO){
 
