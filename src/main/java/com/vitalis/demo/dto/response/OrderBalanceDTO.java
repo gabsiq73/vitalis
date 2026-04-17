@@ -6,7 +6,7 @@ import java.util.UUID;
 public record OrderBalanceDTO(
         UUID orderId,
         BigDecimal totalValue,
-        BigDecimal paidValue,
+        BigDecimal totalPaid,
         BigDecimal remainingBalance
 ) {
 }
