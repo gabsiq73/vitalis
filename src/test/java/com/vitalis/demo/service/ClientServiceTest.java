@@ -2,13 +2,11 @@ package com.vitalis.demo.service;
 
 import com.vitalis.demo.model.Client;
 import com.vitalis.demo.model.enums.ClientStatus;
-import com.vitalis.demo.model.enums.ClientType;
 import com.vitalis.demo.repository.ClientRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -52,7 +50,7 @@ public class ClientServiceTest {
 
         BigDecimal debt = BigDecimal.ZERO;
 
-        clientService.calculateDebt(saved, debt);
+        clientService.updateStatusByDebt(saved, debt);
 
         assertEquals(ClientStatus.PAID, saved.getClientStatus());
 

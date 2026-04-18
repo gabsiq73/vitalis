@@ -36,7 +36,7 @@ public class ClientController {
     @GetMapping("/{id}")
     public ResponseEntity<ClientResponseDTO> getById(@PathVariable("id") UUID id){
         return clientService
-                .findByIdController(id)
+                .findByIdOptional(id)
                 .map(client -> {
                     ClientResponseDTO dto = clientMapper.toResponseDTO(client);
                     return ResponseEntity.ok(dto);

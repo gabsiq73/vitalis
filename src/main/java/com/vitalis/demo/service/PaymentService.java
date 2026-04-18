@@ -100,7 +100,7 @@ public class PaymentService {
             }
         }
 
-        clientService.processCustomerDebitBalance(client.getId());
+        clientService.calculateDebtBalance(client.getId());
     }
 
     @Transactional(readOnly = true)
@@ -128,7 +128,7 @@ public class PaymentService {
                 .map(mapper::toResponseDTO)
                 .toList();
     }
-    
+
     private void processOrderFinancials(Order order) {
         BigDecimal totalOrderValue = calculateTotalAmount(order);
         BigDecimal totalPaid = calculatePaidAmount(order);

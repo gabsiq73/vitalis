@@ -30,15 +30,14 @@ public class ClientService {
     private final OrderRepository orderRepository;
     private final ClientMapper clientMapper;
 
-    @Transactional(readOnly = true)
-    public Optional<Client> findByIdController(UUID id){
-        return repository.findById(id);
+    public Client findById(UUID id) {
+        return findByIdOptional(id)
+                .orElseThrow(() -> new EntityNotFoundException("Cliente com ID " + id + " não encontrado"));
     }
 
-    //Método atalho para uso interno no Service (Update, Delete, etc)
-    public Client findById(UUID id) {
-        return findByIdController(id)
-                .orElseThrow(() -> new EntityNotFoundException("Cliente com ID " + id + " não encontrado"));
+    @Transactional(readOnly = true)
+    public Optional<Client> findByIdOptional(UUID id){
+        return repository.findById(id);
     }
 
     @Transactional(readOnly = true)
@@ -46,11 +45,6 @@ public class ClientService {
         return repository.findAll(pageable);
     }
 
-    @Transactional
-    public void delete(UUID id){
-        Client client = findById(id);
-        repository.delete(client);
-    }
 
     @Transactional
     public Client save(Client client) {
@@ -65,26 +59,13 @@ public class ClientService {
     }
 
     @Transactional
-    public void calculateDebt(Client client, BigDecimal debt){
-
-        if(debt != null && debt.compareTo(BigDecimal.ZERO) < 0){
-            throw new BusinessException("O saldo devedor não pode ser menor que zero!");
-        }
-
-        BigDecimal currentDebt = (debt != null)? debt : BigDecimal.ZERO;
-
-        if(currentDebt.compareTo(BigDecimal.ZERO) == 0){
-            client.setClientStatus(ClientStatus.PAID);
-        }
-        else if(currentDebt.compareTo(BigDecimal.ZERO) > 0){
-            client.setClientStatus(ClientStatus.OVERDUE);
-        }
-
-        repository.save(client);
+    public void delete(UUID id){
+        Client client = findById(id);
+        repository.delete(client);
     }
 
     @Transactional
-    public BigDecimal processCustomerDebitBalance(UUID clientId){
+    public BigDecimal calculateDebtBalance(UUID clientId){
         Client client = repository.findById(clientId)
                 .orElseThrow(() -> new BusinessException("Cliente não encontrado!"));
 
@@ -106,9 +87,28 @@ public class ClientService {
         // Calcula o resultado final = comprado - pago
         BigDecimal outstandingBalance = totalBought.subtract(totalPaid);
 
-        this.calculateDebt(client, outstandingBalance);
+        this.updateStatusByDebt(client, outstandingBalance);
 
         return outstandingBalance;
+    }
+
+    @Transactional
+    public void updateStatusByDebt(Client client, BigDecimal debt){
+
+        if(debt != null && debt.compareTo(BigDecimal.ZERO) < 0){
+            throw new BusinessException("O saldo devedor não pode ser menor que zero!");
+        }
+
+        BigDecimal currentDebt = (debt != null)? debt : BigDecimal.ZERO;
+
+        if(currentDebt.compareTo(BigDecimal.ZERO) == 0){
+            client.setClientStatus(ClientStatus.PAID);
+        }
+        else if(currentDebt.compareTo(BigDecimal.ZERO) > 0){
+            client.setClientStatus(ClientStatus.OVERDUE);
+        }
+
+        repository.save(client);
     }
 
     private BigDecimal sumOrderItems(Order order){
