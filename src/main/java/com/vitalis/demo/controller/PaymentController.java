@@ -4,10 +4,8 @@ import com.vitalis.demo.dto.request.PaymentRequestDTO;
 import com.vitalis.demo.dto.response.OrderBalanceDTO;
 import com.vitalis.demo.dto.response.PaymentResponseDTO;
 import com.vitalis.demo.mapper.PaymentMapper;
-import com.vitalis.demo.model.Order;
 import com.vitalis.demo.model.Payment;
 import com.vitalis.demo.model.enums.Method;
-import com.vitalis.demo.service.OrderService;
 import com.vitalis.demo.service.PaymentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -45,19 +43,19 @@ public class PaymentController {
 
     @GetMapping("/orders/{orderId}/balance")
     public ResponseEntity<OrderBalanceDTO> getBalance(@PathVariable UUID orderId){
-        OrderBalanceDTO balance = paymentService.getOrderBalance(orderId);
+        OrderBalanceDTO balance = paymentService.findOrderBalance(orderId);
         return ResponseEntity.ok(balance);
     }
 
     @GetMapping("/orders/{orderId}")
     public ResponseEntity<List<PaymentResponseDTO>> listByOrder(@PathVariable UUID orderId){
-        List<PaymentResponseDTO> payments = paymentService.getPaymentByOrderId(orderId);
+        List<PaymentResponseDTO> payments = paymentService.findByOrderId(orderId);
         return ResponseEntity.ok(payments);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<PaymentResponseDTO> getById(@PathVariable UUID id){
-        return paymentService.findByIdController(id)
+        return paymentService.findByIdOptional(id)
                 .map(paymentMapper::toResponseDTO)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());

@@ -35,14 +35,14 @@ public class PaymentService {
     private final PaymentMapper mapper;
 
     @Transactional(readOnly = true)
-    public Optional<Payment> findByIdController(UUID id){
-        return repository.findById(id);
+    public Payment findById(UUID id){
+        return findByIdOptional(id)
+                .orElseThrow(() -> new BusinessException("Pagamento com ID: "+ id +" não encontrado!"));
     }
 
     @Transactional(readOnly = true)
-    public Payment findById(UUID id){
-        return findByIdController(id)
-                .orElseThrow(() -> new BusinessException("Pagamento com ID: "+ id +" não encontrado!"));
+    public Optional<Payment> findByIdOptional(UUID id){
+        return repository.findById(id);
     }
 
     @Transactional
@@ -75,8 +75,8 @@ public class PaymentService {
             if (remainingAmount.compareTo(BigDecimal.ZERO) <= 0) break;
 
             // Ve quanto falta para quitar ESSA order especifica
-            BigDecimal totalOrder = calculateOrderTotalValue(order);
-            BigDecimal totalAlreadyPayed = calculateTotalPaid(order);
+            BigDecimal totalOrder = calculateTotalAmount(order);
+            BigDecimal totalAlreadyPayed = calculatePaidAmount(order);
             BigDecimal debtInThisOrder = totalOrder.subtract(totalAlreadyPayed);
 
             // Abate apenas o minimo necessário para quitar o pedido
@@ -103,22 +103,12 @@ public class PaymentService {
         clientService.processCustomerDebitBalance(client.getId());
     }
 
-    // Pega todos os pagamentos associados a um pedido especifico
-    public List<PaymentResponseDTO> getPaymentByOrderId(UUID orderId){
-        // apenas valida antes de listar
-        orderService.findById(orderId);
-
-        return repository.findByOrder_Id(orderId).stream()
-                .map(mapper::toResponseDTO)
-                .toList();
-    }
-
     @Transactional(readOnly = true)
-    public OrderBalanceDTO getOrderBalance(UUID orderId){
+    public OrderBalanceDTO findOrderBalance(UUID orderId){
         Order order = orderService.findById(orderId);
 
-        BigDecimal totalValue = calculateOrderTotalValue(order);
-        BigDecimal totalPaid = calculateTotalPaid(order);
+        BigDecimal totalValue = calculateTotalAmount(order);
+        BigDecimal totalPaid = calculatePaidAmount(order);
         BigDecimal remainingBalance = totalValue.subtract(totalPaid);
 
         return new OrderBalanceDTO(
@@ -129,9 +119,19 @@ public class PaymentService {
         );
     }
 
+    // Pega todos os pagamentos associados a um pedido especifico
+    public List<PaymentResponseDTO> findByOrderId(UUID orderId){
+        // apenas valida antes de listar
+        orderService.findById(orderId);
+
+        return repository.findByOrder_Id(orderId).stream()
+                .map(mapper::toResponseDTO)
+                .toList();
+    }
+    
     private void processOrderFinancials(Order order) {
-        BigDecimal totalOrderValue = calculateOrderTotalValue(order);
-        BigDecimal totalPaid = calculateTotalPaid(order);
+        BigDecimal totalOrderValue = calculateTotalAmount(order);
+        BigDecimal totalPaid = calculatePaidAmount(order);
 
         if (totalPaid.compareTo(totalOrderValue) >= 0) {
             order.setPaymentStatus(PaymentStatus.PAID);
@@ -144,13 +144,13 @@ public class PaymentService {
         orderRepository.save(order);
     }
 
-    private BigDecimal calculateOrderTotalValue(Order order){
+    private BigDecimal calculateTotalAmount(Order order){
         return order.getItems().stream()
                 .map(item -> item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private BigDecimal calculateTotalPaid(Order order){
+    private BigDecimal calculatePaidAmount(Order order){
         return order.getPayments().stream()
                 .map(Payment::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);

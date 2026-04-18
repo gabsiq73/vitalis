@@ -22,7 +22,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.*;
@@ -258,7 +257,7 @@ class PaymentServiceTest {
             when(orderService.findById(order.getId())).thenReturn(order);
 
             // ACT
-            OrderBalanceDTO balance = paymentService.getOrderBalance(order.getId());
+            OrderBalanceDTO balance = paymentService.findOrderBalance(order.getId());
 
             // ASSERT
             assertThat(balance.totalValue()).isEqualByComparingTo("200.00");
@@ -280,7 +279,7 @@ class PaymentServiceTest {
             when(orderService.findById(order.getId())).thenReturn(order);
 
             // ACT
-            OrderBalanceDTO balance = paymentService.getOrderBalance(order.getId());
+            OrderBalanceDTO balance = paymentService.findOrderBalance(order.getId());
 
             // ASSERT
             assertThat(balance.remainingBalance()).isEqualByComparingTo("0.00");
@@ -296,7 +295,7 @@ class PaymentServiceTest {
             when(orderService.findById(order.getId())).thenReturn(order);
 
             // ACT
-            OrderBalanceDTO balance = paymentService.getOrderBalance(order.getId());
+            OrderBalanceDTO balance = paymentService.findOrderBalance(order.getId());
 
             // ASSERT
             assertThat(balance.totalValue()).isEqualByComparingTo("360.00");
