@@ -2,6 +2,7 @@ package com.vitalis.demo.service;
 
 import com.vitalis.demo.exceptions.VitalisException;
 import com.vitalis.demo.infra.exception.BusinessException;
+import com.vitalis.demo.infra.exception.OutOfStockException;
 import com.vitalis.demo.model.Product;
 import com.vitalis.demo.model.Stock;
 import com.vitalis.demo.model.enums.ProductType;
@@ -61,9 +62,14 @@ public class StockService {
 
     @Transactional
     public void decreaseStock(Product product, Integer quantity){
+        if(quantity <= 0){
+            throw new BusinessException("A quantidade para baixar deve ser maior que 0");
+        }
+
         Stock stock = findByProduct(product);
+        
         if(stock.getQuantityInStock() < quantity){
-            throw new VitalisException("Estoque insuficiente! Disponível: " + stock.getQuantityInStock());
+            throw new OutOfStockException("Estoque insuficiente! Disponível: " + stock.getQuantityInStock());
         }
 
         stock.setQuantityInStock(stock.getQuantityInStock() - quantity);
