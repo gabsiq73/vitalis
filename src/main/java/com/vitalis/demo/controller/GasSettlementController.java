@@ -31,7 +31,7 @@ public class GasSettlementController {
 
     @GetMapping("/{id}")
     public ResponseEntity<GasSettlementResponseDTO> getById(@PathVariable UUID id){
-        return settlementService.findByIdController(id)
+        return settlementService.findByIdOptional(id)
                 .map(entity -> {
                     GasSettlementResponseDTO dto = settlementMapper.toResponseDTO(entity);
                     return ResponseEntity.ok(dto);
@@ -45,13 +45,13 @@ public class GasSettlementController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end){
 
-        settlementService.settledAllBySupplier(supplierId, start, end);
+        settlementService.settleAllBySupplier(supplierId, start, end);
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{id}/settle")
     public ResponseEntity<Void> settleOne(@PathVariable UUID id){
-        settlementService.markAsSettled(id);
+        settlementService.settleIndividual(id);
         return ResponseEntity.noContent().build();
     }
 }

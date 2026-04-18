@@ -11,7 +11,6 @@ import com.vitalis.demo.model.enums.OrderStatus;
 import com.vitalis.demo.repository.ClientRepository;
 import com.vitalis.demo.repository.OrderRepository;
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

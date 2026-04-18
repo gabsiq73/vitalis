@@ -209,7 +209,7 @@ class GasSettlementServiceTest {
 
             when(repository.findById(any())).thenReturn(Optional.of(alreadySettled));
 
-            assertThatThrownBy(() -> gasSettlementService.markAsSettled(UUID.randomUUID()))
+            assertThatThrownBy(() -> gasSettlementService.settleIndividual(UUID.randomUUID()))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("já foi liquidado");
         }
@@ -226,7 +226,7 @@ class GasSettlementServiceTest {
             when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
             // ACT
-            gasSettlementService.markAsSettled(pending.getId());
+            gasSettlementService.settleIndividual(pending.getId());
 
             // ASSERT
             ArgumentCaptor<GasSettlement> captor = ArgumentCaptor.forClass(GasSettlement.class);
@@ -245,7 +245,7 @@ class GasSettlementServiceTest {
         void shouldThrowWhenSettlementNotFound() {
             when(repository.findById(any())).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> gasSettlementService.markAsSettled(UUID.randomUUID()))
+            assertThatThrownBy(() -> gasSettlementService.settleIndividual(UUID.randomUUID()))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("não encontrado");
         }
@@ -265,7 +265,7 @@ class GasSettlementServiceTest {
                     any(), any(), any())).thenReturn(List.of());
 
             assertThatThrownBy(() ->
-                    gasSettlementService.settledAllBySupplier(
+                    gasSettlementService.settleAllBySupplier(
                             supplier.getId(),
                             LocalDate.now().minusDays(30),
                             LocalDate.now()))
@@ -285,7 +285,7 @@ class GasSettlementServiceTest {
                     any(), any(), any())).thenReturn(List.of(s1, s2, s3));
 
             // ACT
-            gasSettlementService.settledAllBySupplier(
+            gasSettlementService.settleAllBySupplier(
                     supplier.getId(),
                     LocalDate.now().minusDays(30),
                     LocalDate.now());

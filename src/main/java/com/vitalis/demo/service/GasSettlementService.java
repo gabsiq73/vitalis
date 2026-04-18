@@ -28,19 +28,19 @@ public class GasSettlementService {
     private final GasSettlementMapper mapper;
 
     @Transactional(readOnly = true)
-    public List<GasSettlement> findAll() {
-        return repository.findAll();
+    public GasSettlement findById(UUID id) {
+        return findByIdOptional(id)
+                .orElseThrow(() -> new BusinessException("Acerto de gás não encontrado!"));
     }
 
     @Transactional(readOnly = true)
-    public Optional<GasSettlement> findByIdController(UUID id){
+    public Optional<GasSettlement> findByIdOptional(UUID id){
         return repository.findById(id);
     }
 
     @Transactional(readOnly = true)
-    public GasSettlement findById(UUID id) {
-        return findByIdController(id)
-                .orElseThrow(() -> new BusinessException("Acerto de gás não encontrado!"));
+    public List<GasSettlement> findAll() {
+        return repository.findAll();
     }
 
     @Transactional
@@ -62,6 +62,42 @@ public class GasSettlementService {
             settlement.setSettlementType(SettlementType.SUPPLIER_OWE);
         }
 
+        repository.save(settlement);
+    }
+
+    // Método para dar baixa em todos os acertos de uma vez só
+    @Transactional
+    public void settleAllBySupplier(UUID supplierId, LocalDate start, LocalDate end){
+        LocalDateTime startDt = start.atStartOfDay();
+        LocalDateTime endDt = end.atTime(LocalTime.MAX);
+
+        List<GasSettlement> settlements = repository.findByGasSupplier_IdAndSettledFalseAndCreateDateBetween(supplierId, startDt, endDt);
+
+        if(settlements.isEmpty()){
+            throw new BusinessException("Não há acertos pendentes para liquidar neste período!");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        settlements.forEach(s -> {
+            s.setSettled(true);
+            s.setSettledDate(now); // Registro da data do acerto
+        });
+
+        repository.saveAll(settlements);
+    }
+
+    // Método para dar baixa individual no acerto do gás
+    @Transactional
+    public void settleIndividual(UUID settlementId){
+        GasSettlement settlement = repository.findById(settlementId)
+                .orElseThrow(() -> new BusinessException("Acerto não encontrado!"));
+
+        if(Boolean.TRUE.equals(settlement.getSettled())){
+            throw new BusinessException("Este acerto já foi liquidado!");
+        }
+
+        settlement.setSettled(true);
+        settlement.setSettledDate(LocalDateTime.now());
         repository.save(settlement);
     }
 
@@ -94,42 +130,6 @@ public class GasSettlementService {
 
         List<GasSettlementResponseDTO> detailsDTO = mapper.toResponseDTOList(settlements);
         return new GasSettlementReportDTO(supplierName, toPay, toReceive, netBalance, detailsDTO);
-    }
-
-    // Método para dar baixa em todos os acertos de uma vez só
-    @Transactional
-    public void settledAllBySupplier(UUID supplierId, LocalDate start, LocalDate end){
-        LocalDateTime startDt = start.atStartOfDay();
-        LocalDateTime endDt = end.atTime(LocalTime.MAX);
-
-        List<GasSettlement> settlements = repository.findByGasSupplier_IdAndSettledFalseAndCreateDateBetween(supplierId, startDt, endDt);
-
-        if(settlements.isEmpty()){
-            throw new BusinessException("Não há acertos pendentes para liquidar neste período!");
-        }
-
-        LocalDateTime now = LocalDateTime.now();
-        settlements.forEach(s -> {
-            s.setSettled(true);
-            s.setSettledDate(now); // Registro da data do acerto
-        });
-
-        repository.saveAll(settlements);
-    }
-
-    // Método para dar baixa individual no acerto do gás
-    @Transactional
-    public void markAsSettled(UUID settlementId){
-        GasSettlement settlement = repository.findById(settlementId)
-                .orElseThrow(() -> new BusinessException("Acerto não encontrado!"));
-
-        if(Boolean.TRUE.equals(settlement.getSettled())){
-            throw new BusinessException("Este acerto já foi liquidado!");
-        }
-
-        settlement.setSettled(true);
-        settlement.setSettledDate(LocalDateTime.now());
-        repository.save(settlement);
     }
 
     @Transactional
