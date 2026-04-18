@@ -213,7 +213,7 @@ public class OrderService {
     public BigDecimal calculateFinalPrice(Client client, Product product, Boolean isDeliveryDTO){
 
         // Preço base (Varejo ou revenda especial)
-        BigDecimal price = clientPriceService.calculateEffectivePrice(client, product);
+        BigDecimal price = clientPriceService.findEffectivePrice(client, product);
 
         //Define se é entrega (Padrão true se for null ou se for gás)
         boolean isDelivery = (isDeliveryDTO == null) || isDeliveryDTO;

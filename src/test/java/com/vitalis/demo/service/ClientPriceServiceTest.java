@@ -11,12 +11,10 @@ import com.vitalis.demo.repository.ProductRepository;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 
 import static com.vitalis.demo.model.enums.ClientType.RESELLER;
 
@@ -56,7 +54,7 @@ public class ClientPriceServiceTest {
 
         clientRepository.save(client);
 
-        BigDecimal calculatedPrice = service.calculateEffectivePrice(client, product);
+        BigDecimal calculatedPrice = service.findEffectivePrice(client, product);
 
         assertTrue(BigDecimal.valueOf(8.50).compareTo(calculatedPrice) == 0);
         System.out.println(calculatedPrice);
@@ -88,7 +86,7 @@ public class ClientPriceServiceTest {
 
         repository.save(clientPrice);
 
-        BigDecimal calculatedPrice = service.calculateEffectivePrice(client, product);
+        BigDecimal calculatedPrice = service.findEffectivePrice(client, product);
 
         assertTrue(BigDecimal.valueOf(6.50).compareTo(calculatedPrice) == 0);
         System.out.println(calculatedPrice);

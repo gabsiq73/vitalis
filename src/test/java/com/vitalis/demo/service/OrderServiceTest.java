@@ -73,7 +73,7 @@ class OrderServiceTest {
         void shouldApplyPickupDiscountForRetailWithNoSpecialPrice() {
             // ARRANGE
             // clientPriceService retorna o preço base (sem desconto especial)
-            when(clientPriceService.calculateEffectivePrice(retailClient, waterProduct))
+            when(clientPriceService.findEffectivePrice(retailClient, waterProduct))
                     .thenReturn(new BigDecimal("10.00"));
 
             // ACT — isDelivery = false (retirada no depósito)
@@ -87,7 +87,7 @@ class OrderServiceTest {
         @DisplayName("Cliente RETAIL com preço especial NÃO deve receber desconto de retirada")
         void shouldNotApplyPickupDiscountWhenClientHasSpecialPrice() {
             // ARRANGE — preço especial (menor que o base)
-            when(clientPriceService.calculateEffectivePrice(retailClient, waterProduct))
+            when(clientPriceService.findEffectivePrice(retailClient, waterProduct))
                     .thenReturn(new BigDecimal("8.00")); // 8.00 < 10.00 (base) = tem preço especial
 
             // ACT
@@ -101,7 +101,7 @@ class OrderServiceTest {
         @DisplayName("Cliente RESELLER com retirada NÃO deve receber desconto de R$0,50")
         void shouldNotApplyPickupDiscountForReseller() {
             // ARRANGE
-            when(clientPriceService.calculateEffectivePrice(resellerClient, waterProduct))
+            when(clientPriceService.findEffectivePrice(resellerClient, waterProduct))
                     .thenReturn(new BigDecimal("10.00"));
 
             // ACT
@@ -115,7 +115,7 @@ class OrderServiceTest {
         @DisplayName("Produto GÁS deve sempre ser tratado como entrega, ignorando isDelivery=false")
         void shouldAlwaysTreatGasAsDelivery() {
             // ARRANGE
-            when(clientPriceService.calculateEffectivePrice(retailClient, gasProduct))
+            when(clientPriceService.findEffectivePrice(retailClient, gasProduct))
                     .thenReturn(new BigDecimal("120.00"));
 
             // ACT — mesmo passando false, gás ignora e trata como entrega
@@ -129,7 +129,7 @@ class OrderServiceTest {
         @DisplayName("isDelivery=null deve ser tratado como entrega (sem desconto de retirada)")
         void shouldTreatNullDeliveryAsDelivery() {
             // ARRANGE
-            when(clientPriceService.calculateEffectivePrice(retailClient, waterProduct))
+            when(clientPriceService.findEffectivePrice(retailClient, waterProduct))
                     .thenReturn(new BigDecimal("10.00"));
 
             // ACT — null = entrega por padrão
@@ -142,7 +142,7 @@ class OrderServiceTest {
         @Test
         @DisplayName("Cliente RETAIL com entrega (isDelivery=true) não deve receber desconto de retirada")
         void shouldNotApplyDiscountWhenIsDeliveryTrue() {
-            when(clientPriceService.calculateEffectivePrice(retailClient, waterProduct))
+            when(clientPriceService.findEffectivePrice(retailClient, waterProduct))
                     .thenReturn(new BigDecimal("10.00"));
 
             BigDecimal result = orderService.calculateFinalPrice(retailClient, waterProduct, true);

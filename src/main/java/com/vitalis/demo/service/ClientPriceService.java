@@ -22,6 +22,23 @@ public class ClientPriceService {
     private final ClientService clientService;
     private final ProductService productService;
 
+    @Transactional(readOnly = true)
+    public ClientPrice findById(UUID id){
+        return findByIdOptional(id)
+                .orElseThrow(() -> new EntityNotFoundException("Preço especial de cliente não encontrado!"));
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<ClientPrice> findByIdOptional(UUID id){
+        return clientPriceRepository.findById(id);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ClientPrice> findByClientId(UUID clientId){
+        clientService.findById(clientId);
+        return clientPriceRepository.findByClientId(clientId);
+    }
+
     @Transactional
     public ClientPrice save(UUID clientId, UUID productId, BigDecimal customPrice) {
         Client client = clientService.findById(clientId);
@@ -38,23 +55,6 @@ public class ClientPriceService {
         return clientPriceRepository.save(cp);
     }
 
-    @Transactional(readOnly = true)
-    public Optional<ClientPrice> findByControllerId(UUID id){
-        return clientPriceRepository.findById(id);
-    }
-
-    @Transactional(readOnly = true)
-    public ClientPrice findById(UUID id){
-        return findByControllerId(id)
-                .orElseThrow(() -> new EntityNotFoundException("Preço especial de cliente não encontrado!"));
-    }
-
-    @Transactional(readOnly = true)
-    public List<ClientPrice> findAllByClientId(UUID clientId){
-        clientService.findById(clientId);
-        return clientPriceRepository.findByClientId(clientId);
-    }
-
     @Transactional
     public void delete(UUID id){
         ClientPrice clientPrice = findById(id);
@@ -62,7 +62,7 @@ public class ClientPriceService {
     }
 
     @Transactional(readOnly = true)
-    public BigDecimal calculateEffectivePrice(Client client, Product product){
+    public BigDecimal findEffectivePrice(Client client, Product product){
         return clientPriceRepository.findByClientAndProduct(client, product)
                 .map(ClientPrice::getPrice)
                 .filter(price -> price != null)

@@ -55,7 +55,7 @@ public class ClientPriceController {
 
     @GetMapping
     public ResponseEntity<List<ClientPriceResponseDTO>> getByClient(@PathVariable UUID clientId){
-        List<ClientPrice> entities = clientPriceService.findAllByClientId(clientId);
+        List<ClientPrice> entities = clientPriceService.findByClientId(clientId);
         return ResponseEntity.ok(clientPriceMapper.toResponseDTOList(entities));
     }
 }
