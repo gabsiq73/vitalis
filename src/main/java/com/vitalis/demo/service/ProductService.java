@@ -5,7 +5,6 @@ import com.vitalis.demo.infra.exception.BusinessException;
 import com.vitalis.demo.mapper.ProductMapper;
 import com.vitalis.demo.model.Product;
 import com.vitalis.demo.model.enums.ProductType;
-import com.vitalis.demo.repository.ClientPriceRepository;
 import com.vitalis.demo.repository.ProductRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.AllArgsConstructor;
@@ -23,13 +22,17 @@ import java.util.UUID;
 public class ProductService {
 
     private final ProductRepository repository;
-    private final ClientPriceRepository clientPriceRepository;
     private final StockService stockService;
     private final ProductMapper productMapper;
 
+    @Transactional(readOnly = true)
+    public Product findById(UUID id) {
+        return findByIdOptional(id)
+                .orElseThrow(() -> new EntityNotFoundException("Produto com ID: " +id+ " não encontrado!"));
+    }
 
     @Transactional(readOnly = true)
-    public Optional<Product> findByIdController(UUID id){
+    public Optional<Product> findByIdOptional(UUID id){
         return repository.findById(id);
     }
 
@@ -70,10 +73,6 @@ public class ProductService {
         repository.save(product);
     }
 
-    public Product findById(UUID id) {
-        return findByIdController(id)
-                .orElseThrow(() -> new EntityNotFoundException("Produto com ID: " +id+ " não encontrado!"));
-    }
 
 
 

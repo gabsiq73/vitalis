@@ -20,13 +20,7 @@ import java.util.UUID;
 public class StockService {
 
     private final StockRepository repository;
-
-    @Transactional
-    public Stock save(Stock stock){
-        validateStock(stock);
-        return repository.save(stock);
-    }
-
+    
     @Transactional(readOnly = true)
     public Stock findById(UUID id){
         return repository.findById(id)
@@ -42,6 +36,12 @@ public class StockService {
     @Transactional(readOnly = true)
     public Page<Stock> findAll(Pageable pageable){
         return repository.findAll(pageable);
+    }
+
+    @Transactional
+    public Stock save(Stock stock){
+        validateStock(stock);
+        return repository.save(stock);
     }
 
     @Transactional
@@ -83,7 +83,7 @@ public class StockService {
         repository.save(stock);
     }
 
-    public void validateStockAvailability(Product product, Integer requestedQuantity){
+    public void checkStockAvailability(Product product, Integer requestedQuantity){
         Stock stock = findByProduct(product);
 
         // Ignora se for gás

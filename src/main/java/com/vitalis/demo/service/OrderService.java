@@ -36,14 +36,14 @@ public class OrderService {
     private final OrderMapper orderMapper;
 
     @Transactional(readOnly = true)
-    public Optional<Order> findByIdOptional(UUID id) {
-        return repository.findById(id);
-    }
-
-    @Transactional(readOnly = true)
     public Order findById(UUID id){
         return findByIdOptional(id)
                 .orElseThrow(() -> new BusinessException("Pedido com ID: "+ id +" não encontrado!"));
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<Order> findByIdOptional(UUID id) {
+        return repository.findById(id);
     }
 
     @Transactional(readOnly = true)
@@ -154,8 +154,6 @@ public class OrderService {
         return orderMapper.toResponseDTO(savedOrder);
     }
 
-
-
     @Transactional
     public void confirmDelivery(UUID orderId){
         Order order = findById(orderId);
@@ -250,7 +248,7 @@ public class OrderService {
 
         for (OrderItem item : items) {
             validateProductAvailability(item.getProduct());
-            stockService.validateStockAvailability(item.getProduct(), item.getQuantity());
+            stockService.checkStockAvailability(item.getProduct(), item.getQuantity());
 
             BigDecimal finalPrice = calculateFinalPrice(subOrder.getClient(), item.getProduct(), isDelivery);
             item.setUnitPrice(finalPrice);

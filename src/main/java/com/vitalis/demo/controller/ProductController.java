@@ -37,7 +37,7 @@ public class ProductController {
     @GetMapping("/{id}")
     public ResponseEntity<ProductResponseDTO> getById(@PathVariable("id") UUID id){
         return productService
-                .findByIdController(id)
+                .findByIdOptional(id)
                 .map(product -> {
                     ProductResponseDTO dto = productMapper.toResponseDTO(product);
                     return ResponseEntity.ok(dto);

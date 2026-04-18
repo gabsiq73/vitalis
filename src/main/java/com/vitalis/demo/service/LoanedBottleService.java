@@ -44,7 +44,7 @@ public class LoanedBottleService {
     public Page<LoanedBottle> findPendingReturns(Pageable pageable){
         return repository.findByReturnDateIsNullOrderByLoanDateAsc(pageable);
     }
-    
+
     @Transactional
     public LoanedBottle save(LoanedBottle loanedBottle){
         if(loanedBottle.getQuantity() != null && loanedBottle.getQuantity() <= 0){
