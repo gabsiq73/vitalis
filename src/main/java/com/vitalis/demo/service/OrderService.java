@@ -102,9 +102,7 @@ public class OrderService {
     public OrderResponseDTO updateOrders(Order existingOrder, List<OrderItem> newItems,
                                          Map<UUID, GasFinancialInfoRequest> financialMap, Boolean isDelivery) {
 
-        if (existingOrder.getStatus() != OrderStatus.PENDING) {
-            throw new BusinessException("Não é permitido editar pedidos com status: " + existingOrder.getStatus());
-        }
+        checkItemsModificationAllowed(existingOrder);
 
         List<OrderItem> currentItems = existingOrder.getItems();
 
@@ -250,5 +248,13 @@ public class OrderService {
 
         return price;
     }
+
+    private void checkItemsModificationAllowed(Order order) {
+        if (order.getStatus() == OrderStatus.DELIVERED || order.getStatus() == OrderStatus.CANCELLED) {
+            throw new BusinessException("Não é permitido alterar itens de um pedido com status: " + order.getStatus());
+        }
+    }
+
+
 
 }
