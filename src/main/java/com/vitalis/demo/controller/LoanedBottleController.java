@@ -42,14 +42,14 @@ public class LoanedBottleController {
     @GetMapping
     public ResponseEntity<Page<LoanedBottleResponseDTO>> getAllPendings(
             @PageableDefault(size = 10, sort = "loanDate")Pageable pageable){
-        Page<LoanedBottle> entities = loanedBottleService.findAllPendingReturns(pageable);
+        Page<LoanedBottle> entities = loanedBottleService.findPendingReturns(pageable);
         Page<LoanedBottleResponseDTO> dtos = entities.map(loanedBottleMapper::toResponseDTO);
         return ResponseEntity.ok(dtos);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<LoanedBottleResponseDTO> getById(@PathVariable UUID id){
-        return loanedBottleService.findByIdController(id)
+        return loanedBottleService.findByIdOptional(id)
                 .map(entity -> {
                     LoanedBottleResponseDTO dto = loanedBottleMapper.toResponseDTO(entity);
                     return ResponseEntity.ok(dto);
@@ -60,7 +60,7 @@ public class LoanedBottleController {
     @GetMapping("/client/{clientId}")
     public ResponseEntity<Page<LoanedBottleResponseDTO>> getPendingByClient(@PathVariable UUID clientId
             , @PageableDefault(size = 10, sort = "loanDate") Pageable pageable){
-        Page<LoanedBottle> entities = loanedBottleService.listPendingByClient(clientId, pageable);
+        Page<LoanedBottle> entities = loanedBottleService.findPendingByClient(clientId, pageable);
         Page<LoanedBottleResponseDTO> dtos = entities.map(loanedBottleMapper::toResponseDTO);
 
         return ResponseEntity.ok(dtos);

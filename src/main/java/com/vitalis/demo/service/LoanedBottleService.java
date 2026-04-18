@@ -1,7 +1,6 @@
 package com.vitalis.demo.service;
 
 import com.vitalis.demo.infra.exception.BusinessException;
-import com.vitalis.demo.model.Client;
 import com.vitalis.demo.model.LoanedBottle;
 import com.vitalis.demo.model.enums.LoanStatus;
 import com.vitalis.demo.repository.LoanedBottleRepository;
@@ -13,7 +12,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -25,16 +23,28 @@ public class LoanedBottleService {
     private final ClientService clientService;
     private final ProductService productService;
 
-    @Transactional(readOnly = true)
-    public Optional<LoanedBottle> findByIdController(UUID id){
-        return repository.findById(id);
-    }
-
     public LoanedBottle findById(UUID id){
-        return findByIdController(id)
+        return findByIdOptional(id)
                 .orElseThrow(() -> new EntityNotFoundException("Registro de vasilhame com ID: "+ id + " não encontrado!"));
     }
 
+    @Transactional(readOnly = true)
+    public Optional<LoanedBottle> findByIdOptional(UUID id){
+        return repository.findById(id);
+    }
+
+    // Lista os garrafões emprestados que um cliente especifico tem
+    @Transactional(readOnly = true)
+    public Page<LoanedBottle> findPendingByClient(UUID clientId, Pageable pageable){
+        return repository.findByClient_IdAndLoanStatus(clientId, LoanStatus.LOANED, pageable);
+    }
+
+    // Lista de todos os garrafões emprestados
+    @Transactional(readOnly = true)
+    public Page<LoanedBottle> findPendingReturns(Pageable pageable){
+        return repository.findByReturnDateIsNullOrderByLoanDateAsc(pageable);
+    }
+    
     @Transactional
     public LoanedBottle save(LoanedBottle loanedBottle){
         if(loanedBottle.getQuantity() != null && loanedBottle.getQuantity() <= 0){
@@ -66,17 +76,6 @@ public class LoanedBottleService {
         repository.save(lb);
     }
 
-    // Lista os garrafões emprestados que um cliente especifico tem
-    @Transactional(readOnly = true)
-    public Page<LoanedBottle> listPendingByClient(UUID clientId, Pageable pageable){
-        return repository.findByClient_IdAndLoanStatus(clientId, LoanStatus.LOANED, pageable);
-    }
-
-    // Lista de todos os garrafões emprestados
-    @Transactional(readOnly = true)
-    public Page<LoanedBottle> findAllPendingReturns(Pageable pageable){
-        return repository.findByReturnDateIsNullOrderByLoanDateAsc(pageable);
-    }
 
     @Transactional
     public void delete(UUID id){
