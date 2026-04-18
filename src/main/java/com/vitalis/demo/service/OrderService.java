@@ -4,13 +4,14 @@ import com.vitalis.demo.dto.request.GasFinancialInfoRequest;
 import com.vitalis.demo.dto.response.OrderResponseDTO;
 import com.vitalis.demo.infra.exception.BusinessException;
 import com.vitalis.demo.mapper.OrderMapper;
-import com.vitalis.demo.model.*;
+import com.vitalis.demo.model.Client;
+import com.vitalis.demo.model.Order;
+import com.vitalis.demo.model.OrderItem;
+import com.vitalis.demo.model.Product;
 import com.vitalis.demo.model.enums.ClientType;
 import com.vitalis.demo.model.enums.OrderStatus;
 import com.vitalis.demo.model.enums.PaymentStatus;
 import com.vitalis.demo.model.enums.ProductType;
-import com.vitalis.demo.repository.GasSettlementRepository;
-import com.vitalis.demo.repository.OrderItemRepository;
 import com.vitalis.demo.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -29,30 +30,21 @@ public class OrderService {
 
     private final OrderRepository repository;
     private final ClientService clientService;
-    private final ProductService productService;
     private final ClientPriceService clientPriceService;
-    private final OrderItemRepository orderItemRepository;
     private final StockService stockService;
-    private final GasSettlementRepository gasSettlementRepository;
-    private final GasSupplierService gasSupplierService;
     private final GasSettlementService gasSettlementService;
     private final OrderMapper orderMapper;
 
-    @Transactional(readOnly = true)
-    public Optional<Order> findByIdController(UUID id) {
-        return repository.findById(id);
-    }
 
     @Transactional(readOnly = true)
     public Order findById(UUID id){
-        return findByIdController(id)
+        return findByIdOptional(id)
                 .orElseThrow(() -> new BusinessException("Pedido com ID: "+ id +" não encontrado!"));
     }
 
     @Transactional(readOnly = true)
-    public Page<Order> findOrderByClient(UUID id, Pageable pageable){
-        Client client = clientService.findById(id);
-        return repository.findByClient(client, pageable);
+    public Optional<Order> findByIdOptional(UUID id) {
+        return repository.findById(id);
     }
 
     @Transactional(readOnly = true)
@@ -63,6 +55,18 @@ public class OrderService {
     @Transactional(readOnly = true)
     public List<Order> listActiveOrders(){
         return repository.findByStatus(OrderStatus.SHIPPED);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Order> findOrderByClient(UUID id, Pageable pageable){
+        Client client = clientService.findById(id);
+        return repository.findByClient(client, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Order> findOpenOrdersByClient(UUID id){
+        Client client = clientService.findById(id);
+        return repository.findByClientAndPaymentStatusNotOrderByCreateDateAsc(client, PaymentStatus.PAID);
     }
 
     @Transactional
@@ -87,7 +91,7 @@ public class OrderService {
                     saved.getItems().forEach(item -> {
                         GasFinancialInfoRequest info = financialMap.get(item.getProduct().getId());
                         if (info != null) {
-                            processOrderItem(item, info.receivedByUs(), info.gasCostPrice());
+                            processGasFinancials(item, info.receivedByUs(), info.gasCostPrice());
                         }
                     });
                 }
@@ -129,35 +133,12 @@ public class OrderService {
             if (item.getProduct().getType() == ProductType.GAS) {
                 GasFinancialInfoRequest info = financialMap.get(item.getProduct().getId());
                 if (info != null) {
-                    processOrderItem(item, info.receivedByUs(), info.gasCostPrice());
+                    processGasFinancials(item, info.receivedByUs(), info.gasCostPrice());
                 }
             }
         });
 
         return orderMapper.toResponseDTO(savedOrder);
-    }
-
-    private Order prepareSubOrder(Order prototype, List<OrderItem> items, boolean isGas, Boolean isDelivery) {
-        Order subOrder = new Order();
-        subOrder.setClient(prototype.getClient());
-        subOrder.setDeliveryDate(prototype.getDeliveryDate());
-        subOrder.setStatus(OrderStatus.PENDING);
-        subOrder.setPaymentStatus(PaymentStatus.PENDING);
-
-        for (OrderItem item : items) {
-            stockService.validateStockAvailability(item.getProduct(), item.getQuantity());
-
-            BigDecimal finalPrice = calculateFinalPrice(subOrder.getClient(), item.getProduct(), isDelivery);
-            item.setUnitPrice(finalPrice);
-
-            if (isGas && item.getGasSupplier() == null) {
-                throw new BusinessException("Fornecedor obrigatório para gás!");
-            }
-
-            subOrder.addItem(item); // Garante o vínculo bi-direcional
-        }
-
-        return subOrder;
     }
 
     @Transactional
@@ -178,17 +159,6 @@ public class OrderService {
 
         order.setDeliveryDate(LocalDateTime.now());
         order.setStatus(OrderStatus.DELIVERED);
-        repository.save(order);
-    }
-
-    @Transactional
-    public void updateStatus(UUID orderId, OrderStatus newStatus){
-        if (newStatus == OrderStatus.DELIVERED || newStatus == OrderStatus.CANCELLED) {
-            throw new BusinessException("Para este status, utilize os endpoints específicos de confirmação ou cancelamento.");
-        }
-
-        Order order = findById(orderId);
-        order.setStatus(newStatus);
         repository.save(order);
     }
 
@@ -214,19 +184,14 @@ public class OrderService {
     }
 
     @Transactional
-    public void processOrderItem(OrderItem item, Boolean receivedByUs, BigDecimal costPrice){
-        if(item.getProduct().getType() == ProductType.GAS){
-            if(receivedByUs == null || costPrice == null){
-                throw new BusinessException("Dados financeiros do gás são obrigatórios!");
-            }
-            gasSettlementService.createAutomatedSettlement(item, receivedByUs, costPrice);
+    public void updateStatus(UUID orderId, OrderStatus newStatus){
+        if (newStatus == OrderStatus.DELIVERED || newStatus == OrderStatus.CANCELLED) {
+            throw new BusinessException("Para este status, utilize os endpoints específicos de confirmação ou cancelamento.");
         }
-    }
 
-    @Transactional(readOnly = true)
-    public List<Order> findOpenOrdersByClient(UUID id){
-        Client client = clientService.findById(id);
-        return repository.findByClientAndPaymentStatusNotOrderByCreateDateAsc(client, PaymentStatus.PAID);
+        Order order = findById(orderId);
+        order.setStatus(newStatus);
+        repository.save(order);
     }
 
     //Metodo para calcular o preço final que o cliente vai pagar, com base no tipo de cliente, tipo de produto e se é entrega ou retirada
@@ -250,5 +215,39 @@ public class OrderService {
 
         return price;
     }
+
+    @Transactional
+    public void processGasFinancials(OrderItem item, Boolean receivedByUs, BigDecimal costPrice){
+        if(item.getProduct().getType() == ProductType.GAS){
+            if(receivedByUs == null || costPrice == null){
+                throw new BusinessException("Dados financeiros do gás são obrigatórios!");
+            }
+            gasSettlementService.createAutomatedSettlement(item, receivedByUs, costPrice);
+        }
+    }
+
+    private Order prepareSubOrder(Order prototype, List<OrderItem> items, boolean isGas, Boolean isDelivery) {
+        Order subOrder = new Order();
+        subOrder.setClient(prototype.getClient());
+        subOrder.setDeliveryDate(prototype.getDeliveryDate());
+        subOrder.setStatus(OrderStatus.PENDING);
+        subOrder.setPaymentStatus(PaymentStatus.PENDING);
+
+        for (OrderItem item : items) {
+            stockService.validateStockAvailability(item.getProduct(), item.getQuantity());
+
+            BigDecimal finalPrice = calculateFinalPrice(subOrder.getClient(), item.getProduct(), isDelivery);
+            item.setUnitPrice(finalPrice);
+
+            if (isGas && item.getGasSupplier() == null) {
+                throw new BusinessException("Fornecedor obrigatório para gás!");
+            }
+
+            subOrder.addItem(item); // Garante o vínculo bi-direcional
+        }
+
+        return subOrder;
+    }
+
 
 }

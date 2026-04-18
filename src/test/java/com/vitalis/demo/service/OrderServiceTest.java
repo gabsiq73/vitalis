@@ -290,7 +290,7 @@ class OrderServiceTest {
             OrderItem gasItem = new OrderItem();
             gasItem.setProduct(gasProduct);
 
-            assertThatThrownBy(() -> orderService.processOrderItem(gasItem, null, null))
+            assertThatThrownBy(() -> orderService.processGasFinancials(gasItem, null, null))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("obrigatórios");
         }
@@ -301,7 +301,7 @@ class OrderServiceTest {
             OrderItem gasItem = new OrderItem();
             gasItem.setProduct(gasProduct);
 
-            orderService.processOrderItem(gasItem, true, new BigDecimal("90.00"));
+            orderService.processGasFinancials(gasItem, true, new BigDecimal("90.00"));
 
             verify(gasSettlementService).createAutomatedSettlement(gasItem, true, new BigDecimal("90.00"));
         }
