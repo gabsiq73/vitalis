@@ -67,7 +67,7 @@ public class StockService {
         }
 
         Stock stock = findByProduct(product);
-        
+
         if(stock.getQuantityInStock() < quantity){
             throw new OutOfStockException("Estoque insuficiente! Disponível: " + stock.getQuantityInStock());
         }

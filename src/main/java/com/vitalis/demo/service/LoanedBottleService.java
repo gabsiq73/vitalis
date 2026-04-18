@@ -1,6 +1,7 @@
 package com.vitalis.demo.service;
 
 import com.vitalis.demo.infra.exception.BusinessException;
+import com.vitalis.demo.model.Client;
 import com.vitalis.demo.model.LoanedBottle;
 import com.vitalis.demo.model.enums.LoanStatus;
 import com.vitalis.demo.repository.LoanedBottleRepository;
@@ -60,6 +61,7 @@ public class LoanedBottleService {
 
         lb.setReturnDate(LocalDateTime.now());
         lb.setLoanStatus(LoanStatus.RETURNED);
+        clientService.updateBottleBalance(lb.getClient().getId(), lb.getQuantity());
 
         repository.save(lb);
     }
