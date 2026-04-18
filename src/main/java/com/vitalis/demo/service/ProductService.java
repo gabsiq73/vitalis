@@ -48,7 +48,12 @@ public class ProductService {
     @Transactional
     public void delete(UUID id){
         Product product = findById(id);
-        repository.delete(product);
+
+        if(product.hasOrders()){
+            product.setActive(false);
+            repository.save(product);
+        }
+        else repository.delete(product);
     }
 
 

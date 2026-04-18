@@ -109,6 +109,7 @@ public class OrderService {
         currentItems.clear();
 
         for (OrderItem newItem : newItems) {
+            validateProductAvailability(newItem.getProduct());
             // Recalcular preço unitário
             BigDecimal finalPrice = calculateFinalPrice(existingOrder.getClient(), newItem.getProduct(), isDelivery);
             newItem.setUnitPrice(finalPrice);
@@ -143,6 +144,7 @@ public class OrderService {
         subOrder.setPaymentStatus(PaymentStatus.PENDING);
 
         for (OrderItem item : items) {
+            validateProductAvailability(item.getProduct());
             stockService.validateStockAvailability(item.getProduct(), item.getQuantity());
 
             BigDecimal finalPrice = calculateFinalPrice(subOrder.getClient(), item.getProduct(), isDelivery);
@@ -252,6 +254,12 @@ public class OrderService {
     private void checkItemsModificationAllowed(Order order) {
         if (order.getStatus() == OrderStatus.DELIVERED || order.getStatus() == OrderStatus.CANCELLED) {
             throw new BusinessException("Não é permitido alterar itens de um pedido com status: " + order.getStatus());
+        }
+    }
+
+    public void validateProductAvailability(Product product){
+        if(!product.isActive()){
+            throw new BusinessException("O produto "+product.getName()+" está inativo");
         }
     }
 

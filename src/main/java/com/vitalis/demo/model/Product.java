@@ -42,8 +42,15 @@ public class Product extends BaseEntity {
     @Column(name = "PROD_type", nullable = false)
     private ProductType type;
 
+    @Column(name = "PROD_is_active")
+    private boolean isActive;
+
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY)
     private List<OrderItem> orderItems;
+
+    public boolean hasOrders(){
+        return this.orderItems != null && !this.orderItems.isEmpty();
+    }
 
 }
 
