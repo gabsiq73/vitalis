@@ -35,16 +35,15 @@ public class OrderService {
     private final GasSettlementService gasSettlementService;
     private final OrderMapper orderMapper;
 
+    @Transactional(readOnly = true)
+    public Optional<Order> findByIdOptional(UUID id) {
+        return repository.findById(id);
+    }
 
     @Transactional(readOnly = true)
     public Order findById(UUID id){
         return findByIdOptional(id)
                 .orElseThrow(() -> new BusinessException("Pedido com ID: "+ id +" não encontrado!"));
-    }
-
-    @Transactional(readOnly = true)
-    public Optional<Order> findByIdOptional(UUID id) {
-        return repository.findById(id);
     }
 
     @Transactional(readOnly = true)
@@ -90,9 +89,14 @@ public class OrderService {
                 if (isGas) {
                     saved.getItems().forEach(item -> {
                         GasFinancialInfoRequest info = financialMap.get(item.getProduct().getId());
-                        if (info != null) {
-                            processGasFinancials(item, info.receivedByUs(), info.gasCostPrice());
-                        }
+
+                        BigDecimal finalCost = (info != null && info.gasCostPrice() != null)
+                                                ? info.gasCostPrice()
+                                                : item.getProduct().getCostPrice();
+
+                        Boolean receivedByUs = (info != null) ? info.receivedByUs() : false;
+
+                        processGasFinancials(item, receivedByUs, finalCost);
                     });
                 }
                 savedOrders.add(saved);
@@ -106,22 +110,26 @@ public class OrderService {
     public OrderResponseDTO updateOrders(Order existingOrder, List<OrderItem> newItems,
                                          Map<UUID, GasFinancialInfoRequest> financialMap, Boolean isDelivery) {
 
-        if (existingOrder.getStatus() != OrderStatus.PENDING) {
-            throw new BusinessException("Não é permitido editar pedidos com status: " + existingOrder.getStatus());
-        }
+        checkItemsModificationAllowed(existingOrder);
 
         List<OrderItem> currentItems = existingOrder.getItems();
 
         currentItems.clear();
 
         for (OrderItem newItem : newItems) {
+            validateProductAvailability(newItem.getProduct());
             // Recalcular preço unitário
             BigDecimal finalPrice = calculateFinalPrice(existingOrder.getClient(), newItem.getProduct(), isDelivery);
             newItem.setUnitPrice(finalPrice);
 
             // Validação de Gás
-            if (newItem.getProduct().getType() == ProductType.GAS && newItem.getGasSupplier() == null) {
-                throw new BusinessException("Fornecedor obrigatório para itens de gás!");
+            if (newItem.getProduct().getType() == ProductType.GAS){
+                if (newItem.getGasSupplier() == null){
+                    newItem.setGasSupplier(newItem.getProduct().getDefaultSupplier());
+                }
+                if (newItem.getGasSupplier() == null){
+                    throw new BusinessException("Não foi possível identificar o fornecedor deste gás. Verifique o cadastro do produto!");
+                }
             }
 
             existingOrder.addItem(newItem);
@@ -132,14 +140,21 @@ public class OrderService {
         savedOrder.getItems().forEach(item -> {
             if (item.getProduct().getType() == ProductType.GAS) {
                 GasFinancialInfoRequest info = financialMap.get(item.getProduct().getId());
-                if (info != null) {
-                    processGasFinancials(item, info.receivedByUs(), info.gasCostPrice());
-                }
+
+                BigDecimal finalCost = (info != null && info.gasCostPrice() != null)
+                        ? info.gasCostPrice()
+                        : item.getProduct().getCostPrice();
+
+                Boolean receivedByUs = (info != null) ? info.receivedByUs() : true;
+
+                processGasFinancials(item, receivedByUs, finalCost);
             }
         });
 
         return orderMapper.toResponseDTO(savedOrder);
     }
+
+
 
     @Transactional
     public void confirmDelivery(UUID orderId){
@@ -163,6 +178,17 @@ public class OrderService {
     }
 
     @Transactional
+    public void updateStatus(UUID orderId, OrderStatus newStatus){
+        if (newStatus == OrderStatus.DELIVERED || newStatus == OrderStatus.CANCELLED) {
+            throw new BusinessException("Para este status, utilize os endpoints específicos de confirmação ou cancelamento.");
+        }
+
+        Order order = findById(orderId);
+        order.setStatus(newStatus);
+        repository.save(order);
+    }
+
+    @Transactional
     public void cancelOrder(UUID orderId){
         Order order = findById(orderId);
 
@@ -180,17 +206,6 @@ public class OrderService {
             });
         }
         order.setStatus(OrderStatus.CANCELLED);
-        repository.save(order);
-    }
-
-    @Transactional
-    public void updateStatus(UUID orderId, OrderStatus newStatus){
-        if (newStatus == OrderStatus.DELIVERED || newStatus == OrderStatus.CANCELLED) {
-            throw new BusinessException("Para este status, utilize os endpoints específicos de confirmação ou cancelamento.");
-        }
-
-        Order order = findById(orderId);
-        order.setStatus(newStatus);
         repository.save(order);
     }
 
@@ -234,13 +249,19 @@ public class OrderService {
         subOrder.setPaymentStatus(PaymentStatus.PENDING);
 
         for (OrderItem item : items) {
+            validateProductAvailability(item.getProduct());
             stockService.validateStockAvailability(item.getProduct(), item.getQuantity());
 
             BigDecimal finalPrice = calculateFinalPrice(subOrder.getClient(), item.getProduct(), isDelivery);
             item.setUnitPrice(finalPrice);
 
-            if (isGas && item.getGasSupplier() == null) {
-                throw new BusinessException("Fornecedor obrigatório para gás!");
+            if (isGas) {
+                if(item.getGasSupplier() == null){
+                    item.setGasSupplier(item.getProduct().getDefaultSupplier());
+                }
+                if (item.getGasSupplier() == null) {
+                    throw new BusinessException("Não foi possível identificar o fornecedor deste gás. Verifique o cadastro do produto!");
+                }
             }
 
             subOrder.addItem(item); // Garante o vínculo bi-direcional
@@ -248,6 +269,19 @@ public class OrderService {
 
         return subOrder;
     }
+
+    private void checkItemsModificationAllowed(Order order) {
+        if (order.getStatus() == OrderStatus.DELIVERED || order.getStatus() == OrderStatus.CANCELLED) {
+            throw new BusinessException("Não é permitido alterar itens de um pedido com status: " + order.getStatus());
+        }
+    }
+
+    public void validateProductAvailability(Product product){
+        if(!product.isActive()){
+            throw new BusinessException("O produto "+product.getName()+" está inativo");
+        }
+    }
+
 
 
 }

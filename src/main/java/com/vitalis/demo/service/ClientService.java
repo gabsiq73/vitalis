@@ -11,6 +11,7 @@ import com.vitalis.demo.model.enums.OrderStatus;
 import com.vitalis.demo.repository.ClientRepository;
 import com.vitalis.demo.repository.OrderRepository;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -115,6 +116,19 @@ public class ClientService {
         return order.getItems().stream()
                 .map(item -> item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    public void updateBottleBalance(UUID clientId, Integer quantity){
+        Client client = findById(clientId);
+
+        Integer newDebt = client.getBottlesDebt() + quantity;
+
+        if(quantity < 0){
+            throw new BusinessException("O cliente não pode devolver mais garrafões!");
+        }
+
+        client.setBottlesDebt(newDebt);
+        repository.save(client);
     }
 
 

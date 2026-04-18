@@ -51,6 +51,9 @@ public class Client extends BaseEntity {
     @OneToMany(mappedBy = "client", fetch = FetchType.LAZY)
     private List<LoanedBottle> loanedBottles;
 
+    @Column(name = "CLI_bottles_debt")
+    private Integer bottlesDebt = 0;
+
     @OneToMany(mappedBy = "client", fetch = FetchType.LAZY)
     private List<Order> orders;
 

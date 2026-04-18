@@ -16,6 +16,8 @@ public record ProductRequestDTO(
         @NotNull(message = "Preço base do produto é obrigatório!")
         @Positive(message = "O preço deve ser maior que zero")
         BigDecimal basePrice,
+        @Positive(message = "O preço deve ser maior que zero")
+        BigDecimal lastCostPrice,
         @NotNull(message = "Tipo do produto é obrigatório!")
         ProductType type) {
 
