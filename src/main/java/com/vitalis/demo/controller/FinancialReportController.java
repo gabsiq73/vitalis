@@ -26,26 +26,26 @@ public class FinancialReportController {
     @GetMapping("/performance")
     public ResponseEntity<FinancialReportDTO> getPerformance(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)LocalDate start
             , @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end){
-        return ResponseEntity.ok(financialService.getReport(start, end));
+        return ResponseEntity.ok(financialService.generateFinancialReport(start, end));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/performance/daily")
     public ResponseEntity<FinancialReportDTO> getDailyPerformance(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date){
-        return ResponseEntity.ok(financialService.getDailyFinancialPerformance(date));
+        return ResponseEntity.ok(financialService.findDailyFinancialPerformance(date));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/inventory")
     public ResponseEntity<InventoryFlowDTO> getInventoryFlow(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date){
-        return ResponseEntity.ok(financialService.getInventoryFlow(date));
+        return ResponseEntity.ok(financialService.findInventoryFlowByDate(date));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/operational")
     public ResponseEntity<DailyReportDTO> getOperational(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start
             , @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end){
-        return ResponseEntity.ok(financialService.getOperationalSummary(start, end));
+        return ResponseEntity.ok(financialService.generateOperationalSummary(start, end));
     }
 
 }

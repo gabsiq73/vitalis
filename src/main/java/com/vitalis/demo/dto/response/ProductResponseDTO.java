@@ -15,7 +15,4 @@ public record ProductResponseDTO(
         boolean isActive
 ) {
 
-    public static ProductResponseDTO fromEntity(Product product){
-        return new ProductResponseDTO(product.getId(), product.getName(), product.getBasePrice(), product.getType());
-    }
 }

@@ -31,12 +31,10 @@ public class FinancialService {
     private final PaymentRepository paymentRepository;
     private final GasSettlementRepository gasSettlementRepository;
 
-    public FinancialReportDTO getDailyFinancialPerformance(LocalDate date) {
-
-        return getReport(date, date);
+    public FinancialReportDTO findDailyFinancialPerformance(LocalDate date) {return generateFinancialReport(date, date);
     }
 
-    public FinancialReportDTO getReport(LocalDate startDate, LocalDate endDate) {
+    public FinancialReportDTO generateFinancialReport(LocalDate startDate, LocalDate endDate) {
         LocalDateTime start = startDate.atStartOfDay();
         LocalDateTime end = endDate.atTime(LocalTime.MAX);
 
@@ -55,39 +53,9 @@ public class FinancialService {
         return new FinancialReportDTO(invoiced, received, gasProfit);
     }
 
-    public InventoryFlowDTO getInventoryFlow(LocalDate date){
-        LocalDateTime start = date.atStartOfDay();
-        LocalDateTime end = date.atTime(LocalTime.MAX);
-
-        List<Order> orders = orderRepository.findByStatusAndDeliveryDateBetween(OrderStatus.DELIVERED, start, end);
-
-        Integer waterRefill = 0;
-        Integer waterComplete = 0;
-        Integer gasOut = 0;
-
-        for(Order order: orders){
-            for(OrderItem item : order.getItems()){
-                String productName = item.getProduct().getName().toUpperCase();
-
-                if(item.getProduct().getType() == ProductType.GAS){
-                    gasOut += item.getQuantity();
-                }
-                else if(item.getProduct().getType() == ProductType.WATER){
-                    if(productName.contains("COMPLETO")) {
-                        waterComplete += item.getQuantity();
-                    }
-                    else{
-                        waterRefill += item.getQuantity();
-                    }
-                }
-            }
-        }
-        return new InventoryFlowDTO(waterRefill, waterComplete, gasOut);
-    }
-
     // Método para instanciar o resumo diário de vendas
     @Transactional(readOnly = true)
-    public DailyReportDTO getOperationalSummary(LocalDate start, LocalDate end){
+    public DailyReportDTO generateOperationalSummary(LocalDate start, LocalDate end){
         LocalDateTime startOfDay = start.atStartOfDay();
         LocalDateTime endOfDay = end.atTime(LocalTime.MAX);
 
@@ -132,6 +100,36 @@ public class FinancialService {
         }
 
         return new DailyReportDTO(totalPix, totalCash, totalDebt, totalWater, totalGas);
+    }
+
+    public InventoryFlowDTO findInventoryFlowByDate(LocalDate date){
+        LocalDateTime start = date.atStartOfDay();
+        LocalDateTime end = date.atTime(LocalTime.MAX);
+
+        List<Order> orders = orderRepository.findByStatusAndDeliveryDateBetween(OrderStatus.DELIVERED, start, end);
+
+        Integer waterRefill = 0;
+        Integer waterComplete = 0;
+        Integer gasOut = 0;
+
+        for(Order order: orders){
+            for(OrderItem item : order.getItems()){
+                String productName = item.getProduct().getName().toUpperCase();
+
+                if(item.getProduct().getType() == ProductType.GAS){
+                    gasOut += item.getQuantity();
+                }
+                else if(item.getProduct().getType() == ProductType.WATER){
+                    if(productName.contains("COMPLETO")) {
+                        waterComplete += item.getQuantity();
+                    }
+                    else{
+                        waterRefill += item.getQuantity();
+                    }
+                }
+            }
+        }
+        return new InventoryFlowDTO(waterRefill, waterComplete, gasOut);
     }
 
 
