@@ -23,6 +23,6 @@ public class SecurityService {
 
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         String login = userDetails.getUsername();
-        return userService.getByLogin(login);
+        return userService.findByUsername(login);
     }
 }
