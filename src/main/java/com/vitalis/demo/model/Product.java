@@ -38,12 +38,19 @@ public class Product extends BaseEntity {
     @Column(name = "PROD_basePrice", precision = 10, scale = 2)
     private BigDecimal basePrice;
 
+    @Column(name = "PROD_last_CostPrice", precision = 10, scale = 2)
+    private BigDecimal costPrice;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "PROD_type", nullable = false)
     private ProductType type;
 
     @Column(name = "PROD_is_active")
     private boolean isActive;
+
+    @ManyToOne
+    @JoinColumn(name = "gasSupplier_id")
+    private GasSupplier defaultSupplier;
 
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY)
     private List<OrderItem> orderItems;

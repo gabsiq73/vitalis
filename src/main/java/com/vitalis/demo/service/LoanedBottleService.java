@@ -75,7 +75,7 @@ public class LoanedBottleService {
     // Lista de todos os garrafões emprestados
     @Transactional(readOnly = true)
     public Page<LoanedBottle> findAllPendingReturns(Pageable pageable){
-        return repository.findByReturnDateIsNull(pageable);
+        return repository.findByReturnDateIsNullOrderByLoanDateAsc(pageable);
     }
 
     @Transactional

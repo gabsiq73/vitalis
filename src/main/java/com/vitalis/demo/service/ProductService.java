@@ -4,6 +4,7 @@ import com.vitalis.demo.dto.update.ProductUpdateDTO;
 import com.vitalis.demo.infra.exception.BusinessException;
 import com.vitalis.demo.mapper.ProductMapper;
 import com.vitalis.demo.model.Product;
+import com.vitalis.demo.model.enums.ProductType;
 import com.vitalis.demo.repository.ClientPriceRepository;
 import com.vitalis.demo.repository.ProductRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -39,6 +40,11 @@ public class ProductService {
 
     @Transactional
     public Product save(Product product){
+
+        if(product.getType() == ProductType.GAS && product.getCostPrice() == null){
+            throw new BusinessException("Erro: Para produtos do tipo GÁS, o preço de custo deve ser informado!");
+        }
+
         Product savedProduct = repository.save(product);
         stockService.createInitialStock(savedProduct);
 
@@ -68,5 +74,7 @@ public class ProductService {
         return findByIdController(id)
                 .orElseThrow(() -> new EntityNotFoundException("Produto com ID: " +id+ " não encontrado!"));
     }
+
+
 
 }

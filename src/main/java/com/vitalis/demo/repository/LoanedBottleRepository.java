@@ -18,5 +18,5 @@ public interface LoanedBottleRepository extends JpaRepository<LoanedBottle, UUID
 
     Page<LoanedBottle> findByClient_IdAndLoanStatus(UUID clientId, LoanStatus status, Pageable pageable);
 
-    Page<LoanedBottle> findByReturnDateIsNull(Pageable pageable);
+    Page<LoanedBottle> findByReturnDateIsNullOrderByLoanDateAsc(Pageable pageable);
 }

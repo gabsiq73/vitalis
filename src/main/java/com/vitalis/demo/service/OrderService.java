@@ -86,9 +86,14 @@ public class OrderService {
                 if (isGas) {
                     saved.getItems().forEach(item -> {
                         GasFinancialInfoRequest info = financialMap.get(item.getProduct().getId());
-                        if (info != null) {
-                            processOrderItem(item, info.receivedByUs(), info.gasCostPrice());
-                        }
+
+                        BigDecimal finalCost = (info != null && info.gasCostPrice() != null)
+                                                ? info.gasCostPrice()
+                                                : item.getProduct().getCostPrice();
+
+                        Boolean receivedByUs = (info != null) ? info.receivedByUs() : false;
+
+                        processOrderItem(item, receivedByUs, finalCost);
                     });
                 }
                 savedOrders.add(saved);
@@ -115,8 +120,13 @@ public class OrderService {
             newItem.setUnitPrice(finalPrice);
 
             // Validação de Gás
-            if (newItem.getProduct().getType() == ProductType.GAS && newItem.getGasSupplier() == null) {
-                throw new BusinessException("Fornecedor obrigatório para itens de gás!");
+            if (newItem.getProduct().getType() == ProductType.GAS){
+                if (newItem.getGasSupplier() == null){
+                    newItem.setGasSupplier(newItem.getProduct().getDefaultSupplier());
+                }
+                if (newItem.getGasSupplier() == null){
+                    throw new BusinessException("Não foi possível identificar o fornecedor deste gás. Verifique o cadastro do produto!");
+                }
             }
 
             existingOrder.addItem(newItem);
@@ -127,9 +137,14 @@ public class OrderService {
         savedOrder.getItems().forEach(item -> {
             if (item.getProduct().getType() == ProductType.GAS) {
                 GasFinancialInfoRequest info = financialMap.get(item.getProduct().getId());
-                if (info != null) {
-                    processOrderItem(item, info.receivedByUs(), info.gasCostPrice());
-                }
+
+                BigDecimal finalCost = (info != null && info.gasCostPrice() != null)
+                        ? info.gasCostPrice()
+                        : item.getProduct().getCostPrice();
+
+                Boolean receivedByUs = (info != null) ? info.receivedByUs() : true;
+
+                processOrderItem(item, receivedByUs, finalCost);
             }
         });
 
@@ -150,8 +165,13 @@ public class OrderService {
             BigDecimal finalPrice = calculateFinalPrice(subOrder.getClient(), item.getProduct(), isDelivery);
             item.setUnitPrice(finalPrice);
 
-            if (isGas && item.getGasSupplier() == null) {
-                throw new BusinessException("Fornecedor obrigatório para gás!");
+            if (isGas) {
+                if(item.getGasSupplier() == null){
+                    item.setGasSupplier(item.getProduct().getDefaultSupplier());
+                }
+                if (item.getGasSupplier() == null) {
+                    throw new BusinessException("Não foi possível identificar o fornecedor deste gás. Verifique o cadastro do produto!");
+                }
             }
 
             subOrder.addItem(item); // Garante o vínculo bi-direcional

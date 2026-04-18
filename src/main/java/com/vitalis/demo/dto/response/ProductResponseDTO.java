@@ -10,7 +10,9 @@ public record ProductResponseDTO(
         UUID id,
         String name,
         BigDecimal basePrice,
-        ProductType type
+        BigDecimal lastCostPrice,
+        ProductType type,
+        boolean isActive
 ) {
 
     public static ProductResponseDTO fromEntity(Product product){
