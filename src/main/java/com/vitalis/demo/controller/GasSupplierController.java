@@ -43,7 +43,7 @@ public class GasSupplierController {
     @GetMapping("/{id}")
     public ResponseEntity<GasSupplierResponseDTO> getById(@PathVariable UUID id){
         return gasSupplierService
-                .findByIdController(id)
+                .findByIdOptional(id)
                 .map(supplier -> {
                     GasSupplierResponseDTO dto = gasSupplierMapper.toResponseDTO(supplier);
                     return ResponseEntity.ok(dto);

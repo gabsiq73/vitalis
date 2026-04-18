@@ -11,7 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -23,18 +22,19 @@ public class GasSupplierService {
     private final GasSupplierMapper gasSupplierMapper;
 
     @Transactional(readOnly = true)
-    public Page<GasSupplier> findAll(Pageable pageable) {
-        return repository.findAll(pageable);
-    }
-    @Transactional(readOnly = true)
     public GasSupplier findById(UUID id) {
-        return findByIdController(id)
+        return findByIdOptional(id)
                 .orElseThrow(() -> new BusinessException("Fornecedor não encontrado"));
     }
 
     @Transactional(readOnly = true)
-    public Optional<GasSupplier> findByIdController(UUID id){
+    public Optional<GasSupplier> findByIdOptional(UUID id){
         return repository.findById(id);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<GasSupplier> findAll(Pageable pageable) {
+        return repository.findAll(pageable);
     }
 
     @Transactional
