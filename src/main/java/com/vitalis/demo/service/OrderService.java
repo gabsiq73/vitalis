@@ -113,21 +113,22 @@ public class OrderService {
         checkItemsModificationAllowed(existingOrder);
 
         List<OrderItem> currentItems = existingOrder.getItems();
-
         currentItems.clear();
 
         for (OrderItem newItem : newItems) {
             validateProductAvailability(newItem.getProduct());
-            // Recalcular preço unitário
-            BigDecimal finalPrice = calculateFinalPrice(existingOrder.getClient(), newItem.getProduct(), isDelivery);
-            newItem.setUnitPrice(finalPrice);
 
-            // Validação de Gás
-            if (newItem.getProduct().getType() == ProductType.GAS){
-                if (newItem.getGasSupplier() == null){
+            // Se o preço de venda não foi alterado manualmente, calcula o padrão
+            if (newItem.getUnitPrice() == null || newItem.getUnitPrice().compareTo(BigDecimal.ZERO) <= 0) {
+                BigDecimal finalPrice = calculateFinalPrice(existingOrder.getClient(), newItem.getProduct(), isDelivery);
+                newItem.setUnitPrice(finalPrice);
+            }
+
+            if (newItem.getProduct().getType() == ProductType.GAS) {
+                if (newItem.getGasSupplier() == null) {
                     newItem.setGasSupplier(newItem.getProduct().getDefaultSupplier());
                 }
-                if (newItem.getGasSupplier() == null){
+                if (newItem.getGasSupplier() == null) {
                     throw new BusinessException("Não foi possível identificar o fornecedor deste gás. Verifique o cadastro do produto!");
                 }
             }
@@ -137,17 +138,18 @@ public class OrderService {
 
         Order savedOrder = repository.save(existingOrder);
 
+        // Processamento do Acerto (Sempre usando o custo fixo do cadastro do produto)
         savedOrder.getItems().forEach(item -> {
             if (item.getProduct().getType() == ProductType.GAS) {
                 GasFinancialInfoRequest info = financialMap.get(item.getProduct().getId());
 
-                BigDecimal finalCost = (info != null && info.gasCostPrice() != null)
-                        ? info.gasCostPrice()
-                        : item.getProduct().getCostPrice();
+                // Pega o custo direto da entidade Product
+                BigDecimal costPrice = item.getProduct().getCostPrice();
 
+                // Se não houver info financeira extra, assume que o depósito recebeu o dinheiro
                 Boolean receivedByUs = (info != null) ? info.receivedByUs() : true;
 
-                processGasFinancials(item, receivedByUs, finalCost);
+                processOrderItem(item, receivedByUs, costPrice);
             }
         });
 
@@ -250,11 +252,15 @@ public class OrderService {
             validateProductAvailability(item.getProduct());
             stockService.checkStockAvailability(item.getProduct(), item.getQuantity());
 
-            BigDecimal finalPrice = calculateFinalPrice(subOrder.getClient(), item.getProduct(), isDelivery);
-            item.setUnitPrice(finalPrice);
+            // Lógica de Preço: Se o preço não foi alterado manualmente (está zerado/nulo),
+            // o sistema aplica a regra automática (ClientPrice ou BasePrice).
+            if (item.getUnitPrice() == null || item.getUnitPrice().compareTo(BigDecimal.ZERO) <= 0) {
+                BigDecimal calculatedPrice = calculateFinalPrice(subOrder.getClient(), item.getProduct(), isDelivery);
+                item.setUnitPrice(calculatedPrice);
+            }
 
             if (isGas) {
-                if(item.getGasSupplier() == null){
+                if (item.getGasSupplier() == null) {
                     item.setGasSupplier(item.getProduct().getDefaultSupplier());
                 }
                 if (item.getGasSupplier() == null) {
@@ -262,7 +268,7 @@ public class OrderService {
                 }
             }
 
-            subOrder.addItem(item); // Garante o vínculo bi-direcional
+            subOrder.addItem(item);
         }
 
         return subOrder;
