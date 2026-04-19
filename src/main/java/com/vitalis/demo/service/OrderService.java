@@ -149,7 +149,7 @@ public class OrderService {
                 // Se não houver info financeira extra, assume que o depósito recebeu o dinheiro
                 Boolean receivedByUs = (info != null) ? info.receivedByUs() : true;
 
-                processOrderItem(item, receivedByUs, costPrice);
+                processGasFinancials(item, receivedByUs, costPrice);
             }
         });
 
