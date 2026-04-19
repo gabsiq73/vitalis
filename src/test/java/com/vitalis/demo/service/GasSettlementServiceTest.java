@@ -1,9 +1,14 @@
 package com.vitalis.demo.service;
 
 import com.vitalis.demo.dto.response.GasSettlementReportDTO;
+import com.vitalis.demo.dto.response.GasSettlementResponseDTO;
 import com.vitalis.demo.infra.exception.BusinessException;
 import com.vitalis.demo.mapper.GasSettlementMapper;
-import com.vitalis.demo.model.*;
+import com.vitalis.demo.model.GasSettlement;
+import com.vitalis.demo.model.GasSupplier;
+import com.vitalis.demo.model.OrderItem;
+import com.vitalis.demo.model.Product;
+import com.vitalis.demo.model.enums.ProductType;
 import com.vitalis.demo.model.enums.SettlementType;
 import com.vitalis.demo.repository.GasSettlementRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,295 +25,557 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("GasSettlementService - Testes Unitários")
 class GasSettlementServiceTest {
-
-    @Mock private GasSettlementRepository repository;
-
-    @Mock private GasSettlementMapper mapper;
 
     @InjectMocks
     private GasSettlementService gasSettlementService;
 
-    private OrderItem orderItem;
+    @Mock
+    private GasSettlementRepository repository;
+
+    @Mock
+    private GasSettlementMapper mapper;
+
+    // -------------------------------------------------------------------------
+    // Fixtures
+    // -------------------------------------------------------------------------
+
     private GasSupplier supplier;
+    private Product gasProduct;
+    private OrderItem orderItem;
 
     @BeforeEach
     void setUp() {
         supplier = new GasSupplier();
         supplier.setId(UUID.randomUUID());
-        supplier.setName("Distribuidora Sul");
+        supplier.setName("Distribuidora Alpha");
 
-        Product gasProduct = new Product();
+        gasProduct = new Product();
         gasProduct.setId(UUID.randomUUID());
+        gasProduct.setName("Gás P13");
+        gasProduct.setType(ProductType.GAS);
 
         orderItem = new OrderItem();
         orderItem.setId(UUID.randomUUID());
         orderItem.setProduct(gasProduct);
-        orderItem.setUnitPrice(new BigDecimal("120.00"));
-        orderItem.setQuantity(1);
         orderItem.setGasSupplier(supplier);
+        orderItem.setQuantity(1);
+        orderItem.setUnitPrice(new BigDecimal("100.00"));
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // createAutomatedSettlement — a regra mais crítica do módulo financeiro
-    // ═══════════════════════════════════════════════════════════════════════════
+    // =========================================================================
+    // findById
+    // =========================================================================
+
     @Nested
-    @DisplayName("createAutomatedSettlement")
-    class CreateAutomatedSettlement {
+    @DisplayName("findById")
+    class FindByIdTests {
 
         @Test
-        @DisplayName("receivedByUs=true: depósito recebeu → tipo YOU_OWE com valor do custo")
-        void shouldCreateYouOweSettlementWhenReceivedByUs() {
-            // ARRANGE
-            BigDecimal costPrice = new BigDecimal("90.00");
+        @DisplayName("Deve retornar o acerto quando o ID existe")
+        void shouldReturnSettlementWhenIdExists() {
+            // Given
+            UUID id = UUID.randomUUID();
+            GasSettlement settlement = new GasSettlement();
+            settlement.setId(id);
+            when(repository.findById(id)).thenReturn(Optional.of(settlement));
 
-            // ACT
-            gasSettlementService.createAutomatedSettlement(orderItem, true, costPrice);
+            // When
+            GasSettlement result = gasSettlementService.findById(id);
 
-            // ASSERT — captura o objeto salvo para inspecionar seus campos
-            ArgumentCaptor<GasSettlement> captor = ArgumentCaptor.forClass(GasSettlement.class);
-            verify(repository).save(captor.capture());
-
-            GasSettlement saved = captor.getValue();
-            assertThat(saved.getSettlementType()).isEqualTo(SettlementType.YOU_OWE);
-            // Depósito recebeu → deve ao fornecedor o custo inteiro
-            assertThat(saved.getAmount()).isEqualByComparingTo("90.00");
-            assertThat(saved.getSettled()).isFalse();
-            assertThat(saved.getGasSupplier()).isEqualTo(supplier);
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getId()).isEqualTo(id);
         }
 
         @Test
-        @DisplayName("receivedByUs=false: entregador recebeu → tipo SUPPLIER_OWE com valor do lucro")
-        void shouldCreateSupplierOweSettlementWhenNotReceivedByUs() {
-            // ARRANGE
-            // Venda: R$120, Custo: R$90 → Lucro (comissão a receber): R$30
-            BigDecimal costPrice = new BigDecimal("90.00");
+        @DisplayName("Deve lançar BusinessException quando o ID não existe")
+        void shouldThrowWhenIdNotFound() {
+            // Given
+            UUID id = UUID.randomUUID();
+            when(repository.findById(id)).thenReturn(Optional.empty());
 
-            // ACT
-            gasSettlementService.createAutomatedSettlement(orderItem, false, costPrice);
-
-            // ASSERT
-            ArgumentCaptor<GasSettlement> captor = ArgumentCaptor.forClass(GasSettlement.class);
-            verify(repository).save(captor.capture());
-
-            GasSettlement saved = captor.getValue();
-            assertThat(saved.getSettlementType()).isEqualTo(SettlementType.SUPPLIER_OWE);
-            // Entregador ficou com o dinheiro → fornecedor deve o lucro ao depósito
-            assertThat(saved.getAmount()).isEqualByComparingTo("30.00"); // 120 - 90
-            assertThat(saved.getSettled()).isFalse();
-        }
-
-        @Test
-        @DisplayName("Lucro zero quando preço de venda e custo são iguais")
-        void shouldCreateZeroProfitSettlementWhenPriceEqualsCost() {
-            // Caso extremo: venda pelo preço de custo (sem margem)
-            BigDecimal costPrice = new BigDecimal("120.00"); // igual ao unitPrice
-
-            gasSettlementService.createAutomatedSettlement(orderItem, false, costPrice);
-
-            ArgumentCaptor<GasSettlement> captor = ArgumentCaptor.forClass(GasSettlement.class);
-            verify(repository).save(captor.capture());
-            assertThat(captor.getValue().getAmount()).isEqualByComparingTo("0.00");
-        }
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════════
-    // generateReportBySupplier
-    // ═══════════════════════════════════════════════════════════════════════════
-    @Nested
-    @DisplayName("generateReportBySupplier")
-    class GenerateReportBySupplier {
-
-        private LocalDate start;
-        private LocalDate end;
-
-        @BeforeEach
-        void setDates() {
-            start = LocalDate.of(2025, 1, 1);
-            end   = LocalDate.of(2025, 1, 31);
-        }
-
-        @Test
-        @DisplayName("Deve lançar exceção quando não há acertos pendentes no período")
-        void shouldThrowWhenNoSettlementsFound() {
-            when(repository.findByGasSupplier_IdAndSettledFalseAndCreateDateBetween(
-                    any(), any(), any())).thenReturn(List.of());
-
-            assertThatThrownBy(() ->
-                    gasSettlementService.generateReportBySupplier(supplier.getId(), start, end))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("Não há acertos pendentes");
-        }
-
-        @Test
-        @DisplayName("Deve calcular toPay e toReceive separadamente e o saldo líquido")
-        void shouldCalculateToPayToReceiveAndNetBalance() {
-            // ARRANGE — 2 acertos YOU_OWE (R$200 total) e 1 SUPPLIER_OWE (R$50)
-            // saldo líquido = toPay - toReceive = 200 - 50 = 150 (devemos R$150 ao fornecedor)
-            GasSettlement youOwe1 = buildSettlement(SettlementType.YOU_OWE, "120.00");
-            GasSettlement youOwe2 = buildSettlement(SettlementType.YOU_OWE, "80.00");
-            GasSettlement supplierOwes = buildSettlement(SettlementType.SUPPLIER_OWE, "50.00");
-
-            when(repository.findByGasSupplier_IdAndSettledFalseAndCreateDateBetween(
-                    eq(supplier.getId()),
-                    eq(start.atStartOfDay()),
-                    eq(end.atTime(LocalTime.MAX))))
-                    .thenReturn(List.of(youOwe1, youOwe2, supplierOwes));
-
-            // ACT
-            GasSettlementReportDTO report =
-                    gasSettlementService.generateReportBySupplier(supplier.getId(), start, end);
-
-            // ASSERT
-            assertThat(report.totalToPay()).isEqualByComparingTo("200.00");
-            assertThat(report.totalToReceive()).isEqualByComparingTo("50.00");
-            assertThat(report.netBalance()).isEqualByComparingTo("150.00");
-            assertThat(report.supplierName()).isEqualTo("Distribuidora Sul");
-        }
-
-        @Test
-        @DisplayName("Deve usar startOfDay e endOfDay corretos para o intervalo de datas")
-        void shouldQueryWithCorrectDateRange() {
-            // Garante que o período pega do primeiro segundo de start ao último segundo de end
-            when(repository.findByGasSupplier_IdAndSettledFalseAndCreateDateBetween(
-                    any(), any(), any())).thenReturn(List.of());
-
-            try {
-                gasSettlementService.generateReportBySupplier(supplier.getId(), start, end);
-            } catch (BusinessException ignored) { /* esperado, sem acertos */ }
-
-            verify(repository).findByGasSupplier_IdAndSettledFalseAndCreateDateBetween(
-                    eq(supplier.getId()),
-                    eq(LocalDateTime.of(2025, 1, 1, 0, 0, 0)),
-                    eq(LocalDate.of(2025, 1, 31).atTime(LocalTime.MAX))
-            );
-        }
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════════
-    // markAsSettled
-    // ═══════════════════════════════════════════════════════════════════════════
-    @Nested
-    @DisplayName("markAsSettled")
-    class MarkAsSettled {
-
-        @Test
-        @DisplayName("Deve lançar exceção ao liquidar acerto já liquidado")
-        void shouldThrowWhenAlreadySettled() {
-            GasSettlement alreadySettled = new GasSettlement();
-            alreadySettled.setSettled(true);
-
-            when(repository.findById(any())).thenReturn(Optional.of(alreadySettled));
-
-            assertThatThrownBy(() -> gasSettlementService.settleIndividual(UUID.randomUUID()))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("já foi liquidado");
-        }
-
-        @Test
-        @DisplayName("Deve marcar como liquidado e definir a data do acerto")
-        void shouldMarkAsSettledAndSetDate() {
-            // ARRANGE
-            GasSettlement pending = new GasSettlement();
-            pending.setId(UUID.randomUUID());
-            pending.setSettled(false);
-
-            when(repository.findById(pending.getId())).thenReturn(Optional.of(pending));
-            when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-            // ACT
-            gasSettlementService.settleIndividual(pending.getId());
-
-            // ASSERT
-            ArgumentCaptor<GasSettlement> captor = ArgumentCaptor.forClass(GasSettlement.class);
-            verify(repository).save(captor.capture());
-
-            GasSettlement saved = captor.getValue();
-            assertThat(saved.getSettled()).isTrue();
-            assertThat(saved.getSettledDate()).isNotNull();
-            // Data do acerto deve ser recente (menos de 5 segundos atrás)
-            assertThat(saved.getSettledDate())
-                    .isAfter(LocalDateTime.now().minusSeconds(5));
-        }
-
-        @Test
-        @DisplayName("Deve lançar exceção quando acerto não existe")
-        void shouldThrowWhenSettlementNotFound() {
-            when(repository.findById(any())).thenReturn(Optional.empty());
-
-            assertThatThrownBy(() -> gasSettlementService.settleIndividual(UUID.randomUUID()))
+            // When / Then
+            assertThatThrownBy(() -> gasSettlementService.findById(id))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("não encontrado");
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // settledAllBySupplier
-    // ═══════════════════════════════════════════════════════════════════════════
+    // =========================================================================
+    // createAutomatedSettlement
+    // =========================================================================
+
     @Nested
-    @DisplayName("settledAllBySupplier")
-    class SettledAllBySupplier {
+    @DisplayName("createAutomatedSettlement - Criação de Acerto Automático")
+    class CreateAutomatedSettlementTests {
 
         @Test
-        @DisplayName("Deve lançar exceção quando não há acertos pendentes para liquidar")
-        void shouldThrowWhenNothingToSettle() {
-            when(repository.findByGasSupplier_IdAndSettledFalseAndCreateDateBetween(
-                    any(), any(), any())).thenReturn(List.of());
+        @DisplayName("Deve criar acerto YOU_OWE com amount=costPrice quando receivedByUs=true (dinheiro no depósito)")
+        void shouldCreateYouOweSettlementWhenMoneyReceivedByDeposit() {
+            // Given
+            BigDecimal costPrice = new BigDecimal("80.00");
+            boolean receivedByUs = true;
 
-            assertThatThrownBy(() ->
-                    gasSettlementService.settleAllBySupplier(
-                            supplier.getId(),
-                            LocalDate.now().minusDays(30),
-                            LocalDate.now()))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("Não há acertos pendentes");
+            // When
+            gasSettlementService.createAutomatedSettlement(orderItem, receivedByUs, costPrice);
+
+            // Then
+            ArgumentCaptor<GasSettlement> captor = ArgumentCaptor.forClass(GasSettlement.class);
+            verify(repository, times(1)).save(captor.capture());
+
+            GasSettlement saved = captor.getValue();
+            assertThat(saved.getSettlementType()).isEqualTo(SettlementType.YOU_OWE);
+            assertThat(saved.getAmount()).isEqualByComparingTo(new BigDecimal("80.00"));
+            assertThat(saved.getGasSupplier()).isEqualTo(supplier);
+            assertThat(saved.getOrderItem()).isEqualTo(orderItem);
+            assertThat(saved.getSettled()).isFalse();
         }
 
         @Test
-        @DisplayName("Deve marcar todos os acertos do período como liquidados")
-        void shouldMarkAllSettlementsAsSettled() {
-            // ARRANGE
-            GasSettlement s1 = new GasSettlement(); s1.setSettled(false);
-            GasSettlement s2 = new GasSettlement(); s2.setSettled(false);
-            GasSettlement s3 = new GasSettlement(); s3.setSettled(false);
+        @DisplayName("Deve criar acerto SUPPLIER_OWE com amount=lucro quando receivedByUs=false (dinheiro com entregador)")
+        void shouldCreateSupplierOweSettlementWhenMoneyWithDeliveryPerson() {
+            // Given
+            BigDecimal costPrice = new BigDecimal("80.00");
+            // unitPrice = 100,00 → lucro = 100 - 80 = 20,00
+            boolean receivedByUs = false;
 
-            when(repository.findByGasSupplier_IdAndSettledFalseAndCreateDateBetween(
-                    any(), any(), any())).thenReturn(List.of(s1, s2, s3));
+            // When
+            gasSettlementService.createAutomatedSettlement(orderItem, receivedByUs, costPrice);
 
-            // ACT
-            gasSettlementService.settleAllBySupplier(
-                    supplier.getId(),
-                    LocalDate.now().minusDays(30),
-                    LocalDate.now());
+            // Then
+            ArgumentCaptor<GasSettlement> captor = ArgumentCaptor.forClass(GasSettlement.class);
+            verify(repository, times(1)).save(captor.capture());
 
-            // ASSERT — saveAll chamado com todos marcados como settled
-            ArgumentCaptor<List<GasSettlement>> captor = ArgumentCaptor.forClass(List.class);
-            verify(repository).saveAll(captor.capture());
+            GasSettlement saved = captor.getValue();
+            assertThat(saved.getSettlementType()).isEqualTo(SettlementType.SUPPLIER_OWE);
+            assertThat(saved.getAmount()).isEqualByComparingTo(new BigDecimal("20.00"));
+            assertThat(saved.getSettled()).isFalse();
+        }
 
-            captor.getValue().forEach(s -> {
-                assertThat(s.getSettled()).isTrue();
-                assertThat(s.getSettledDate()).isNotNull();
-            });
+        @Test
+        @DisplayName("Deve criar acerto SUPPLIER_OWE com lucro zero quando venda a custo (unitPrice == costPrice)")
+        void shouldCreateZeroProfitSettlementWhenSoldAtCost() {
+            // Given
+            BigDecimal costPrice = new BigDecimal("100.00"); // igual ao unitPrice
+            orderItem.setUnitPrice(new BigDecimal("100.00"));
+
+            // When
+            gasSettlementService.createAutomatedSettlement(orderItem, false, costPrice);
+
+            // Then
+            ArgumentCaptor<GasSettlement> captor = ArgumentCaptor.forClass(GasSettlement.class);
+            verify(repository).save(captor.capture());
+
+            assertThat(captor.getValue().getAmount()).isEqualByComparingTo(BigDecimal.ZERO);
+            assertThat(captor.getValue().getSettlementType()).isEqualTo(SettlementType.SUPPLIER_OWE);
+        }
+
+        @Test
+        @DisplayName("Deve associar o fornecedor correto do item no acerto")
+        void shouldLinkCorrectSupplierFromOrderItem() {
+            // Given
+            GasSupplier anotherSupplier = new GasSupplier();
+            anotherSupplier.setId(UUID.randomUUID());
+            anotherSupplier.setName("Distribuidora Beta");
+            orderItem.setGasSupplier(anotherSupplier);
+
+            // When
+            gasSettlementService.createAutomatedSettlement(orderItem, true, new BigDecimal("80.00"));
+
+            // Then
+            ArgumentCaptor<GasSettlement> captor = ArgumentCaptor.forClass(GasSettlement.class);
+            verify(repository).save(captor.capture());
+            assertThat(captor.getValue().getGasSupplier()).isEqualTo(anotherSupplier);
         }
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
-    private GasSettlement buildSettlement(SettlementType type, String amount) {
-        GasSettlement settlement = new GasSettlement();
-        settlement.setId(UUID.randomUUID());
-        settlement.setSettlementType(type);
-        settlement.setAmount(new BigDecimal(amount));
-        settlement.setSettled(false);
-        settlement.setGasSupplier(supplier);
-        return settlement;
+    // =========================================================================
+    // settleAllBySupplier
+    // =========================================================================
+
+    @Nested
+    @DisplayName("settleAllBySupplier - Liquidação em Lote por Fornecedor")
+    class SettleAllBySupplierTests {
+
+        private final LocalDate startDate = LocalDate.of(2024, 1, 1);
+        private final LocalDate endDate = LocalDate.of(2024, 1, 31);
+
+        @Test
+        @DisplayName("Deve liquidar todos os acertos pendentes de um fornecedor no período")
+        void shouldSettleAllPendingSettlementsForSupplier() {
+            // Given
+            GasSettlement s1 = buildPendingSettlement();
+            GasSettlement s2 = buildPendingSettlement();
+            List<GasSettlement> pending = List.of(s1, s2);
+
+            LocalDateTime startDt = startDate.atStartOfDay();
+            LocalDateTime endDt = endDate.atTime(LocalTime.MAX);
+
+            when(repository.findByGasSupplier_IdAndSettledFalseAndCreateDateBetween(
+                    supplier.getId(), startDt, endDt)).thenReturn(pending);
+
+            // When
+            gasSettlementService.settleAllBySupplier(supplier.getId(), startDate, endDate);
+
+            // Then
+            assertThat(s1.getSettled()).isTrue();
+            assertThat(s1.getSettledDate()).isNotNull();
+            assertThat(s2.getSettled()).isTrue();
+            assertThat(s2.getSettledDate()).isNotNull();
+            verify(repository, times(1)).saveAll(pending);
+        }
+
+        @Test
+        @DisplayName("Deve lançar BusinessException quando não há acertos pendentes no período")
+        void shouldThrowWhenNoPendingSettlementsFound() {
+            // Given
+            LocalDateTime startDt = startDate.atStartOfDay();
+            LocalDateTime endDt = endDate.atTime(LocalTime.MAX);
+
+            when(repository.findByGasSupplier_IdAndSettledFalseAndCreateDateBetween(
+                    supplier.getId(), startDt, endDt)).thenReturn(Collections.emptyList());
+
+            // When / Then
+            assertThatThrownBy(() -> gasSettlementService.settleAllBySupplier(
+                    supplier.getId(), startDate, endDate))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("pendentes");
+
+            verify(repository, never()).saveAll(any());
+        }
+
+        @Test
+        @DisplayName("Deve registrar a data e hora do acerto em cada settlement liquidado")
+        void shouldRecordSettlementDateTimeForEachSettledItem() {
+            // Given
+            GasSettlement settlement = buildPendingSettlement();
+            LocalDateTime beforeCall = LocalDateTime.now().minusSeconds(1);
+
+            LocalDateTime startDt = startDate.atStartOfDay();
+            LocalDateTime endDt = endDate.atTime(LocalTime.MAX);
+
+            when(repository.findByGasSupplier_IdAndSettledFalseAndCreateDateBetween(
+                    supplier.getId(), startDt, endDt)).thenReturn(List.of(settlement));
+
+            // When
+            gasSettlementService.settleAllBySupplier(supplier.getId(), startDate, endDate);
+
+            // Then
+            assertThat(settlement.getSettledDate()).isAfterOrEqualTo(beforeCall);
+        }
+    }
+
+    // =========================================================================
+    // settleIndividual
+    // =========================================================================
+
+    @Nested
+    @DisplayName("settleIndividual - Liquidação Individual")
+    class SettleIndividualTests {
+
+        @Test
+        @DisplayName("Deve liquidar um acerto individual com sucesso")
+        void shouldSettleIndividualSettlement() {
+            // Given
+            UUID id = UUID.randomUUID();
+            GasSettlement settlement = buildPendingSettlement();
+            settlement.setId(id);
+            when(repository.findById(id)).thenReturn(Optional.of(settlement));
+
+            // When
+            gasSettlementService.settleIndividual(id);
+
+            // Then
+            assertThat(settlement.getSettled()).isTrue();
+            assertThat(settlement.getSettledDate()).isNotNull();
+            verify(repository, times(1)).save(settlement);
+        }
+
+        @Test
+        @DisplayName("Deve lançar BusinessException quando o acerto não é encontrado")
+        void shouldThrowWhenSettlementNotFound() {
+            // Given
+            UUID id = UUID.randomUUID();
+            when(repository.findById(id)).thenReturn(Optional.empty());
+
+            // When / Then
+            assertThatThrownBy(() -> gasSettlementService.settleIndividual(id))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("não encontrado");
+
+            verify(repository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Deve lançar BusinessException quando o acerto já foi liquidado")
+        void shouldThrowWhenSettlementAlreadySettled() {
+            // Given
+            UUID id = UUID.randomUUID();
+            GasSettlement settlement = buildPendingSettlement();
+            settlement.setSettled(true);
+            settlement.setSettledDate(LocalDateTime.now().minusDays(1));
+            when(repository.findById(id)).thenReturn(Optional.of(settlement));
+
+            // When / Then
+            assertThatThrownBy(() -> gasSettlementService.settleIndividual(id))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("liquidado");
+
+            verify(repository, never()).save(any());
+        }
+    }
+
+    // =========================================================================
+    // generateReportBySupplier
+    // =========================================================================
+
+    @Nested
+    @DisplayName("generateReportBySupplier - Relatório de Acertos")
+    class GenerateReportTests {
+
+        private final LocalDate startDate = LocalDate.of(2024, 1, 1);
+        private final LocalDate endDate = LocalDate.of(2024, 1, 31);
+
+        @Test
+        @DisplayName("Deve gerar relatório com saldo líquido correto (toPay - toReceive)")
+        void shouldGenerateReportWithCorrectNetBalance() {
+            // Given
+            GasSettlement youOwe = buildSettlementOfType(SettlementType.YOU_OWE, new BigDecimal("150.00"));
+            GasSettlement supplierOwes = buildSettlementOfType(SettlementType.SUPPLIER_OWE, new BigDecimal("40.00"));
+            List<GasSettlement> settlements = List.of(youOwe, supplierOwes);
+
+            LocalDateTime startDt = startDate.atStartOfDay();
+            LocalDateTime endDt = endDate.atTime(LocalTime.MAX);
+
+            when(repository.findByGasSupplier_IdAndSettledFalseAndCreateDateBetween(
+                    supplier.getId(), startDt, endDt)).thenReturn(settlements);
+            when(mapper.toResponseDTOList(settlements)).thenReturn(
+                    List.of(stubGasSettlementResponseDTO(), stubGasSettlementResponseDTO()));
+
+            // When
+            GasSettlementReportDTO report = gasSettlementService.generateReportBySupplier(
+                    supplier.getId(), startDate, endDate);
+
+            // Then
+            assertThat(report.supplierName()).isEqualTo(supplier.getName());
+            assertThat(report.totalToPay()).isEqualByComparingTo(new BigDecimal("150.00"));
+            assertThat(report.totalToReceive()).isEqualByComparingTo(new BigDecimal("40.00"));
+            // netBalance = 150 - 40 = 110
+            assertThat(report.netBalance()).isEqualByComparingTo(new BigDecimal("110.00"));
+            assertThat(report.details()).hasSize(2);
+        }
+
+        @Test
+        @DisplayName("Deve gerar relatório com saldo líquido negativo quando fornecedor deve mais do que o depósito")
+        void shouldGenerateReportWithNegativeNetBalance() {
+            // Given
+            GasSettlement youOwe = buildSettlementOfType(SettlementType.YOU_OWE, new BigDecimal("30.00"));
+            GasSettlement supplierOwes = buildSettlementOfType(SettlementType.SUPPLIER_OWE, new BigDecimal("100.00"));
+
+            LocalDateTime startDt = startDate.atStartOfDay();
+            LocalDateTime endDt = endDate.atTime(LocalTime.MAX);
+
+            when(repository.findByGasSupplier_IdAndSettledFalseAndCreateDateBetween(
+                    supplier.getId(), startDt, endDt)).thenReturn(List.of(youOwe, supplierOwes));
+            when(mapper.toResponseDTOList(anyList())).thenReturn(List.of());
+
+            // When
+            GasSettlementReportDTO report = gasSettlementService.generateReportBySupplier(
+                    supplier.getId(), startDate, endDate);
+
+            // Then: netBalance = 30 - 100 = -70
+            assertThat(report.netBalance()).isEqualByComparingTo(new BigDecimal("-70.00"));
+        }
+
+        @Test
+        @DisplayName("Deve gerar relatório apenas com acertos YOU_OWE (sem SUPPLIER_OWE)")
+        void shouldGenerateReportWithOnlyYouOweEntries() {
+            // Given
+            GasSettlement s1 = buildSettlementOfType(SettlementType.YOU_OWE, new BigDecimal("50.00"));
+            GasSettlement s2 = buildSettlementOfType(SettlementType.YOU_OWE, new BigDecimal("70.00"));
+
+            LocalDateTime startDt = startDate.atStartOfDay();
+            LocalDateTime endDt = endDate.atTime(LocalTime.MAX);
+
+            when(repository.findByGasSupplier_IdAndSettledFalseAndCreateDateBetween(
+                    supplier.getId(), startDt, endDt)).thenReturn(List.of(s1, s2));
+            when(mapper.toResponseDTOList(anyList())).thenReturn(List.of());
+
+            // When
+            GasSettlementReportDTO report = gasSettlementService.generateReportBySupplier(
+                    supplier.getId(), startDate, endDate);
+
+            // Then
+            assertThat(report.totalToPay()).isEqualByComparingTo(new BigDecimal("120.00"));
+            assertThat(report.totalToReceive()).isEqualByComparingTo(BigDecimal.ZERO);
+            assertThat(report.netBalance()).isEqualByComparingTo(new BigDecimal("120.00"));
+        }
+
+        @Test
+        @DisplayName("Deve lançar BusinessException quando não há acertos pendentes no período para o relatório")
+        void shouldThrowWhenNoSettlementsForReport() {
+            // Given
+            LocalDateTime startDt = startDate.atStartOfDay();
+            LocalDateTime endDt = endDate.atTime(LocalTime.MAX);
+
+            when(repository.findByGasSupplier_IdAndSettledFalseAndCreateDateBetween(
+                    supplier.getId(), startDt, endDt)).thenReturn(Collections.emptyList());
+
+            // When / Then
+            assertThatThrownBy(() -> gasSettlementService.generateReportBySupplier(
+                    supplier.getId(), startDate, endDate))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("pendentes");
+        }
+
+        @Test
+        @DisplayName("Deve usar o nome do fornecedor do primeiro acerto encontrado")
+        void shouldUseSupplierNameFromFirstSettlement() {
+            // Given
+            GasSettlement settlement = buildSettlementOfType(SettlementType.YOU_OWE, new BigDecimal("100.00"));
+
+            LocalDateTime startDt = startDate.atStartOfDay();
+            LocalDateTime endDt = endDate.atTime(LocalTime.MAX);
+
+            when(repository.findByGasSupplier_IdAndSettledFalseAndCreateDateBetween(
+                    supplier.getId(), startDt, endDt)).thenReturn(List.of(settlement));
+            when(mapper.toResponseDTOList(anyList())).thenReturn(List.of());
+
+            // When
+            GasSettlementReportDTO report = gasSettlementService.generateReportBySupplier(
+                    supplier.getId(), startDate, endDate);
+
+            // Then
+            assertThat(report.supplierName()).isEqualTo("Distribuidora Alpha");
+        }
+    }
+
+    // =========================================================================
+    // delete / deleteByOrderItem
+    // =========================================================================
+
+    @Nested
+    @DisplayName("delete / deleteByOrderItem")
+    class DeleteTests {
+
+        @Test
+        @DisplayName("delete deve remover o acerto quando encontrado pelo ID")
+        void shouldDeleteSettlementById() {
+            // Given
+            UUID id = UUID.randomUUID();
+            GasSettlement settlement = new GasSettlement();
+            settlement.setId(id);
+            when(repository.findById(id)).thenReturn(Optional.of(settlement));
+
+            // When
+            gasSettlementService.delete(id);
+
+            // Then
+            verify(repository, times(1)).delete(settlement);
+        }
+
+        @Test
+        @DisplayName("delete deve lançar BusinessException quando o ID não existe")
+        void shouldThrowWhenDeletingNonExistentId() {
+            // Given
+            UUID id = UUID.randomUUID();
+            when(repository.findById(id)).thenReturn(Optional.empty());
+
+            // When / Then
+            assertThatThrownBy(() -> gasSettlementService.delete(id))
+                    .isInstanceOf(BusinessException.class);
+
+            verify(repository, never()).delete(any(GasSettlement.class));
+        }
+
+        @Test
+        @DisplayName("deleteByOrderItem deve remover o acerto vinculado ao item")
+        void shouldDeleteSettlementByOrderItem() {
+            // Given
+            GasSettlement settlement = buildPendingSettlement();
+            when(repository.findByOrderItem(orderItem)).thenReturn(Optional.of(settlement));
+
+            // When
+            gasSettlementService.deleteByOrderItem(orderItem);
+
+            // Then
+            verify(repository, times(1)).delete(settlement);
+        }
+
+        @Test
+        @DisplayName("deleteByOrderItem deve lançar BusinessException quando nenhum acerto está vinculado ao item")
+        void shouldThrowWhenNoSettlementLinkedToOrderItem() {
+            // Given
+            when(repository.findByOrderItem(orderItem)).thenReturn(Optional.empty());
+
+            // When / Then
+            assertThatThrownBy(() -> gasSettlementService.deleteByOrderItem(orderItem))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("não encontrado");
+
+            verify(repository, never()).delete(any(GasSettlement.class));
+        }
+    }
+
+    // =========================================================================
+    // findAll
+    // =========================================================================
+
+    @Test
+    @DisplayName("findAll deve retornar todos os acertos do repositório")
+    void shouldReturnAllSettlements() {
+        // Given
+        List<GasSettlement> allSettlements = List.of(new GasSettlement(), new GasSettlement());
+        when(repository.findAll()).thenReturn(allSettlements);
+
+        // When
+        List<GasSettlement> result = gasSettlementService.findAll();
+
+        // Then
+        assertThat(result).hasSize(2);
+        verify(repository, times(1)).findAll();
+    }
+
+    // =========================================================================
+    // Helpers internos
+    // =========================================================================
+
+    /**
+     * Cria um GasSettlementResponseDTO válido com todos os campos nulos.
+     * Necessário pois record não possui construtor vazio.
+     */
+    private GasSettlementResponseDTO stubGasSettlementResponseDTO() {
+        return new GasSettlementResponseDTO(null, null, null, null, null, null, null);
+    }
+
+    private GasSettlement buildPendingSettlement() {
+        GasSettlement s = new GasSettlement();
+        s.setId(UUID.randomUUID());
+        s.setGasSupplier(supplier);
+        s.setOrderItem(orderItem);
+        s.setSettled(false);
+        s.setAmount(new BigDecimal("80.00"));
+        s.setSettlementType(SettlementType.YOU_OWE);
+        return s;
+    }
+
+    private GasSettlement buildSettlementOfType(SettlementType type, BigDecimal amount) {
+        GasSettlement s = buildPendingSettlement();
+        s.setSettlementType(type);
+        s.setAmount(amount);
+        s.setGasSupplier(supplier);
+        return s;
     }
 }

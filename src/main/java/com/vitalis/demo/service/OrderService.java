@@ -146,8 +146,8 @@ public class OrderService {
                 // Pega o custo direto da entidade Product
                 BigDecimal costPrice = item.getProduct().getCostPrice();
 
-                // Se não houver info financeira extra, assume que o depósito recebeu o dinheiro
-                Boolean receivedByUs = (info != null) ? info.receivedByUs() : true;
+                // Se não houver info financeira extra, assume que não foi o depósito recebeu o dinheiro
+                Boolean receivedByUs = (info != null) ? info.receivedByUs() : false;
 
                 processGasFinancials(item, receivedByUs, costPrice);
             }
