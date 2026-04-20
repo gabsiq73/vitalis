@@ -48,17 +48,30 @@ public class PaymentService {
     @Transactional
     public Payment registerPayment(Payment payment, UUID orderId){
         Order order = orderService.findById(orderId);
+        BigDecimal amountReceived = payment.getAmount();
+        BigDecimal orderValue = order.getTotalValue();
 
-        if(order.getStatus() == OrderStatus.CANCELLED){
-            throw new BusinessException("Este pedido está cancelado!");
+        // 1. Caso o cliente pague exatamente o que deve ou menos (parcial)
+        if (amountReceived.compareTo(orderValue) <= 0) {
+            order.addPayment(payment);
+            Payment saved = repository.save(payment);
+            processOrderFinancials(order);
+            return saved;
         }
 
+        // CASO SOBRE DINHEIRO (Troco/Crédito)
+        // O pedido atual é quitado com o valor exato dele
+        payment.setAmount(orderValue);
         order.addPayment(payment);
-        Payment savedPayment = repository.save(payment);
-
+        Payment saved = repository.save(payment);
         processOrderFinancials(order);
 
-        return savedPayment;
+        // Oque sobrou do pagamento
+        BigDecimal excess = amountReceived.subtract(orderValue);
+
+        processBulkPayment(order.getClient().getId(), excess, payment.getMethod());
+
+        return saved;
     }
 
     // First in First Out
@@ -98,6 +111,10 @@ public class PaymentService {
 
                 remainingAmount = remainingAmount.subtract(amountToApply);
             }
+        }
+
+        if(remainingAmount.compareTo(BigDecimal.ZERO) > 0){
+            clientService.addCreditBalance(client.getId(), remainingAmount);
         }
 
         clientService.calculateDebtBalance(client.getId());

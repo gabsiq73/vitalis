@@ -65,6 +65,27 @@ public class ClientService {
     }
 
     @Transactional
+    public void addCreditBalance(UUID clientId, BigDecimal amount) {
+        Client client = findById(clientId);
+
+        BigDecimal currentBalance = (client.getBalance() != null) ? client.getBalance() : BigDecimal.ZERO;
+        client.setBalance(currentBalance.add(amount));
+        repository.save(client);
+    }
+
+    @Transactional
+    public void consumeCreditBalance(UUID clientId, BigDecimal amount){
+        Client client = findById(clientId);
+
+        if(amount.compareTo(client.getBalance()) > 0){
+            throw new BusinessException("O valor inserido é maior que os saldo de pontos!");
+        }
+
+        client.setBalance(client.getBalance().subtract(amount));
+        repository.save(client);
+    }
+
+    @Transactional
     public BigDecimal calculateDebtBalance(UUID clientId){
         Client client = repository.findById(clientId)
                 .orElseThrow(() -> new BusinessException("Cliente não encontrado!"));

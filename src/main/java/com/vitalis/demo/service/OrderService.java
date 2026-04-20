@@ -4,10 +4,7 @@ import com.vitalis.demo.dto.request.GasFinancialInfoRequest;
 import com.vitalis.demo.dto.response.OrderResponseDTO;
 import com.vitalis.demo.infra.exception.BusinessException;
 import com.vitalis.demo.mapper.OrderMapper;
-import com.vitalis.demo.model.Client;
-import com.vitalis.demo.model.Order;
-import com.vitalis.demo.model.OrderItem;
-import com.vitalis.demo.model.Product;
+import com.vitalis.demo.model.*;
 import com.vitalis.demo.model.enums.ClientType;
 import com.vitalis.demo.model.enums.OrderStatus;
 import com.vitalis.demo.model.enums.PaymentStatus;
@@ -170,6 +167,19 @@ public class OrderService {
 
         order.getItems().forEach(item -> {
             stockService.decreaseStock(item.getProduct(), item.getQuantity());
+
+            if(item.getProduct().getType() == ProductType.WATER){
+                String productName = item.getProduct().getName().toUpperCase();
+                if(productName.contains("NIETA") || productName.contains("PINHEIRO")){
+                    ClientFidelity fidelity = order.getClient().getFidelity();
+                    fidelity.setPoints(fidelity.getPoints() + item.getQuantity());
+
+                    while(fidelity.getPoints() >= 10) {
+                        fidelity.setPoints(fidelity.getPoints() - 10);
+                        fidelity.setPendingBonusWater(fidelity.getPendingBonusWater() + 1);
+                    }
+                }
+            }
         });
 
         order.setDeliveryDate(LocalDateTime.now());
@@ -252,13 +262,33 @@ public class OrderService {
             validateProductAvailability(item.getProduct());
             stockService.checkStockAvailability(item.getProduct(), item.getQuantity());
 
-            // Lógica de Preço: Se o preço não foi alterado manualmente (está zerado/nulo),
-            // o sistema aplica a regra automática (ClientPrice ou BasePrice).
-            if (item.getUnitPrice() == null || item.getUnitPrice().compareTo(BigDecimal.ZERO) <= 0) {
+            boolean isBonusRedemption = false;
+
+            // Se o preço veio explicitamente como ZERO
+            if (item.getUnitPrice() != null && item.getUnitPrice().compareTo(BigDecimal.ZERO) == 0) {
+
+                if (item.getProduct().getType() == ProductType.WATER) {
+                    ClientFidelity fidelity = subOrder.getClient().getFidelity();
+
+                    // Valida se o client tem saldo suficiente para resgatar essa quantidade
+                    if (fidelity != null && fidelity.getPendingBonusWater() >= item.getQuantity()) {
+                        isBonusRedemption = true;
+                        fidelity.setPendingBonusWater(fidelity.getPendingBonusWater() - item.getQuantity());
+                    } else {
+                        throw new BusinessException("O cliente não tem águas de brinde suficientes para este resgate!");
+                    }
+                } else {
+                    throw new BusinessException("Apenas água pode ser resgatada como brinde!");
+                }
+            }
+
+            // Só calcula se NÃO for um resgate de brinde
+            if (!isBonusRedemption && (item.getUnitPrice() == null || item.getUnitPrice().compareTo(BigDecimal.ZERO) <= 0)) {
                 BigDecimal calculatedPrice = calculateFinalPrice(subOrder.getClient(), item.getProduct(), isDelivery);
                 item.setUnitPrice(calculatedPrice);
             }
 
+            // 3. Lógica do Gás
             if (isGas) {
                 if (item.getGasSupplier() == null) {
                     item.setGasSupplier(item.getProduct().getDefaultSupplier());

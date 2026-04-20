@@ -10,6 +10,7 @@ import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -39,6 +40,13 @@ public class Client extends BaseEntity {
 
     @Column(name = "CLI_notes")
     private String notes;
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal balance;
+
+    @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JoinColumn(name = "CLI_fidelity_id")
+    private ClientFidelity fidelity = new ClientFidelity();
 
     @Enumerated(EnumType.STRING)
     @Column(name = "CLI_type",nullable = false)
