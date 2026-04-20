@@ -77,11 +77,13 @@ public class ClientService {
     public void consumeCreditBalance(UUID clientId, BigDecimal amount){
         Client client = findById(clientId);
 
+        BigDecimal currentBalance = (client.getBalance() != null) ? client.getBalance() : BigDecimal.ZERO;
+
         if(amount.compareTo(client.getBalance()) > 0){
-            throw new BusinessException("O valor inserido é maior que os saldo de pontos!");
+            throw new BusinessException("Saldo insuficiente! O cliente possui apenas R$ " + currentBalance);
         }
 
-        client.setBalance(client.getBalance().subtract(amount));
+        client.setBalance(currentBalance.subtract(amount));
         repository.save(client);
     }
 

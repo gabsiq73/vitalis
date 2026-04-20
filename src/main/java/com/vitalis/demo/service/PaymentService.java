@@ -51,11 +51,18 @@ public class PaymentService {
         BigDecimal amountReceived = payment.getAmount();
         BigDecimal orderValue = order.getTotalValue();
 
+        if(payment.getMethod() == Method.SALDO){
+            clientService.consumeCreditBalance(order.getClient().getId(), amountReceived);
+        }
+
         // 1. Caso o cliente pague exatamente o que deve ou menos (parcial)
         if (amountReceived.compareTo(orderValue) <= 0) {
             order.addPayment(payment);
             Payment saved = repository.save(payment);
             processOrderFinancials(order);
+
+            clientService.calculateDebtBalance(order.getClient().getId());
+
             return saved;
         }
 

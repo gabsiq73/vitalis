@@ -2,7 +2,8 @@ package com.vitalis.demo.model.enums;
 
 public enum Method {
     PIX("PIX"),
-    DINHEIRO("DINHEIRO");
+    DINHEIRO("DINHEIRO"),
+    SALDO("SALDO");
 
     private final String valor;
 
