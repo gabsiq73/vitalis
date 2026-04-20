@@ -49,14 +49,19 @@ public class PaymentService {
     public Payment registerPayment(Payment payment, UUID orderId){
         Order order = orderService.findById(orderId);
         BigDecimal amountReceived = payment.getAmount();
-        BigDecimal orderValue = order.getTotalValue();
 
+        // Calcula quanto ainda falta pagar nesse pedido especificamente
+        BigDecimal totalOrderValue = calculateTotalAmount(order);
+        BigDecimal totalAlreadyPaid = calculatePaidAmount(order);
+        BigDecimal debtInThisOrder = totalOrderValue.subtract(totalAlreadyPaid);
+
+        // Se o método for saldo, valida e consome do cadastro do cliente
         if(payment.getMethod() == Method.SALDO){
             clientService.consumeCreditBalance(order.getClient().getId(), amountReceived);
         }
 
-        // 1. Caso o cliente pague exatamente o que deve ou menos (parcial)
-        if (amountReceived.compareTo(orderValue) <= 0) {
+        // 1. Caso o cliente pague o que falta ou menos (pagamento parcial ou exato)
+        if (amountReceived.compareTo(debtInThisOrder) <= 0) {
             order.addPayment(payment);
             Payment saved = repository.save(payment);
             processOrderFinancials(order);
@@ -66,15 +71,15 @@ public class PaymentService {
             return saved;
         }
 
-        // CASO SOBRE DINHEIRO (Troco/Crédito)
-        // O pedido atual é quitado com o valor exato dele
-        payment.setAmount(orderValue);
+        // 2. CASO SOBRE DINHEIRO (Troco/Crédito)
+        // O pagamento atual é ajustado para quitar apenas o que faltava NESTE pedido
+        payment.setAmount(debtInThisOrder);
         order.addPayment(payment);
         Payment saved = repository.save(payment);
         processOrderFinancials(order);
 
-        // Oque sobrou do pagamento
-        BigDecimal excess = amountReceived.subtract(orderValue);
+        // O que sobrou vai para o processBulkPayment
+        BigDecimal excess = amountReceived.subtract(debtInThisOrder);
 
         processBulkPayment(order.getClient().getId(), excess, payment.getMethod());
 
