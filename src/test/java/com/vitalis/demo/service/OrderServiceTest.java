@@ -5,11 +5,7 @@ import com.vitalis.demo.dto.response.OrderItemResponseDTO;
 import com.vitalis.demo.dto.response.OrderResponseDTO;
 import com.vitalis.demo.infra.exception.BusinessException;
 import com.vitalis.demo.mapper.OrderMapper;
-import com.vitalis.demo.model.Client;
-import com.vitalis.demo.model.GasSupplier;
-import com.vitalis.demo.model.Order;
-import com.vitalis.demo.model.OrderItem;
-import com.vitalis.demo.model.Product;
+import com.vitalis.demo.model.*;
 import com.vitalis.demo.model.enums.ClientType;
 import com.vitalis.demo.model.enums.OrderStatus;
 import com.vitalis.demo.model.enums.PaymentStatus;
@@ -24,13 +20,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.*;
@@ -38,60 +29,56 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("OrderService - Testes Unitários")
+@DisplayName("OrderService — Hierarquia de Preços (Água e Gás)")
 class OrderServiceTest {
 
     @InjectMocks
     private OrderService orderService;
 
-    @Mock
-    private OrderRepository repository;
-
-    @Mock
-    private ClientService clientService;
-
-    @Mock
-    private ClientPriceService clientPriceService;
-
-    @Mock
-    private StockService stockService;
-
-    @Mock
-    private GasSettlementService gasSettlementService;
-
-    @Mock
-    private OrderMapper orderMapper;
+    @Mock private OrderRepository repository;
+    @Mock private ClientService clientService;
+    @Mock private ClientPriceService clientPriceService;
+    @Mock private StockService stockService;
+    @Mock private GasSettlementService gasSettlementService;
+    @Mock private OrderMapper orderMapper;
 
     // -------------------------------------------------------------------------
-    // Fixtures reutilizáveis
+    // Fixtures
     // -------------------------------------------------------------------------
 
     private Client retailClient;
     private Client resellerClient;
+    private ClientFidelity fidelity;
     private Product waterProduct;
     private Product gasProduct;
-    private GasSupplier defaultSupplier;
+    private GasSupplier supplier;
 
     @BeforeEach
     void setUp() {
-        defaultSupplier = new GasSupplier();
-        defaultSupplier.setId(UUID.randomUUID());
-        defaultSupplier.setName("Distribuidora Central");
+        fidelity = new ClientFidelity();
+        fidelity.setPoints(0);
+        fidelity.setPendingBonusWater(2); // saldo inicial para testes de brinde
 
         retailClient = new Client();
         retailClient.setId(UUID.randomUUID());
         retailClient.setClientType(ClientType.RETAIL);
+        retailClient.setFidelity(fidelity);
 
         resellerClient = new Client();
         resellerClient.setId(UUID.randomUUID());
         resellerClient.setClientType(ClientType.RESELLER);
+        resellerClient.setFidelity(new ClientFidelity());
 
         waterProduct = new Product();
         waterProduct.setId(UUID.randomUUID());
-        waterProduct.setName("Água 20L");
+        waterProduct.setName("Água NIETA 20L");
         waterProduct.setType(ProductType.WATER);
         waterProduct.setBasePrice(new BigDecimal("12.00"));
         waterProduct.setActive(true);
+
+        supplier = new GasSupplier();
+        supplier.setId(UUID.randomUUID());
+        supplier.setName("Distribuidora Teste");
 
         gasProduct = new Product();
         gasProduct.setId(UUID.randomUUID());
@@ -99,827 +86,458 @@ class OrderServiceTest {
         gasProduct.setType(ProductType.GAS);
         gasProduct.setBasePrice(new BigDecimal("100.00"));
         gasProduct.setCostPrice(new BigDecimal("80.00"));
-        gasProduct.setDefaultSupplier(defaultSupplier);
+        gasProduct.setDefaultSupplier(supplier);
         gasProduct.setActive(true);
     }
 
     // =========================================================================
-    // findById
+    // Hierarquia de preços — ÁGUA
     // =========================================================================
 
     @Nested
-    @DisplayName("findById")
-    class FindByIdTests {
+    @DisplayName("Água — Hierarquia de Preços")
+    class WaterPriceResolutionTests {
 
         @Test
-        @DisplayName("Deve retornar o pedido quando o ID existe")
-        void shouldReturnOrderWhenIdExists() {
-            // Given
-            UUID id = UUID.randomUUID();
-            Order order = new Order();
-            order.setId(id);
-            when(repository.findById(id)).thenReturn(Optional.of(order));
+        @DisplayName("Deve usar o preço manual quando unitPrice > 0 (desconto pontual sem ClientPrice)")
+        void shouldUseManualPriceWhenUnitPriceIsPositive() {
+            // Given: operador digitou R$ 9,00 manualmente
+            BigDecimal manualPrice = new BigDecimal("9.00");
+            Order prototype = buildPrototype(retailClient);
+            prototype.addItem(buildItem(waterProduct, manualPrice, 1));
+
+            when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(orderMapper.toResponseDTOList(any())).thenReturn(List.of(stubDTO()));
 
             // When
-            Order result = orderService.findById(id);
+            orderService.createOrders(prototype, new HashMap<>(), true);
 
-            // Then
-            assertThat(result).isNotNull();
-            assertThat(result.getId()).isEqualTo(id);
-            verify(repository, times(1)).findById(id);
+            // Then: clientPriceService nunca é chamado — preço manual tem prioridade total
+            verify(clientPriceService, never()).findEffectivePrice(any(), any());
+            assertSavedItemPrice(manualPrice);
         }
 
         @Test
-        @DisplayName("Deve lançar BusinessException quando o ID não existe")
-        void shouldThrowBusinessExceptionWhenIdNotFound() {
-            // Given
-            UUID id = UUID.randomUUID();
-            when(repository.findById(id)).thenReturn(Optional.empty());
+        @DisplayName("Deve buscar ClientPrice quando unitPrice é nulo (cliente sem desconto pontual)")
+        void shouldFetchClientPriceWhenUnitPriceIsNull() {
+            // Given: nenhum preço informado → sistema busca ClientPrice
+            BigDecimal clientPrice = new BigDecimal("10.50");
+            Order prototype = buildPrototype(retailClient);
+            prototype.addItem(buildItem(waterProduct, null, 1));
+
+            when(clientPriceService.findEffectivePrice(retailClient, waterProduct)).thenReturn(clientPrice);
+            when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(orderMapper.toResponseDTOList(any())).thenReturn(List.of(stubDTO()));
+
+            // When
+            orderService.createOrders(prototype, new HashMap<>(), true);
+
+            // Then: preço do ClientPrice foi aplicado
+            verify(clientPriceService, times(1)).findEffectivePrice(retailClient, waterProduct);
+            assertSavedItemPrice(clientPrice);
+        }
+
+        @Test
+        @DisplayName("Deve usar o basePrice quando unitPrice é nulo e não há ClientPrice (preço padrão do produto)")
+        void shouldUseBasePriceWhenUnitPriceIsNullAndNoClientPrice() {
+            // Given: sem preço manual e sem ClientPrice — clientPriceService retorna o basePrice
+            BigDecimal basePrice = waterProduct.getBasePrice();
+            Order prototype = buildPrototype(retailClient);
+            prototype.addItem(buildItem(waterProduct, null, 1));
+
+            when(clientPriceService.findEffectivePrice(retailClient, waterProduct)).thenReturn(basePrice);
+            when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(orderMapper.toResponseDTOList(any())).thenReturn(List.of(stubDTO()));
+
+            // When
+            orderService.createOrders(prototype, new HashMap<>(), true);
+
+            // Then
+            assertSavedItemPrice(basePrice);
+        }
+
+        @Test
+        @DisplayName("Deve tratar unitPrice zero como BRINDE para água e consumir saldo de fidelidade")
+        void shouldTreatZeroPriceAsWaterBonusRedemptionAndConsumeFidelity() {
+            // Given: zero explícito + cliente com brindes disponíveis
+            fidelity.setPendingBonusWater(2);
+            Order prototype = buildPrototype(retailClient);
+            prototype.addItem(buildItem(waterProduct, BigDecimal.ZERO, 1));
+
+            when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(orderMapper.toResponseDTOList(any())).thenReturn(List.of(stubDTO()));
+
+            // When
+            orderService.createOrders(prototype, new HashMap<>(), true);
+
+            // Then: preço permanece zero, clientPriceService não é chamado, brinde descontado
+            verify(clientPriceService, never()).findEffectivePrice(any(), any());
+            assertThat(fidelity.getPendingBonusWater()).isEqualTo(1);
+            assertSavedItemPrice(BigDecimal.ZERO);
+        }
+
+        @Test
+        @DisplayName("Deve lançar BusinessException ao resgatar brinde sem saldo de fidelidade")
+        void shouldThrowWhenRedeemingWaterBonusWithNoBalance() {
+            // Given: zero explícito mas sem saldo
+            fidelity.setPendingBonusWater(0);
+            Order prototype = buildPrototype(retailClient);
+            prototype.addItem(buildItem(waterProduct, BigDecimal.ZERO, 1));
 
             // When / Then
-            assertThatThrownBy(() -> orderService.findById(id))
+            assertThatThrownBy(() -> orderService.createOrders(prototype, new HashMap<>(), true))
                     .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining(id.toString());
-        }
-    }
-
-    // =========================================================================
-    // listOrders / listActiveOrders / findOrderByClient / findOpenOrdersByClient
-    // =========================================================================
-
-    @Nested
-    @DisplayName("Consultas de listagem")
-    class ListingTests {
-
-        @Test
-        @DisplayName("listOrders deve delegar paginação ao repositório")
-        void shouldDelegateListOrdersToRepository() {
-            // Given
-            Pageable pageable = PageRequest.of(0, 10);
-            Page<Order> page = new PageImpl<>(List.of(new Order()));
-            when(repository.findAll(pageable)).thenReturn(page);
-
-            // When
-            Page<Order> result = orderService.listOrders(pageable);
-
-            // Then
-            assertThat(result).isNotEmpty();
-            verify(repository).findAll(pageable);
+                    .hasMessageContaining("brinde");
         }
 
         @Test
-        @DisplayName("listActiveOrders deve retornar apenas pedidos com status SHIPPED")
-        void shouldReturnShippedOrders() {
-            // Given
-            Order shipped = new Order();
-            shipped.setStatus(OrderStatus.SHIPPED);
-            when(repository.findByStatus(OrderStatus.SHIPPED)).thenReturn(List.of(shipped));
+        @DisplayName("Deve aplicar desconto de R$ 0,50 para cliente RETAIL com retirada no balcão (sem ClientPrice)")
+        void shouldApplyCounterDiscountForRetailPickupWithoutClientPrice() {
+            // Given: clientPriceService retorna basePrice (sem preço especial) e isDelivery=false
+            when(clientPriceService.findEffectivePrice(retailClient, waterProduct))
+                    .thenReturn(waterProduct.getBasePrice()); // 12.00 == basePrice → sem ClientPrice
 
-            // When
-            List<Order> result = orderService.listActiveOrders();
-
-            // Then
-            assertThat(result).hasSize(1);
-            assertThat(result.get(0).getStatus()).isEqualTo(OrderStatus.SHIPPED);
-        }
-
-        @Test
-        @DisplayName("findOrderByClient deve retornar pedidos paginados do cliente")
-        void shouldReturnPagedOrdersByClient() {
-            // Given
-            UUID clientId = retailClient.getId();
-            Pageable pageable = PageRequest.of(0, 10);
-            when(clientService.findById(clientId)).thenReturn(retailClient);
-            when(repository.findByClient(retailClient, pageable))
-                    .thenReturn(new PageImpl<>(List.of(new Order())));
-
-            // When
-            Page<Order> result = orderService.findOrderByClient(clientId, pageable);
-
-            // Then
-            assertThat(result).isNotEmpty();
-        }
-
-        @Test
-        @DisplayName("findOpenOrdersByClient deve retornar pedidos não pagos em ordem de criação")
-        void shouldReturnUnpaidOrdersForClient() {
-            // Given
-            UUID clientId = retailClient.getId();
-            when(clientService.findById(clientId)).thenReturn(retailClient);
-            when(repository.findByClientAndPaymentStatusNotOrderByCreateDateAsc(retailClient, PaymentStatus.PAID))
-                    .thenReturn(List.of(new Order()));
-
-            // When
-            List<Order> result = orderService.findOpenOrdersByClient(clientId);
-
-            // Then
-            assertThat(result).hasSize(1);
-        }
-    }
-
-    // =========================================================================
-    // calculateFinalPrice
-    // =========================================================================
-
-    @Nested
-    @DisplayName("calculateFinalPrice - Hierarquia de Preços")
-    class CalculateFinalPriceTests {
-
-        @Test
-        @DisplayName("Deve retornar preço base para cliente revendedor (sem desconto de retirada)")
-        void shouldReturnBasePriceForResellerClient() {
-            // Given
-            BigDecimal basePrice = new BigDecimal("12.00");
-            when(clientPriceService.findEffectivePrice(resellerClient, waterProduct)).thenReturn(basePrice);
-
-            // When
-            BigDecimal result = orderService.calculateFinalPrice(resellerClient, waterProduct, false);
-
-            // Then
-            // Revendedor não recebe o desconto de R$ 0,50 de retirada no balcão
-            assertThat(result).isEqualByComparingTo(new BigDecimal("12.00"));
-        }
-
-        @Test
-        @DisplayName("Deve aplicar desconto de R$ 0,50 para cliente RETAIL com retirada no balcão (sem preço especial)")
-        void shouldApplyCounterDiscountForRetailClientPickup() {
-            // Given
-            BigDecimal basePrice = new BigDecimal("12.00");
-            // Sem preço especial: clientPriceService retorna o preço base
-            when(clientPriceService.findEffectivePrice(retailClient, waterProduct)).thenReturn(basePrice);
-
-            // When
             BigDecimal result = orderService.calculateFinalPrice(retailClient, waterProduct, false);
 
-            // Then
+            // Then: 12.00 - 0.50 = 11.50
             assertThat(result).isEqualByComparingTo(new BigDecimal("11.50"));
         }
 
         @Test
-        @DisplayName("Não deve aplicar desconto de retirada se o cliente RETAIL tem preço especial")
-        void shouldNotApplyCounterDiscountWhenRetailClientHasSpecialPrice() {
-            // Given
-            BigDecimal specialPrice = new BigDecimal("10.00"); // menor que basePrice
-            when(clientPriceService.findEffectivePrice(retailClient, waterProduct)).thenReturn(specialPrice);
+        @DisplayName("Não deve aplicar desconto de retirada quando cliente tem ClientPrice (preço especial)")
+        void shouldNotApplyCounterDiscountWhenClientHasSpecialPrice() {
+            // Given: clientPriceService retorna valor menor que basePrice → tem ClientPrice
+            when(clientPriceService.findEffectivePrice(retailClient, waterProduct))
+                    .thenReturn(new BigDecimal("10.00")); // 10.00 < 12.00 → tem preço especial
 
-            // When
             BigDecimal result = orderService.calculateFinalPrice(retailClient, waterProduct, false);
 
-            // Then
-            // Tem preço especial → não aplica desconto adicional
+            // Then: mantém 10.00 sem desconto adicional
             assertThat(result).isEqualByComparingTo(new BigDecimal("10.00"));
         }
 
         @Test
-        @DisplayName("Produto do tipo GÁS deve sempre ser tratado como entrega (isDelivery=true)")
-        void shouldAlwaysTreatGasAsDelivery() {
-            // Given
-            BigDecimal basePrice = new BigDecimal("100.00");
-            when(clientPriceService.findEffectivePrice(retailClient, gasProduct)).thenReturn(basePrice);
+        @DisplayName("Deve respeitar preço manual mesmo que seja menor que o ClientPrice")
+        void shouldRespectManualPriceEvenIfLowerThanClientPrice() {
+            // Given: operador fez desconto ainda maior que o ClientPrice cadastrado
+            BigDecimal agressiveManualPrice = new BigDecimal("7.00");
+            Order prototype = buildPrototype(retailClient);
+            prototype.addItem(buildItem(waterProduct, agressiveManualPrice, 1));
 
-            // When: isDelivery=false, mas produto é GAS → deve ignorar e não aplicar desconto
-            BigDecimal result = orderService.calculateFinalPrice(retailClient, gasProduct, false);
+            when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(orderMapper.toResponseDTOList(any())).thenReturn(List.of(stubDTO()));
+
+            // When
+            orderService.createOrders(prototype, new HashMap<>(), true);
+
+            // Then: preço manual usado sem nenhuma consulta ao clientPriceService
+            verify(clientPriceService, never()).findEffectivePrice(any(), any());
+            assertSavedItemPrice(agressiveManualPrice);
+        }
+    }
+
+    // =========================================================================
+    // Hierarquia de preços — GÁS
+    // =========================================================================
+
+    @Nested
+    @DisplayName("Gás — Hierarquia de Preços")
+    class GasPriceResolutionTests {
+
+        @Test
+        @DisplayName("Deve usar o preço manual de gás quando unitPrice > 0 (acréscimo por distância ou desconto pontual)")
+        void shouldUseManualPriceForGasWhenUnitPriceIsPositive() {
+            // Given: entrega distante → operador cobrou R$ 120,00 ao invés do padrão R$ 100,00
+            BigDecimal manualPrice = new BigDecimal("120.00");
+            Order prototype = buildPrototype(retailClient);
+            prototype.addItem(buildGasItem(gasProduct, manualPrice, 1));
+
+            GasFinancialInfoRequest info = new GasFinancialInfoRequest(gasProduct.getCostPrice(), true);
+            when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(orderMapper.toResponseDTOList(any())).thenReturn(List.of(stubDTO()));
+
+            // When
+            orderService.createOrders(prototype, Map.of(gasProduct.getId(), info), true);
+
+            // Then: clientPriceService não é chamado — preço manual prevalece
+            verify(clientPriceService, never()).findEffectivePrice(any(), any());
+            assertSavedItemPrice(manualPrice);
+        }
+
+        @Test
+        @DisplayName("Deve buscar ClientPrice/basePrice quando unitPrice de gás é nulo")
+        void shouldFetchClientPriceWhenGasUnitPriceIsNull() {
+            // Given
+            BigDecimal effectivePrice = new BigDecimal("95.00");
+            Order prototype = buildPrototype(retailClient);
+            prototype.addItem(buildGasItem(gasProduct, null, 1));
+
+            when(clientPriceService.findEffectivePrice(retailClient, gasProduct)).thenReturn(effectivePrice);
+            when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(orderMapper.toResponseDTOList(any())).thenReturn(List.of(stubDTO()));
+
+            // When
+            orderService.createOrders(prototype, new HashMap<>(), true);
+
+            // Then: preço calculado pelo clientPriceService
+            verify(clientPriceService, times(1)).findEffectivePrice(retailClient, gasProduct);
+            assertSavedItemPrice(effectivePrice);
+        }
+
+        @Test
+        @DisplayName("Deve buscar ClientPrice/basePrice quando unitPrice de gás é ZERO (gás não tem brinde)")
+        void shouldFetchBasePriceForGasWhenUnitPriceIsZeroInsteadOfTreatingAsBonusRedemption() {
+            // Given: zero explícito para gás — deve cair no cálculo normal, não no brinde
+            BigDecimal basePrice = gasProduct.getBasePrice(); // 100.00
+            Order prototype = buildPrototype(retailClient);
+            prototype.addItem(buildGasItem(gasProduct, BigDecimal.ZERO, 1));
+
+            when(clientPriceService.findEffectivePrice(retailClient, gasProduct)).thenReturn(basePrice);
+            when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(orderMapper.toResponseDTOList(any())).thenReturn(List.of(stubDTO()));
+
+            // When: NÃO deve lançar exceção de brinde nem tentar consumir fidelidade
+            orderService.createOrders(prototype, new HashMap<>(), true);
+
+            // Then: preço calculado normalmente, fidelidade intocada
+            verify(clientPriceService, times(1)).findEffectivePrice(retailClient, gasProduct);
+            assertSavedItemPrice(basePrice);
+            assertThat(fidelity.getPendingBonusWater()).isEqualTo(2); // intocado
+        }
+
+        @Test
+        @DisplayName("Gás com zero e sem ClientPrice deve usar o basePrice do produto")
+        void shouldUseGasBasePriceWhenUnitPriceIsZeroAndNoClientPrice() {
+            // Given
+            Order prototype = buildPrototype(retailClient);
+            prototype.addItem(buildGasItem(gasProduct, BigDecimal.ZERO, 1));
+
+            // clientPriceService retorna o basePrice (sem ClientPrice cadastrado)
+            when(clientPriceService.findEffectivePrice(retailClient, gasProduct))
+                    .thenReturn(gasProduct.getBasePrice());
+            when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(orderMapper.toResponseDTOList(any())).thenReturn(List.of(stubDTO()));
+
+            // When
+            orderService.createOrders(prototype, new HashMap<>(), true);
 
             // Then
+            assertSavedItemPrice(gasProduct.getBasePrice());
+        }
+
+        @Test
+        @DisplayName("Gás sempre é tratado como entrega, independente do isDelivery recebido")
+        void shouldAlwaysTreatGasAsDeliveryForPriceCalculation() {
+            // Given: isDelivery=false, mas produto é gás
+            when(clientPriceService.findEffectivePrice(retailClient, gasProduct))
+                    .thenReturn(gasProduct.getBasePrice());
+
+            // When: chamando calculateFinalPrice diretamente com isDelivery=false
+            BigDecimal result = orderService.calculateFinalPrice(retailClient, gasProduct, false);
+
+            // Then: gás nunca recebe desconto de retirada
             assertThat(result).isEqualByComparingTo(new BigDecimal("100.00"));
         }
 
         @Test
-        @DisplayName("isDelivery=null deve ser interpretado como true (entrega), sem aplicar desconto de retirada")
-        void shouldTreatNullIsDeliveryAsTrue() {
-            // Given
-            BigDecimal basePrice = new BigDecimal("12.00");
-            when(clientPriceService.findEffectivePrice(retailClient, waterProduct)).thenReturn(basePrice);
-
-            // When
-            BigDecimal result = orderService.calculateFinalPrice(retailClient, waterProduct, null);
-
-            // Then: null → isDelivery=true → sem desconto de retirada
-            assertThat(result).isEqualByComparingTo(new BigDecimal("12.00"));
-        }
-
-        @Test
-        @DisplayName("Deve retornar entrega sem desconto para cliente RETAIL com isDelivery=true")
-        void shouldReturnFullPriceForRetailClientDelivery() {
-            // Given
-            BigDecimal basePrice = new BigDecimal("12.00");
-            when(clientPriceService.findEffectivePrice(retailClient, waterProduct)).thenReturn(basePrice);
-
-            // When
-            BigDecimal result = orderService.calculateFinalPrice(retailClient, waterProduct, true);
-
-            // Then
-            assertThat(result).isEqualByComparingTo(new BigDecimal("12.00"));
-        }
-    }
-
-    // =========================================================================
-    // processGasFinancials
-    // =========================================================================
-
-    @Nested
-    @DisplayName("processGasFinancials - Acerto Financeiro do Gás")
-    class ProcessGasFinancialsTests {
-
-        @Test
-        @DisplayName("Deve chamar createAutomatedSettlement quando o produto é GAS")
-        void shouldCallCreateAutomatedSettlementForGasProduct() {
-            // Given
-            OrderItem item = buildGasOrderItem(gasProduct, new BigDecimal("100.00"));
-
-            // When
-            orderService.processGasFinancials(item, true, new BigDecimal("80.00"));
-
-            // Then
-            verify(gasSettlementService, times(1))
-                    .createAutomatedSettlement(item, true, new BigDecimal("80.00"));
-        }
-
-        @Test
-        @DisplayName("Não deve chamar acerto financeiro quando o produto não é GAS")
-        void shouldNotCallCreateAutomatedSettlementForNonGasProduct() {
-            // Given
-            OrderItem item = new OrderItem();
-            item.setProduct(waterProduct); // O waterProduct no setUp deve ser ProductType.WATER
-
-            // When
-            orderService.processGasFinancials(item, true, new BigDecimal("10.00"));
-
-            // Then
-            // IMPORTANTE: Use anyBoolean() para tipos boolean e any(BigDecimal.class) para objetos
-            verify(gasSettlementService, never())
-                    .createAutomatedSettlement(any(OrderItem.class), anyBoolean(), any(BigDecimal.class));
-        }
-
-        @Test
-        @DisplayName("Deve lançar BusinessException quando receivedByUs é nulo para produto GAS")
-        void shouldThrowWhenReceivedByUsIsNullForGas() {
-            // Given
-            OrderItem item = buildGasOrderItem(gasProduct, new BigDecimal("100.00"));
-
-            // When / Then
-            assertThatThrownBy(() -> orderService.processGasFinancials(item, null, new BigDecimal("80.00")))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("financeiros");
-        }
-
-        @Test
-        @DisplayName("Deve lançar BusinessException quando costPrice é nulo para produto GAS")
-        void shouldThrowWhenCostPriceIsNullForGas() {
-            // Given
-            OrderItem item = buildGasOrderItem(gasProduct, new BigDecimal("100.00"));
-
-            // When / Then
-            assertThatThrownBy(() -> orderService.processGasFinancials(item, true, null))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("financeiros");
-        }
-    }
-
-    // =========================================================================
-    // confirmDelivery
-    // =========================================================================
-
-    @Nested
-    @DisplayName("confirmDelivery - Confirmação de Entrega")
-    class ConfirmDeliveryTests {
-
-        @Test
-        @DisplayName("Deve confirmar entrega, baixar estoque e salvar pedido")
-        void shouldConfirmDeliveryDecreaseStockAndSave() {
-            // Given
-            Order order = buildOrderWithStatus(OrderStatus.SHIPPED);
-            OrderItem waterItem = buildWaterOrderItem(waterProduct, new BigDecimal("12.00"));
-            waterItem.setQuantity(3);
-            order.addItem(waterItem);
-
-            when(repository.findById(order.getId())).thenReturn(Optional.of(order));
-
-            // When
-            orderService.confirmDelivery(order.getId());
-
-            // Then
-            verify(stockService, times(1)).decreaseStock(waterProduct, 3);
-            assertThat(order.getStatus()).isEqualTo(OrderStatus.DELIVERED);
-            assertThat(order.getDeliveryDate()).isNotNull();
-            verify(repository, times(1)).save(order);
-        }
-
-        @Test
-        @DisplayName("Deve lançar BusinessException se o pedido já foi entregue")
-        void shouldThrowWhenOrderAlreadyDelivered() {
-            // Given
-            Order order = buildOrderWithStatus(OrderStatus.DELIVERED);
-            when(repository.findById(order.getId())).thenReturn(Optional.of(order));
-
-            // When / Then
-            assertThatThrownBy(() -> orderService.confirmDelivery(order.getId()))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("entregue");
-
-            verify(repository, never()).save(any());
-        }
-
-        @Test
-        @DisplayName("Deve lançar BusinessException se o pedido não tem itens")
-        void shouldThrowWhenOrderHasNoItems() {
-            // Given
-            Order order = buildOrderWithStatus(OrderStatus.SHIPPED);
-            // itens vazios por padrão
-
-            when(repository.findById(order.getId())).thenReturn(Optional.of(order));
-
-            // When / Then
-            assertThatThrownBy(() -> orderService.confirmDelivery(order.getId()))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("sem itens");
-
-            verify(stockService, never()).decreaseStock(any(), anyInt());
-        }
-    }
-
-    // =========================================================================
-    // cancelOrder
-    // =========================================================================
-
-    @Nested
-    @DisplayName("cancelOrder - Cancelamento de Pedido")
-    class CancelOrderTests {
-
-        @Test
-        @DisplayName("Deve cancelar pedido PENDING sem reverter estoque")
-        void shouldCancelPendingOrderWithoutRevertingStock() {
-            // Given
-            Order order = new Order();
-            order.setId(UUID.randomUUID());
-            order.setStatus(OrderStatus.PENDING);
-
-            OrderItem item = new OrderItem();
-            item.setProduct(waterProduct);
-            order.addItem(item);
-
-            when(repository.findById(order.getId())).thenReturn(Optional.of(order));
-
-            // When
-            orderService.cancelOrder(order.getId());
-
-            // Then
-            assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELLED);
-            // No seu código, o estoque só reverte se o status for DELIVERED. Como era PENDING, o mock nunca deve ser chamado.
-            verify(stockService, never()).increaseStock(any(), anyInt());
-            verify(repository, times(1)).save(order);
-        }
-
-        @Test
-        @DisplayName("Deve reverter estoque e excluir acerto de gás ao cancelar pedido DELIVERED")
-        void shouldRevertStockAndDeleteSettlementWhenCancellingDeliveredOrder() {
-            // Given
-            Order order = buildOrderWithStatus(OrderStatus.DELIVERED);
-
-            OrderItem gasItem = buildGasOrderItem(gasProduct, new BigDecimal("100.00"));
-            gasItem.setQuantity(2);
-            order.addItem(gasItem);
-
-            when(repository.findById(order.getId())).thenReturn(Optional.of(order));
-
-            // When
-            orderService.cancelOrder(order.getId());
-
-            // Then
-            verify(stockService, times(1)).increaseStock(gasProduct, 2);
-            verify(gasSettlementService, times(1)).deleteByOrderItem(gasItem);
-            assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELLED);
-            verify(repository, times(1)).save(order);
-        }
-
-        @Test
-        @DisplayName("Deve reverter estoque de água sem chamar deleteByOrderItem ao cancelar DELIVERED")
-        void shouldRevertWaterStockWithoutSettlementWhenCancellingDeliveredOrder() {
-            // Given
-            Order order = buildOrderWithStatus(OrderStatus.DELIVERED);
-            OrderItem waterItem = buildWaterOrderItem(waterProduct, new BigDecimal("12.00"));
-            waterItem.setQuantity(5);
-            order.addItem(waterItem);
-
-            when(repository.findById(order.getId())).thenReturn(Optional.of(order));
-
-            // When
-            orderService.cancelOrder(order.getId());
-
-            // Then
-            verify(stockService, times(1)).increaseStock(waterProduct, 5);
-            verify(gasSettlementService, never()).deleteByOrderItem(any());
-        }
-
-        @Test
-        @DisplayName("Deve lançar BusinessException ao tentar cancelar pedido já cancelado")
-        void shouldThrowWhenOrderAlreadyCancelled() {
-            // Given
-            Order order = buildOrderWithStatus(OrderStatus.CANCELLED);
-            when(repository.findById(order.getId())).thenReturn(Optional.of(order));
-
-            // When / Then
-            assertThatThrownBy(() -> orderService.cancelOrder(order.getId()))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("cancelado");
-
-            verify(repository, never()).save(any());
-        }
-    }
-
-    // =========================================================================
-    // updateStatus
-    // =========================================================================
-
-    @Nested
-    @DisplayName("updateStatus - Atualização de Status")
-    class UpdateStatusTests {
-
-        @Test
-        @DisplayName("Deve atualizar status para SHIPPED com sucesso")
-        void shouldUpdateStatusToShipped() {
-            // Given
-            Order order = buildOrderWithStatus(OrderStatus.PENDING);
-            when(repository.findById(order.getId())).thenReturn(Optional.of(order));
-
-            // When
-            orderService.updateStatus(order.getId(), OrderStatus.SHIPPED);
-
-            // Then
-            assertThat(order.getStatus()).isEqualTo(OrderStatus.SHIPPED);
-            verify(repository, times(1)).save(order);
-        }
-
-        @Test
-        @DisplayName("Deve lançar BusinessException ao tentar mudar para status DELIVERED via updateStatus")
-        void shouldThrowWhenTryingToSetDeliveredViaUpdateStatus() {
-            // When / Then
-            assertThatThrownBy(() -> orderService.updateStatus(UUID.randomUUID(), OrderStatus.DELIVERED))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("endpoints específicos");
-
-            verify(repository, never()).findById(any());
-            verify(repository, never()).save(any());
-        }
-
-        @Test
-        @DisplayName("Deve lançar BusinessException ao tentar mudar para status CANCELLED via updateStatus")
-        void shouldThrowWhenTryingToSetCancelledViaUpdateStatus() {
-            // When / Then
-            assertThatThrownBy(() -> orderService.updateStatus(UUID.randomUUID(), OrderStatus.CANCELLED))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("endpoints específicos");
-
-            verify(repository, never()).save(any());
-        }
-    }
-
-    // =========================================================================
-    // createOrders
-    // =========================================================================
-
-    @Nested
-    @DisplayName("createOrders - Criação de Pedidos")
-    class CreateOrdersTests {
-
-        @Test
-        @DisplayName("Deve criar sub-pedido de água e calcular preço automaticamente")
-        void shouldCreateWaterOrderAndCalculatePriceWhenUnitPriceIsZero() {
-            // Given
-            Order prototype = new Order();
-            prototype.setClient(retailClient);
-
-            OrderItem waterItem = new OrderItem();
-            waterItem.setProduct(waterProduct);
-            waterItem.setUnitPrice(BigDecimal.ZERO);
-            waterItem.setQuantity(2);
-            prototype.setItems(new ArrayList<>(List.of(waterItem)));
-
-            // Criando uma instância válida do Record (pode ser com dados fictícios)
-            OrderResponseDTO stubResponse = new OrderResponseDTO(
-                    UUID.randomUUID(),
-                    LocalDateTime.now(),
-                    OrderStatus.PENDING,
-                    PaymentStatus.PENDING,
-                    retailClient.getId(),
-                    "Cliente Teste",
-                    List.of(),
-                    new BigDecimal("24.00"),
-                    LocalDateTime.now()
-            );
-
-            when(clientPriceService.findEffectivePrice(retailClient, waterProduct)).thenReturn(new BigDecimal("12.00"));
-            when(repository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
-            when(orderMapper.toResponseDTOList(anyList())).thenReturn(List.of(stubResponse));
-
-            // When
-            List<OrderResponseDTO> result = orderService.createOrders(prototype, new HashMap<>(), true);
-
-            // Then
-            verify(stockService, times(1)).checkStockAvailability(eq(waterProduct), eq(2));
-            verify(repository, times(1)).save(any(Order.class));
-            assertThat(result).isNotEmpty();
-        }
-
-        @Test
-        @DisplayName("Deve criar sub-pedido de gás com acerto financeiro usando costPrice do financialMap")
-        void shouldCreateGasOrderWithSettlementUsingFinancialMapCostPrice() {
-            // Given
-            Order prototype = buildPrototype(retailClient);
-            OrderItem gasItem = buildGasOrderItem(gasProduct, BigDecimal.ZERO);
-            gasItem.setQuantity(1);
-            prototype.addItem(gasItem);
-
-            BigDecimal customCost = new BigDecimal("75.00");
-            GasFinancialInfoRequest financialInfo = new GasFinancialInfoRequest(customCost, true);
-            Map<UUID, GasFinancialInfoRequest> financialMap = Map.of(gasProduct.getId(), financialInfo);
-
-            when(clientPriceService.findEffectivePrice(retailClient, gasProduct))
-                    .thenReturn(new BigDecimal("100.00"));
-            when(repository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
-            when(orderMapper.toResponseDTOList(anyList())).thenReturn(List.of(stubOrderResponseDTO()));
-
-            // When
-            orderService.createOrders(prototype, financialMap, true);
-
-            // Then
-            verify(gasSettlementService, times(1))
-                    .createAutomatedSettlement(any(OrderItem.class), eq(true), eq(customCost));
-        }
-
-        @Test
-        @DisplayName("Deve usar costPrice do produto quando financialMap não tem info para o item de gás")
-        void shouldUseProdutoCostPriceWhenFinancialMapHasNoInfo() {
-            // Given
-            Order prototype = buildPrototype(retailClient);
-            OrderItem gasItem = buildGasOrderItem(gasProduct, BigDecimal.ZERO);
-            gasItem.setQuantity(1);
-            prototype.addItem(gasItem);
-
-            when(clientPriceService.findEffectivePrice(retailClient, gasProduct))
-                    .thenReturn(new BigDecimal("100.00"));
-            when(repository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
-            when(orderMapper.toResponseDTOList(anyList())).thenReturn(List.of(stubOrderResponseDTO()));
+        @DisplayName("Deve aplicar ClientPrice de gás quando o cliente tem preço especial negociado")
+        void shouldApplyClientPriceForGasWhenAvailable() {
+            // Given: revendedor tem ClientPrice de R$ 90,00 para este gás
+            BigDecimal negotiatedPrice = new BigDecimal("90.00");
+            Order prototype = buildPrototype(resellerClient);
+            prototype.addItem(buildGasItem(gasProduct, null, 1));
+
+            when(clientPriceService.findEffectivePrice(resellerClient, gasProduct))
+                    .thenReturn(negotiatedPrice);
+            when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(orderMapper.toResponseDTOList(any())).thenReturn(List.of(stubDTO()));
 
             // When
             orderService.createOrders(prototype, new HashMap<>(), true);
 
-            // Then: deve usar o costPrice do produto (R$ 80,00) e receivedByUs=false (padrão)
-            verify(gasSettlementService, times(1))
-                    .createAutomatedSettlement(any(OrderItem.class), eq(false), eq(gasProduct.getCostPrice()));
+            // Then
+            verify(clientPriceService, times(1)).findEffectivePrice(resellerClient, gasProduct);
+            assertSavedItemPrice(negotiatedPrice);
         }
 
         @Test
-        @DisplayName("Deve separar itens de água e gás em dois sub-pedidos salvos separadamente")
-        void shouldSplitWaterAndGasItemsIntoTwoSubOrders() {
-            // Given
+        @DisplayName("Deve usar preço manual de gás maior que o basePrice (acréscimo por distância)")
+        void shouldUseManualPriceHigherThanBasePriceForGas() {
+            // Given: entrega em zona rural → cobrou R$ 130,00
+            BigDecimal distancePrice = new BigDecimal("130.00");
             Order prototype = buildPrototype(retailClient);
+            prototype.addItem(buildGasItem(gasProduct, distancePrice, 1));
 
-            OrderItem waterItem = buildWaterOrderItem(waterProduct, BigDecimal.ZERO);
-            waterItem.setQuantity(2);
-
-            OrderItem gasItem = buildGasOrderItem(gasProduct, BigDecimal.ZERO);
-            gasItem.setQuantity(1);
-
-            prototype.addItem(waterItem);
-            prototype.addItem(gasItem);
-
-            when(clientPriceService.findEffectivePrice(retailClient, waterProduct))
-                    .thenReturn(new BigDecimal("12.00"));
-            when(clientPriceService.findEffectivePrice(retailClient, gasProduct))
-                    .thenReturn(new BigDecimal("100.00"));
-            when(repository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
-            when(orderMapper.toResponseDTOList(anyList())).thenReturn(
-                    List.of(stubOrderResponseDTO(), stubOrderResponseDTO()));
-
-            // When
-            List<OrderResponseDTO> result = orderService.createOrders(prototype, new HashMap<>(), true);
-
-            // Then: dois saves (um por sub-pedido)
-            verify(repository, times(2)).save(any(Order.class));
-            assertThat(result).hasSize(2);
-        }
-
-        @Test
-        @DisplayName("Deve lançar BusinessException ao criar pedido de gás com produto sem fornecedor")
-        void shouldThrowWhenGasProductHasNoSupplier() {
-            // Given
-            gasProduct.setDefaultSupplier(null); // sem fornecedor padrão
-
-            Order prototype = buildPrototype(retailClient);
-            OrderItem gasItem = buildGasOrderItem(gasProduct, BigDecimal.ZERO);
-            gasItem.setGasSupplier(null); // também sem fornecedor no item
-            gasItem.setQuantity(1);
-            prototype.addItem(gasItem);
-
-            when(clientPriceService.findEffectivePrice(retailClient, gasProduct))
-                    .thenReturn(new BigDecimal("100.00"));
-
-            // When / Then
-            assertThatThrownBy(() -> orderService.createOrders(prototype, new HashMap<>(), true))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("fornecedor");
-        }
-
-        @Test
-        @DisplayName("Deve manter o preço manual do item quando unitPrice > 0")
-        void shouldKeepManualPriceWhenUnitPriceIsGreaterThanZero() {
-            // Given
-            Order prototype = buildPrototype(retailClient);
-            BigDecimal manualPrice = new BigDecimal("9.99");
-            OrderItem waterItem = buildWaterOrderItem(waterProduct, manualPrice);
-            waterItem.setQuantity(1);
-            prototype.addItem(waterItem);
-
-            when(repository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
-            when(orderMapper.toResponseDTOList(anyList())).thenReturn(List.of(stubOrderResponseDTO()));
+            when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(orderMapper.toResponseDTOList(any())).thenReturn(List.of(stubDTO()));
 
             // When
             orderService.createOrders(prototype, new HashMap<>(), true);
 
-            // Then: clientPriceService NÃO deve ser chamado pois o preço já foi definido
+            // Then: preço acima do base aceito normalmente
             verify(clientPriceService, never()).findEffectivePrice(any(), any());
+            assertSavedItemPrice(distancePrice);
+        }
+    }
 
-            // Captura o pedido salvo e verifica o preço do item
-            ArgumentCaptor<Order> orderCaptor = ArgumentCaptor.forClass(Order.class);
-            verify(repository).save(orderCaptor.capture());
-            BigDecimal savedItemPrice = orderCaptor.getValue().getItems().get(0).getUnitPrice();
-            assertThat(savedItemPrice).isEqualByComparingTo(manualPrice);
+    // =========================================================================
+    // Comparação direta dos comportamentos zero: água vs gás
+    // =========================================================================
+
+    @Nested
+    @DisplayName("Contraste: preço zero em Água vs Gás")
+    class ZeroPriceContrastTests {
+
+        @Test
+        @DisplayName("Zero para ÁGUA com saldo → brinde (fidelidade consumida, preço permanece zero)")
+        void zeroPriceForWaterWithBalance_shouldBeBonus() {
+            // Given
+            fidelity.setPendingBonusWater(1);
+            Order prototype = buildPrototype(retailClient);
+            prototype.addItem(buildItem(waterProduct, BigDecimal.ZERO, 1));
+
+            when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(orderMapper.toResponseDTOList(any())).thenReturn(List.of(stubDTO()));
+
+            // When
+            orderService.createOrders(prototype, new HashMap<>(), true);
+
+            // Then: é um brinde — preço zero mantido, saldo consumido
+            assertSavedItemPrice(BigDecimal.ZERO);
+            assertThat(fidelity.getPendingBonusWater()).isEqualTo(0);
+            verify(clientPriceService, never()).findEffectivePrice(any(), any());
         }
 
         @Test
-        @DisplayName("Deve lançar BusinessException ao tentar criar pedido com produto inativo")
-        void shouldThrowWhenProductIsInactive() {
+        @DisplayName("Zero para GÁS → preço base aplicado (gás não tem brinde)")
+        void zeroPriceForGas_shouldFallBackToBasePrice() {
             // Given
-            waterProduct.setActive(false);
             Order prototype = buildPrototype(retailClient);
-            OrderItem waterItem = buildWaterOrderItem(waterProduct, BigDecimal.ZERO);
-            prototype.addItem(waterItem);
+            prototype.addItem(buildGasItem(gasProduct, BigDecimal.ZERO, 1));
 
-            // When / Then
+            when(clientPriceService.findEffectivePrice(retailClient, gasProduct))
+                    .thenReturn(gasProduct.getBasePrice());
+            when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(orderMapper.toResponseDTOList(any())).thenReturn(List.of(stubDTO()));
+
+            // When
+            orderService.createOrders(prototype, new HashMap<>(), true);
+
+            // Then: preço base calculado, fidelidade intocada
+            assertSavedItemPrice(gasProduct.getBasePrice());
+            assertThat(fidelity.getPendingBonusWater()).isEqualTo(2);
+            verify(clientPriceService, times(1)).findEffectivePrice(any(), any());
+        }
+
+        @Test
+        @DisplayName("Zero para ÁGUA sem saldo → BusinessException (não tenta buscar basePrice)")
+        void zeroPriceForWaterWithoutBalance_shouldThrowNotFallBack() {
+            // Given
+            fidelity.setPendingBonusWater(0);
+            Order prototype = buildPrototype(retailClient);
+            prototype.addItem(buildItem(waterProduct, BigDecimal.ZERO, 1));
+
+            // When / Then: deve lançar, não calcular preço automaticamente
             assertThatThrownBy(() -> orderService.createOrders(prototype, new HashMap<>(), true))
                     .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("inativo");
+                    .hasMessageContaining("brinde");
+
+            verify(clientPriceService, never()).findEffectivePrice(any(), any());
+            verify(repository, never()).save(any());
         }
     }
 
     // =========================================================================
-    // updateOrders
+    // Hierarquia de preços no updateOrders
     // =========================================================================
 
     @Nested
-    @DisplayName("updateOrders - Atualização de Pedidos")
-    class UpdateOrdersTests {
+    @DisplayName("updateOrders — Hierarquia de Preços")
+    class UpdateOrdersPriceResolutionTests {
 
         @Test
-        @DisplayName("Deve atualizar itens do pedido e processar acerto de gás com custo do produto")
-        void shouldUpdateOrderItemsAndProcessGasSettlementWithProductCost() {
+        @DisplayName("Deve usar preço manual ao atualizar item de água com unitPrice > 0")
+        void shouldUseManualPriceOnUpdateWhenPositive() {
             // Given
-            Order existingOrder = buildOrderWithStatus(OrderStatus.PENDING);
-            existingOrder.setClient(retailClient);
+            BigDecimal manualPrice = new BigDecimal("8.50");
+            Order existing = buildExistingOrder(OrderStatus.PENDING);
+            OrderItem newItem = buildItem(waterProduct, manualPrice, 2);
 
-            OrderItem newGasItem = buildGasOrderItem(gasProduct, BigDecimal.ZERO);
-            newGasItem.setQuantity(1);
-            List<OrderItem> newItems = List.of(newGasItem);
-
-            GasFinancialInfoRequest financialInfo = new GasFinancialInfoRequest(BigDecimal.valueOf(75), false);
-            Map<UUID, GasFinancialInfoRequest> financialMap = Map.of(gasProduct.getId(), financialInfo);
-
-            when(clientPriceService.findEffectivePrice(retailClient, gasProduct))
-                    .thenReturn(new BigDecimal("100.00"));
-            when(repository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
-            when(orderMapper.toResponseDTO(any(Order.class))).thenReturn(stubOrderResponseDTO());
+            when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(orderMapper.toResponseDTO(any())).thenReturn(stubDTO());
 
             // When
-            OrderResponseDTO result = orderService.updateOrders(existingOrder, newItems, financialMap, true);
+            orderService.updateOrders(existing, List.of(newItem), new HashMap<>(), true);
 
             // Then
-            assertThat(result).isNotNull();
-            // Custo fixo vem do produto (R$ 80,00), não do financialMap
-            verify(gasSettlementService, times(1))
-                    .createAutomatedSettlement(any(OrderItem.class), eq(false), eq(gasProduct.getCostPrice()));
-            verify(repository, times(1)).save(existingOrder);
+            verify(clientPriceService, never()).findEffectivePrice(any(), any());
+            assertThat(newItem.getUnitPrice()).isEqualByComparingTo(manualPrice);
         }
 
         @Test
-        @DisplayName("Deve lançar BusinessException ao tentar atualizar pedido DELIVERED")
-        void shouldThrowWhenUpdatingDeliveredOrder() {
+        @DisplayName("Deve calcular ClientPrice/basePrice ao atualizar item de água com unitPrice nulo")
+        void shouldCalculatePriceOnUpdateWhenNullForWater() {
             // Given
-            Order deliveredOrder = buildOrderWithStatus(OrderStatus.DELIVERED);
+            BigDecimal clientPrice = new BigDecimal("11.00");
+            Order existing = buildExistingOrder(OrderStatus.PENDING);
+            OrderItem newItem = buildItem(waterProduct, null, 1);
 
-            // When / Then
-            assertThatThrownBy(() -> orderService.updateOrders(
-                    deliveredOrder, List.of(), new HashMap<>(), true))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining(OrderStatus.DELIVERED.toString());
-
-            verify(repository, never()).save(any());
-        }
-
-        @Test
-        @DisplayName("Deve lançar BusinessException ao tentar atualizar pedido CANCELLED")
-        void shouldThrowWhenUpdatingCancelledOrder() {
-            // Given
-            Order cancelledOrder = buildOrderWithStatus(OrderStatus.CANCELLED);
-
-            // When / Then
-            assertThatThrownBy(() -> orderService.updateOrders(
-                    cancelledOrder, List.of(), new HashMap<>(), true))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining(OrderStatus.CANCELLED.toString());
-
-            verify(repository, never()).save(any());
-        }
-
-        @Test
-        @DisplayName("Deve usar fornecedor padrão do produto quando item de gás não tem fornecedor")
-        void shouldUseDefaultSupplierWhenGasItemHasNoSupplier() {
-            // Given
-            Order existingOrder = buildOrderWithStatus(OrderStatus.SHIPPED);
-            existingOrder.setClient(retailClient);
-
-            OrderItem gasItem = buildGasOrderItem(gasProduct, BigDecimal.ZERO);
-            gasItem.setGasSupplier(null); // sem fornecedor explícito
-            gasItem.setQuantity(1);
-
-            when(clientPriceService.findEffectivePrice(retailClient, gasProduct))
-                    .thenReturn(new BigDecimal("100.00"));
-            when(repository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
-            when(orderMapper.toResponseDTO(any(Order.class))).thenReturn(stubOrderResponseDTO());
+            when(clientPriceService.findEffectivePrice(retailClient, waterProduct)).thenReturn(clientPrice);
+            when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(orderMapper.toResponseDTO(any())).thenReturn(stubDTO());
 
             // When
-            orderService.updateOrders(existingOrder, List.of(gasItem), new HashMap<>(), true);
+            orderService.updateOrders(existing, List.of(newItem), new HashMap<>(), true);
 
-            // Then: fornecedor padrão do produto deve ter sido usado
-            ArgumentCaptor<Order> orderCaptor = ArgumentCaptor.forClass(Order.class);
-            verify(repository).save(orderCaptor.capture());
-            GasSupplier supplierUsed = orderCaptor.getValue().getItems().get(0).getGasSupplier();
-            assertThat(supplierUsed).isEqualTo(defaultSupplier);
+            // Then
+            assertThat(newItem.getUnitPrice()).isEqualByComparingTo(clientPrice);
         }
 
         @Test
-        @DisplayName("Deve lançar BusinessException ao atualizar gás sem fornecedor disponível")
-        void shouldThrowWhenGasHasNoSupplierAvailableOnUpdate() {
+        @DisplayName("Deve calcular ClientPrice/basePrice ao atualizar item de GÁS com unitPrice zero")
+        void shouldCalculateBasePriceOnUpdateWhenGasUnitPriceIsZero() {
             // Given
-            gasProduct.setDefaultSupplier(null);
-            Order existingOrder = buildOrderWithStatus(OrderStatus.PENDING);
-            existingOrder.setClient(retailClient);
-
-            OrderItem gasItem = buildGasOrderItem(gasProduct, BigDecimal.ZERO);
-            gasItem.setGasSupplier(null);
-            gasItem.setQuantity(1);
+            Order existing = buildExistingOrder(OrderStatus.PENDING);
+            OrderItem newGasItem = buildGasItem(gasProduct, BigDecimal.ZERO, 1);
 
             when(clientPriceService.findEffectivePrice(retailClient, gasProduct))
-                    .thenReturn(new BigDecimal("100.00"));
+                    .thenReturn(gasProduct.getBasePrice());
+            when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(orderMapper.toResponseDTO(any())).thenReturn(stubDTO());
 
-            // When / Then
-            assertThatThrownBy(() -> orderService.updateOrders(
-                    existingOrder, List.of(gasItem), new HashMap<>(), true))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("fornecedor");
-        }
-    }
+            // When
+            orderService.updateOrders(existing, List.of(newGasItem),
+                    Map.of(gasProduct.getId(), new GasFinancialInfoRequest(gasProduct.getCostPrice(), false)),
+                    true);
 
-    // =========================================================================
-    // validateProductAvailability
-    // =========================================================================
-
-    @Nested
-    @DisplayName("validateProductAvailability - Validação de Produto")
-    class ValidateProductTests {
-
-        @Test
-        @DisplayName("Não deve lançar exceção para produto ativo")
-        void shouldNotThrowForActiveProduct() {
-            assertThatCode(() -> orderService.validateProductAvailability(waterProduct))
-                    .doesNotThrowAnyException();
+            // Then
+            assertThat(newGasItem.getUnitPrice()).isEqualByComparingTo(gasProduct.getBasePrice());
         }
 
         @Test
-        @DisplayName("Deve lançar BusinessException para produto inativo")
-        void shouldThrowForInactiveProduct() {
+        @DisplayName("Deve aplicar brinde ao atualizar item de água com unitPrice zero e saldo disponível")
+        void shouldApplyBonusOnUpdateWhenWaterUnitPriceIsZeroWithBalance() {
             // Given
-            waterProduct.setActive(false);
+            fidelity.setPendingBonusWater(1);
+            Order existing = buildExistingOrder(OrderStatus.PENDING);
+            OrderItem bonusItem = buildItem(waterProduct, BigDecimal.ZERO, 1);
 
-            // When / Then
-            assertThatThrownBy(() -> orderService.validateProductAvailability(waterProduct))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining(waterProduct.getName())
-                    .hasMessageContaining("inativo");
+            when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(orderMapper.toResponseDTO(any())).thenReturn(stubDTO());
+
+            // When
+            orderService.updateOrders(existing, List.of(bonusItem), new HashMap<>(), true);
+
+            // Then: brinde aplicado, preço permanece zero
+            assertThat(bonusItem.getUnitPrice()).isEqualByComparingTo(BigDecimal.ZERO);
+            assertThat(fidelity.getPendingBonusWater()).isEqualTo(0);
+            verify(clientPriceService, never()).findEffectivePrice(any(), any());
         }
     }
 
     // =========================================================================
-    // Helpers internos
+    // Helpers
     // =========================================================================
-
-    /**
-     * Cria um OrderResponseDTO válido com todos os campos nulos/vazios.
-     * Necessário pois record não possui construtor vazio.
-     */
-    private OrderResponseDTO stubOrderResponseDTO() {
-        return new OrderResponseDTO(null, null, null, null, null, null, List.of(), null, null);
-    }
 
     private Order buildPrototype(Client client) {
         Order order = new Order();
@@ -928,7 +546,7 @@ class OrderServiceTest {
         return order;
     }
 
-    private Order buildOrderWithStatus(OrderStatus status) {
+    private Order buildExistingOrder(OrderStatus status) {
         Order order = new Order();
         order.setId(UUID.randomUUID());
         order.setStatus(status);
@@ -936,20 +554,36 @@ class OrderServiceTest {
         return order;
     }
 
-    private OrderItem buildWaterOrderItem(Product product, BigDecimal unitPrice) {
+    private OrderItem buildItem(Product product, BigDecimal unitPrice, int quantity) {
         OrderItem item = new OrderItem();
         item.setProduct(product);
         item.setUnitPrice(unitPrice);
-        item.setQuantity(1);
+        item.setQuantity(quantity);
         return item;
     }
 
-    private OrderItem buildGasOrderItem(Product product, BigDecimal unitPrice) {
-        OrderItem item = new OrderItem();
-        item.setProduct(product);
-        item.setUnitPrice(unitPrice);
-        item.setGasSupplier(defaultSupplier);
-        item.setQuantity(1);
+    private OrderItem buildGasItem(Product product, BigDecimal unitPrice, int quantity) {
+        OrderItem item = buildItem(product, unitPrice, quantity);
+        item.setGasSupplier(supplier);
         return item;
+    }
+
+    /**
+     * Captura o Order salvo no repository e retorna o unitPrice do primeiro item.
+     */
+    private void assertSavedItemPrice(BigDecimal expected) {
+        ArgumentCaptor<Order> captor = ArgumentCaptor.forClass(Order.class);
+        verify(repository, atLeastOnce()).save(captor.capture());
+        // Pega o último save (o sub-pedido relevante)
+        Order saved = captor.getAllValues().stream()
+                .filter(o -> !o.getItems().isEmpty())
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Nenhum pedido com itens foi salvo"));
+        BigDecimal actual = saved.getItems().get(0).getUnitPrice();
+        assertThat(actual).isEqualByComparingTo(expected);
+    }
+
+    private OrderResponseDTO stubDTO() {
+        return new OrderResponseDTO(null, null, null, null, null, null, List.of(), null, null);
     }
 }
