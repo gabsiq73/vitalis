@@ -1,5 +1,6 @@
 package com.vitalis.demo.service;
 
+import com.vitalis.demo.infra.exception.BusinessException;
 import com.vitalis.demo.model.Client;
 import com.vitalis.demo.model.ClientPrice;
 import com.vitalis.demo.model.Product;
@@ -56,9 +57,34 @@ public class ClientPriceService {
     }
 
     @Transactional
-    public void delete(UUID id){
-        ClientPrice clientPrice = findById(id);
-        clientPriceRepository.delete(clientPrice);
+    public ClientPrice update(UUID clientId, UUID id, BigDecimal newPrice) {
+        ClientPrice cp = findById(id);
+
+        if (!cp.getClient().getId().equals(clientId)) {
+            throw new BusinessException("Operação inválida: Este preço especial pertence a outro cliente.");
+        }
+
+        if (newPrice.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException("O preço especial deve ser maior que zero. Para brinde, use o fluxo de fidelidade.");
+        }
+
+        if (newPrice.compareTo(cp.getProduct().getBasePrice()) > 0) {
+            throw new BusinessException("O preço especial tem que ser menor que o preço base do produto");
+        }
+
+        cp.setPrice(newPrice);
+        return clientPriceRepository.save(cp);
+    }
+
+    @Transactional
+    public void delete(UUID clientId, UUID id) {
+        ClientPrice cp = findById(id);
+
+        if (!cp.getClient().getId().equals(clientId)) {
+            throw new BusinessException("Operação negada: Este preço não pertence ao cliente informado.");
+        }
+
+        clientPriceRepository.delete(cp);
     }
 
     @Transactional(readOnly = true)

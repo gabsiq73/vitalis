@@ -14,4 +14,7 @@ public interface ClientPriceRepository extends JpaRepository<ClientPrice, UUID> 
     Optional<ClientPrice> findByClientAndProduct(Client client, Product product);
 
     List<ClientPrice> findByClientId(UUID clientId);
+
+    boolean existsById(UUID id);
+
 }

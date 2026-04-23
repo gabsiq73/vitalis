@@ -36,20 +36,20 @@ public class ClientPriceController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> update(@PathVariable UUID clientId, @PathVariable UUID id
-            , @Valid @RequestBody ClientPriceRequestDTO requestDTO){
-        clientPriceService.save(
-                clientId,
-                requestDTO.productId(),
-                requestDTO.customPrice()
-        );
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<ClientPriceResponseDTO> update(
+            @PathVariable UUID clientId,
+            @PathVariable UUID id,
+            @Valid @RequestBody ClientPriceRequestDTO requestDTO) {
+
+        ClientPrice updated = clientPriceService.update(clientId, id, requestDTO.customPrice());
+
+        return ResponseEntity.ok(clientPriceMapper.toResponseDTO(updated));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable UUID clientId, @PathVariable UUID id){
-        clientPriceService.delete(id);
+        clientPriceService.delete(clientId, id);
         return ResponseEntity.noContent().build();
     }
 
