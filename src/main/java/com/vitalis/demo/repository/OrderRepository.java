@@ -37,4 +37,6 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     List<Order> findByStatusAndDeliveryDateBetween(OrderStatus status, LocalDateTime start, LocalDateTime end);
 
+    Long countByClientId(UUID clientId);
+
 }

@@ -5,6 +5,8 @@ import com.vitalis.demo.model.enums.ClientType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.DynamicUpdate;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -24,6 +26,8 @@ import java.util.UUID;
 @ToString
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 @DynamicUpdate
+@SQLDelete(sql = "UPDATE tb_client SET active = false WHERE id = ?") // Faz o delete virar update automático
+@SQLRestriction("active = true") // Sempre filtra os ativos nas buscas comuns
 public class Client extends BaseEntity {
 
     @EqualsAndHashCode.Include
@@ -43,6 +47,9 @@ public class Client extends BaseEntity {
 
     @Column(precision = 10, scale = 2)
     private BigDecimal balance;
+
+    @Column(name = "CLI_is_active")
+    private boolean isActive;
 
     @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JoinColumn(name = "CLI_fidelity_id")
