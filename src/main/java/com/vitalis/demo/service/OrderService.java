@@ -72,6 +72,10 @@ public class OrderService {
     @Transactional
     public List<OrderResponseDTO> createOrders(Order prototype, Map<UUID, GasFinancialInfoRequest> financialMap, Boolean isDelivery) {
 
+        if (prototype.getClient() == null || prototype.getItems().isEmpty()) {
+            throw new BusinessException("Dados do pedido incompletos!");
+        }
+
         Map<Boolean, List<OrderItem>> partitionedItems = partitionItemsByType(prototype);
 
         List<Order> savedOrders = new ArrayList<>();
