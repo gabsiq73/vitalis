@@ -64,7 +64,9 @@ public class FinancialService {
 
         BigDecimal totalPix = BigDecimal.ZERO;
         BigDecimal totalCash = BigDecimal.ZERO;
+        BigDecimal totalBalanceUsed = BigDecimal.ZERO;
         BigDecimal totalDebt = BigDecimal.ZERO;
+        BigDecimal totalCreditGenerated = BigDecimal.ZERO;
         Integer totalWater = 0;
         Integer totalGas = 0;
 
@@ -78,6 +80,9 @@ public class FinancialService {
                 else if(p.getMethod() == Method.DINHEIRO){
                     totalCash = totalCash.add(p.getAmount());
                 }
+                else if(p.getMethod() == Method.SALDO){
+                    totalBalanceUsed = totalBalanceUsed.add(p.getAmount());
+                }
             }
 
             //Calcular fiados
@@ -85,8 +90,15 @@ public class FinancialService {
                     .map(Payment::getAmount)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-            BigDecimal orderDebt = order.getTotalValue().subtract(totalPaid);
-            totalDebt = totalDebt.add(orderDebt);
+            BigDecimal balance = order.getTotalValue().subtract(totalPaid);
+
+            if(balance.compareTo(BigDecimal.ZERO) > 0){
+                totalDebt = totalDebt.add(balance);
+            }
+
+            else if (balance.compareTo(BigDecimal.ZERO) < 0){
+                totalCreditGenerated = totalCreditGenerated.add(balance.abs());
+            }
 
             // Contar as quantidades de produtos vendidos
             for(OrderItem item : order.getItems()){
@@ -99,7 +111,7 @@ public class FinancialService {
             }
         }
 
-        return new DailyReportDTO(totalPix, totalCash, totalDebt, totalWater, totalGas);
+        return new DailyReportDTO(totalPix, totalCash, totalBalanceUsed, totalDebt, totalCreditGenerated, totalWater, totalGas);
     }
 
     public InventoryFlowDTO findInventoryFlowByDate(LocalDate date){

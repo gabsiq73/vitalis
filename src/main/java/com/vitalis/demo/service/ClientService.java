@@ -76,10 +76,9 @@ public class ClientService {
     @Transactional
     public void consumeCreditBalance(UUID clientId, BigDecimal amount){
         Client client = findById(clientId);
-
         BigDecimal currentBalance = (client.getBalance() != null) ? client.getBalance() : BigDecimal.ZERO;
 
-        if(amount.compareTo(client.getBalance()) > 0){
+        if(amount.compareTo(currentBalance) > 0){
             throw new BusinessException("Saldo insuficiente! O cliente possui apenas R$ " + currentBalance);
         }
 
