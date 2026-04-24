@@ -13,11 +13,11 @@ import java.util.UUID;
 
 public interface ClientRepository extends JpaRepository<Client, UUID> {
 
-    Page<Client> findByName(Pageable pageable, String name);
+    Page<Client> findByNameContainingIgnoreCase(Pageable pageable, String name);
 
-    List<Client> findByNameContainingIgnoreCase(String name);
+    Page<Client> findByNameContainingIgnoreCaseAndClientType(Pageable pageable,String name, ClientType type);
 
-    List<Client> findByClientType(ClientType type);
+    Page<Client> findByClientType(Pageable pageable, ClientType type);
 
     Optional<Client> findByNameIgnoreCaseAndPhone(String name, String phone);
 

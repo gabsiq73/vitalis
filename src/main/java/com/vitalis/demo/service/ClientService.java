@@ -7,6 +7,7 @@ import com.vitalis.demo.model.Client;
 import com.vitalis.demo.model.Order;
 import com.vitalis.demo.model.Payment;
 import com.vitalis.demo.model.enums.ClientStatus;
+import com.vitalis.demo.model.enums.ClientType;
 import com.vitalis.demo.model.enums.OrderStatus;
 import com.vitalis.demo.repository.ClientRepository;
 import com.vitalis.demo.repository.OrderRepository;
@@ -43,10 +44,13 @@ public class ClientService {
     }
 
     @Transactional(readOnly = true)
-    public Page<Client> listClient(Pageable pageable){
+    public Page<Client> listClient(String name, ClientType type, Pageable pageable){
+        if(name != null & type != null) return repository.findByNameContainingIgnoreCaseAndClientType(pageable, name, type);
+        if(name != null) return repository.findByNameContainingIgnoreCase(pageable, name);
+        if(type != null) return repository.findByClientType(pageable, type);
+
         return repository.findAll(pageable);
     }
-
 
     @Transactional
     public Client save(Client client) {
