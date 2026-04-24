@@ -28,6 +28,11 @@ public class SecurityConfig {
                 .httpBasic(Customizer.withDefaults())
                 .authorizeHttpRequests(authorize -> {
                     authorize.requestMatchers(HttpMethod.POST, "/users/**").permitAll();
+                    authorize.requestMatchers(
+                            "/v3/api-docs/**",
+                            "/swagger-ui/**",
+                            "/swagger-ui.html"
+                     ).permitAll();
                     authorize.anyRequest().authenticated();
                 })
                 .build();
