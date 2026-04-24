@@ -22,12 +22,9 @@ import java.util.stream.Collectors;
 @Mapper(componentModel = "spring", uses = {OrderItemMapper.class})
 public abstract class OrderMapper {
 
-    @Autowired
-    protected ClientRepository clientRepository;
-
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "status", constant = "PENDING")
-    @Mapping(target = "client", expression = "java(clientRepository.findById(dto.clientId()).orElseThrow())")
+    @Mapping(target = "client", ignore = true) // Service resolve
     @Mapping(target = "items", source = "items")
     public abstract Order toEntity(OrderRequestDTOv2 dto);
 
@@ -40,7 +37,6 @@ public abstract class OrderMapper {
     @Mapping(target = "createDate", ignore = true)
     public abstract void updateEntityFromDto(OrderRequestDTOv2 dto, @MappingTarget Order order);
 
-    // Isso garante a integridade do relacionamento bi-direcional
     @AfterMapping
     protected void linkItems(@MappingTarget Order order) {
         if (order.getItems() != null) {
@@ -53,14 +49,13 @@ public abstract class OrderMapper {
     @Mapping(target = "clientName", source = "client.name")
     public abstract OrderResponseDTO toResponseDTO(Order order);
 
-    // Novo método para extrair os dados financeiros
     public Map<UUID, GasFinancialInfoRequest> extractFinancialInfo(OrderRequestDTOv2 dto) {
         return dto.items().stream()
                 .filter(item -> item.productId() != null)
                 .collect(Collectors.toMap(
                         OrderItemRequestDTO::productId,
                         item -> new GasFinancialInfoRequest(item.gasCostPrice(), item.receivedByUs()),
-                        (existing, replacement) -> existing // Evita erro se houver IDs duplicados
+                        (existing, replacement) -> existing
                 ));
     }
 }

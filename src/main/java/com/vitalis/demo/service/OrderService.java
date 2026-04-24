@@ -1,8 +1,11 @@
 package com.vitalis.demo.service;
 
 import com.vitalis.demo.dto.request.GasFinancialInfoRequest;
+import com.vitalis.demo.dto.request.OrderItemRequestDTO;
+import com.vitalis.demo.dto.request.OrderRequestDTOv2;
 import com.vitalis.demo.dto.response.OrderResponseDTO;
 import com.vitalis.demo.infra.exception.BusinessException;
+import com.vitalis.demo.mapper.OrderItemMapper;
 import com.vitalis.demo.mapper.OrderMapper;
 import com.vitalis.demo.model.*;
 import com.vitalis.demo.model.enums.ClientType;
@@ -26,11 +29,16 @@ import java.util.stream.Collectors;
 public class OrderService {
 
     private final OrderRepository repository;
+
     private final ClientService clientService;
     private final ClientPriceService clientPriceService;
     private final StockService stockService;
     private final GasSettlementService gasSettlementService;
+    private final ProductService productService;
+    private final GasSupplierService gasSupplierService;
+
     private final OrderMapper orderMapper;
+    private final OrderItemMapper orderItemMapper;
 
     // Consultas
 
@@ -67,28 +75,27 @@ public class OrderService {
         return repository.findByClientAndPaymentStatusNotOrderByCreateDateAsc(client, PaymentStatus.PAID);
     }
 
-    // Criação de Pedidos
-
     @Transactional
-    public List<OrderResponseDTO> createOrders(Order prototype, Map<UUID, GasFinancialInfoRequest> financialMap, Boolean isDelivery) {
+    public List<OrderResponseDTO> createOrders(OrderRequestDTOv2 dto) {
+        Client client = clientService.findById(dto.clientId());
+        Map<UUID, GasFinancialInfoRequest> financialMap = orderMapper.extractFinancialInfo(dto);
 
-        if (prototype.getClient() == null || prototype.getItems().isEmpty()) {
-            throw new BusinessException("Dados do pedido incompletos!");
-        }
+        // CHAMA O MÉTODO ÚNICO
+        List<OrderItem> allItems = resolveItemsFromDto(dto.items());
 
+        Order prototype = orderMapper.toEntity(dto);
+        prototype.setClient(client);
+        prototype.setItems(allItems);
+
+        // Segue a partição (Gás vs Água)
         Map<Boolean, List<OrderItem>> partitionedItems = partitionItemsByType(prototype);
-
         List<Order> savedOrders = new ArrayList<>();
 
         partitionedItems.forEach((isGas, items) -> {
             if (!items.isEmpty()) {
-                Order subOrder = prepareSubOrder(prototype, items, isGas, isDelivery);
+                Order subOrder = prepareSubOrder(prototype, items, isGas, dto.isDelivery());
                 Order saved = repository.save(subOrder);
-
-                if (isGas) {
-                    processGasSettlementsForOrder(saved, financialMap);
-                }
-
+                if (isGas) processGasSettlementsForOrder(saved, financialMap);
                 savedOrders.add(saved);
             }
         });
@@ -99,14 +106,21 @@ public class OrderService {
     // Atualização de Pedidos
 
     @Transactional
-    public OrderResponseDTO updateOrders(Order existingOrder, List<OrderItem> newItems,
-                                         Map<UUID, GasFinancialInfoRequest> financialMap, Boolean isDelivery) {
-
+    public OrderResponseDTO updateOrders(UUID id, OrderRequestDTOv2 dto) {
+        Order existingOrder = findById(id);
         checkItemsModificationAllowed(existingOrder);
-        replaceOrderItems(existingOrder, newItems, isDelivery);
+
+        // 1. Atualiza campos básicos
+        orderMapper.updateEntityFromDto(dto, existingOrder);
+
+        // 2. CHAMA O MESMO MÉTODO ÚNICO
+        List<OrderItem> newItems = resolveItemsFromDto(dto.items());
+
+        // 3. Aplica a lógica de negócio de substituição
+        Map<UUID, GasFinancialInfoRequest> financialMap = orderMapper.extractFinancialInfo(dto);
+        replaceOrderItems(existingOrder, newItems, dto.isDelivery());
 
         Order savedOrder = repository.save(existingOrder);
-
         processGasSettlementsOnUpdate(savedOrder, financialMap);
 
         return orderMapper.toResponseDTO(savedOrder);
@@ -514,4 +528,31 @@ public class OrderService {
         if (product.getType() == ProductType.GAS) return true;
         return isDeliveryDTO == null || isDeliveryDTO;
     }
+
+
+    private List<OrderItem> resolveItemsFromDto(List<OrderItemRequestDTO> itemDtos) {
+        return itemDtos.stream().map(itemDto -> {
+            // Converte dados básicos (quantidade)
+            OrderItem item = orderItemMapper.toEntity(itemDto);
+
+            // Resolve o Produto
+            Product product = productService.findById(itemDto.productId());
+            item.setProduct(product);
+
+            // Resolve o Fornecedor se for Gás
+            if (product.getType() == ProductType.GAS) {
+                GasSupplier supplier = (itemDto.supplierId() != null)
+                        ? gasSupplierService.findById(itemDto.supplierId())
+                        : product.getDefaultSupplier();
+
+                if (supplier == null) {
+                    throw new BusinessException("Fornecedor de gás não definido para o produto: " + product.getName());
+                }
+                item.setGasSupplier(supplier);
+            }
+
+            return item;
+        }).toList();
+    }
+
 }

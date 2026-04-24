@@ -48,6 +48,7 @@ public class ProductService {
             throw new BusinessException("Erro: Para produtos do tipo GÁS, o preço de custo deve ser informado!");
         }
 
+        product.setActive(true);
         Product savedProduct = repository.save(product);
         stockService.createInitialStock(savedProduct);
 

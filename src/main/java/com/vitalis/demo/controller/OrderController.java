@@ -1,26 +1,23 @@
 package com.vitalis.demo.controller;
 
-import com.vitalis.demo.dto.request.GasFinancialInfoRequest;
 import com.vitalis.demo.dto.request.OrderRequestDTOv2;
 import com.vitalis.demo.dto.response.OrderResponseDTO;
 import com.vitalis.demo.mapper.OrderItemMapper;
 import com.vitalis.demo.mapper.OrderMapper;
 import com.vitalis.demo.model.Order;
-import com.vitalis.demo.model.OrderItem;
 import com.vitalis.demo.model.enums.OrderStatus;
 import com.vitalis.demo.service.OrderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 
@@ -78,10 +75,7 @@ public class OrderController {
 
     @PostMapping
     public ResponseEntity<List<OrderResponseDTO>> create(@RequestBody @Valid OrderRequestDTOv2 dto) {
-        Order prototype = orderMapper.toEntity(dto);
-        Map<UUID, GasFinancialInfoRequest> financialMap = orderMapper.extractFinancialInfo(dto);
-
-        List<OrderResponseDTO> response = orderService.createOrders(prototype, financialMap, dto.isDelivery());
+        List<OrderResponseDTO> response = orderService.createOrders(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -97,20 +91,8 @@ public class OrderController {
             @PathVariable UUID id,
             @RequestBody @Valid OrderRequestDTOv2 dto) {
 
-        // 1. Busca a ordem do banco (ela vem com a lista original rastreada pelo Hibernate)
-        Order existingOrder = orderService.findById(id);
-
-        // 2. Mapper atualiza campos básicos (Data, Entrega, etc.)
-        orderMapper.updateEntityFromDto(dto, existingOrder);
-
-        List<OrderItem> newItems = dto.items().stream()
-                .map(itemDto -> orderItemMapper.toEntity(itemDto))
-                .toList();
-
-        Map<UUID, GasFinancialInfoRequest> financialMap = orderMapper.extractFinancialInfo(dto);
-
-        OrderResponseDTO response = orderService.updateOrders(existingOrder, newItems, financialMap, dto.isDelivery());
-
+        // O Service cuida de buscar a existente e aplicar as mudanças do DTO
+        OrderResponseDTO response = orderService.updateOrders(id, dto);
         return ResponseEntity.ok(response);
     }
 
