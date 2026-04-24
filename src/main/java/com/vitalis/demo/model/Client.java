@@ -26,8 +26,8 @@ import java.util.UUID;
 @ToString
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 @DynamicUpdate
-@SQLDelete(sql = "UPDATE tb_client SET active = false WHERE id = ?") // Faz o delete virar update automático
-@SQLRestriction("active = true") // Sempre filtra os ativos nas buscas comuns
+@SQLDelete(sql = "UPDATE tb_client SET CLI_is_active = false WHERE CLI_id = ?") // Faz o delete virar update automático
+@SQLRestriction("CLI_is_active = true") // Sempre filtra os ativos nas buscas comuns
 public class Client extends BaseEntity {
 
     @EqualsAndHashCode.Include
@@ -38,6 +38,9 @@ public class Client extends BaseEntity {
 
     @Column(name = "CLI_name", nullable = false)
     private String name;
+
+    @Column(name = "CLI_phone")
+    private String phone;
 
     @Column(name = "CLI_address")
     private String address;

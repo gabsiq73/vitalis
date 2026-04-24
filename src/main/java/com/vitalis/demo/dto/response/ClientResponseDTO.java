@@ -10,6 +10,7 @@ import java.util.UUID;
 public record ClientResponseDTO(
         UUID id,
         String name,
+        String phone,
         String address,
         BigDecimal balance,
         Integer fidelityPoints,

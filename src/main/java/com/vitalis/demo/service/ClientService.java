@@ -10,6 +10,7 @@ import com.vitalis.demo.model.enums.ClientStatus;
 import com.vitalis.demo.model.enums.OrderStatus;
 import com.vitalis.demo.repository.ClientRepository;
 import com.vitalis.demo.repository.OrderRepository;
+import com.vitalis.demo.validator.ClientValidator;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -29,6 +30,7 @@ public class ClientService {
     private final ClientRepository repository;
     private final OrderRepository orderRepository;
     private final ClientMapper clientMapper;
+    private final ClientValidator validator;
 
     public Client findById(UUID id) {
         return findByIdOptional(id)
@@ -48,6 +50,8 @@ public class ClientService {
 
     @Transactional
     public Client save(Client client) {
+       client.setActive(true);
+       validator.validate(client);
        return repository.save(client);
     }
 
@@ -55,6 +59,8 @@ public class ClientService {
     public void update(UUID id, ClientUpdateDTO dto) {
         Client client = findById(id);
         clientMapper.updateEntityFromDto(dto, client);
+        validator.validate(client);
+
         repository.save(client);
     }
 
