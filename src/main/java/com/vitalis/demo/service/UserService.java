@@ -1,7 +1,7 @@
 package com.vitalis.demo.service;
 
 import com.vitalis.demo.dto.update.UserUpdateDTO;
-import com.vitalis.demo.infra.exception.BusinessException;
+import com.vitalis.demo.infra.exception.ResourceNotFoundException;
 import com.vitalis.demo.mapper.UserMapper;
 import com.vitalis.demo.model.SystemUser;
 import com.vitalis.demo.repository.UserRepository;
@@ -25,7 +25,7 @@ public class UserService {
     @Transactional(readOnly = true)
     public SystemUser findById(UUID id){
         return findByIdOptional(id)
-                .orElseThrow(() -> new BusinessException("Usuário de ID: "+ id +" não encontrado!"));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário de ID: "+ id +" não encontrado!"));
     }
 
     @Transactional(readOnly = true)

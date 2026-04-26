@@ -2,7 +2,7 @@ package com.vitalis.demo.service;
 
 import com.vitalis.demo.dto.response.OrderBalanceDTO;
 import com.vitalis.demo.dto.response.PaymentResponseDTO;
-import com.vitalis.demo.infra.exception.BusinessException;
+import com.vitalis.demo.infra.exception.ResourceNotFoundException;
 import com.vitalis.demo.mapper.PaymentMapper;
 import com.vitalis.demo.model.Client;
 import com.vitalis.demo.model.Order;
@@ -36,7 +36,7 @@ public class PaymentService {
     @Transactional(readOnly = true)
     public Payment findById(UUID id) {
         return findByIdOptional(id)
-                .orElseThrow(() -> new BusinessException("Pagamento com ID: " + id + " não encontrado!"));
+                .orElseThrow(() -> new ResourceNotFoundException("Pagamento com ID: " + id + " não encontrado!"));
     }
 
     @Transactional(readOnly = true)

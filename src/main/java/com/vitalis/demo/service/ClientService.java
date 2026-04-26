@@ -2,6 +2,7 @@ package com.vitalis.demo.service;
 
 import com.vitalis.demo.dto.update.ClientUpdateDTO;
 import com.vitalis.demo.infra.exception.BusinessException;
+import com.vitalis.demo.infra.exception.ResourceNotFoundException;
 import com.vitalis.demo.mapper.ClientMapper;
 import com.vitalis.demo.model.Client;
 import com.vitalis.demo.model.Order;
@@ -12,7 +13,6 @@ import com.vitalis.demo.model.enums.OrderStatus;
 import com.vitalis.demo.repository.ClientRepository;
 import com.vitalis.demo.repository.OrderRepository;
 import com.vitalis.demo.validator.ClientValidator;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -35,7 +35,7 @@ public class ClientService {
 
     public Client findById(UUID id) {
         return findByIdOptional(id)
-                .orElseThrow(() -> new EntityNotFoundException("Cliente com ID " + id + " não encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Cliente com ID " + id + " não encontrado"));
     }
 
     @Transactional(readOnly = true)
@@ -107,7 +107,7 @@ public class ClientService {
     @Transactional
     public BigDecimal calculateDebtBalance(UUID clientId){
         Client client = repository.findById(clientId)
-                .orElseThrow(() -> new BusinessException("Cliente não encontrado!"));
+                .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado!"));
 
         // Busca todos os pedidos que ja foram entregues
         List<Order> orders = orderRepository.findByClientAndStatus(client, OrderStatus.DELIVERED);

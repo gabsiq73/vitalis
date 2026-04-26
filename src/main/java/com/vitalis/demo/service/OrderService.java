@@ -5,6 +5,7 @@ import com.vitalis.demo.dto.request.OrderItemRequestDTO;
 import com.vitalis.demo.dto.request.OrderRequestDTOv2;
 import com.vitalis.demo.dto.response.OrderResponseDTO;
 import com.vitalis.demo.infra.exception.BusinessException;
+import com.vitalis.demo.infra.exception.ResourceNotFoundException;
 import com.vitalis.demo.mapper.OrderItemMapper;
 import com.vitalis.demo.mapper.OrderMapper;
 import com.vitalis.demo.model.*;
@@ -45,7 +46,7 @@ public class OrderService {
     @Transactional(readOnly = true)
     public Order findById(UUID id) {
         return findByIdOptional(id)
-                .orElseThrow(() -> new BusinessException("Pedido com ID: " + id + " não encontrado!"));
+                .orElseThrow(() -> new ResourceNotFoundException("Pedido com ID: " + id + " não encontrado!"));
     }
 
     @Transactional(readOnly = true)

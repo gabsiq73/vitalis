@@ -2,17 +2,16 @@ package com.vitalis.demo.service;
 
 import com.vitalis.demo.dto.update.ProductUpdateDTO;
 import com.vitalis.demo.infra.exception.BusinessException;
+import com.vitalis.demo.infra.exception.ResourceNotFoundException;
 import com.vitalis.demo.mapper.ProductMapper;
 import com.vitalis.demo.model.Product;
 import com.vitalis.demo.model.enums.ProductType;
 import com.vitalis.demo.repository.ProductRepository;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 
 import java.util.Optional;
 import java.util.UUID;
@@ -28,7 +27,7 @@ public class ProductService {
     @Transactional(readOnly = true)
     public Product findById(UUID id) {
         return findByIdOptional(id)
-                .orElseThrow(() -> new EntityNotFoundException("Produto com ID: " +id+ " não encontrado!"));
+                .orElseThrow(() -> new ResourceNotFoundException("Produto com ID: " +id+ " não encontrado!"));
     }
 
     @Transactional(readOnly = true)

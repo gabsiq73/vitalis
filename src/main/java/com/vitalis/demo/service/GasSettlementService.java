@@ -3,6 +3,7 @@ package com.vitalis.demo.service;
 import com.vitalis.demo.dto.response.GasSettlementReportDTO;
 import com.vitalis.demo.dto.response.GasSettlementResponseDTO;
 import com.vitalis.demo.infra.exception.BusinessException;
+import com.vitalis.demo.infra.exception.ResourceNotFoundException;
 import com.vitalis.demo.mapper.GasSettlementMapper;
 import com.vitalis.demo.model.GasSettlement;
 import com.vitalis.demo.model.OrderItem;
@@ -30,7 +31,7 @@ public class GasSettlementService {
     @Transactional(readOnly = true)
     public GasSettlement findById(UUID id) {
         return findByIdOptional(id)
-                .orElseThrow(() -> new BusinessException("Acerto de gás não encontrado!"));
+                .orElseThrow(() -> new ResourceNotFoundException("Acerto de gás de ID: "+ id +" não encontrado!"));
     }
 
     @Transactional(readOnly = true)
@@ -90,7 +91,7 @@ public class GasSettlementService {
     @Transactional
     public void settleIndividual(UUID settlementId){
         GasSettlement settlement = repository.findById(settlementId)
-                .orElseThrow(() -> new BusinessException("Acerto não encontrado!"));
+                .orElseThrow(() -> new ResourceNotFoundException("Acerto não encontrado!"));
 
         if(Boolean.TRUE.equals(settlement.getSettled())){
             throw new BusinessException("Este acerto já foi liquidado!");
@@ -141,7 +142,7 @@ public class GasSettlementService {
     @Transactional
     public void deleteByOrderItem(OrderItem item){
         GasSettlement settlement = repository.findByOrderItem(item)
-                .orElseThrow(() -> new BusinessException("Acerto vinculado a este item não encontrado!"));
+                .orElseThrow(() -> new ResourceNotFoundException("Acerto vinculado a este item não encontrado!"));
 
         repository.delete(settlement);
     }

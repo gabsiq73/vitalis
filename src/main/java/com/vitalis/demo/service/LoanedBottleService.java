@@ -1,10 +1,10 @@
 package com.vitalis.demo.service;
 
 import com.vitalis.demo.infra.exception.BusinessException;
+import com.vitalis.demo.infra.exception.ResourceNotFoundException;
 import com.vitalis.demo.model.LoanedBottle;
 import com.vitalis.demo.model.enums.LoanStatus;
 import com.vitalis.demo.repository.LoanedBottleRepository;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,7 +25,7 @@ public class LoanedBottleService {
 
     public LoanedBottle findById(UUID id){
         return findByIdOptional(id)
-                .orElseThrow(() -> new EntityNotFoundException("Registro de vasilhame com ID: "+ id + " não encontrado!"));
+                .orElseThrow(() -> new ResourceNotFoundException("Registro de vasilhame com ID: "+ id + " não encontrado!"));
     }
 
     @Transactional(readOnly = true)

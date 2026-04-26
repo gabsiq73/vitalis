@@ -1,11 +1,11 @@
 package com.vitalis.demo.service;
 
 import com.vitalis.demo.infra.exception.BusinessException;
+import com.vitalis.demo.infra.exception.ResourceNotFoundException;
 import com.vitalis.demo.model.Client;
 import com.vitalis.demo.model.ClientPrice;
 import com.vitalis.demo.model.Product;
 import com.vitalis.demo.repository.ClientPriceRepository;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,7 +26,7 @@ public class ClientPriceService {
     @Transactional(readOnly = true)
     public ClientPrice findById(UUID id){
         return findByIdOptional(id)
-                .orElseThrow(() -> new EntityNotFoundException("Preço especial de cliente não encontrado!"));
+                .orElseThrow(() -> new ResourceNotFoundException("Preço especial de cliente com ID: "+ id +" não encontrado!"));
     }
 
     @Transactional(readOnly = true)

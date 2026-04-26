@@ -2,14 +2,15 @@ package com.vitalis.demo.service;
 
 import com.vitalis.demo.dto.update.GasSupplierUpdateDTO;
 import com.vitalis.demo.infra.exception.BusinessException;
+import com.vitalis.demo.infra.exception.ResourceNotFoundException;
 import com.vitalis.demo.mapper.GasSupplierMapper;
 import com.vitalis.demo.model.GasSupplier;
 import com.vitalis.demo.repository.GasSupplierRepository;
+import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.transaction.annotation.Transactional;
-import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -24,7 +25,7 @@ public class GasSupplierService {
     @Transactional(readOnly = true)
     public GasSupplier findById(UUID id) {
         return findByIdOptional(id)
-                .orElseThrow(() -> new BusinessException("Fornecedor não encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Fornecedor de ID: "+ id +" não encontrado"));
     }
 
     @Transactional(readOnly = true)
@@ -39,11 +40,6 @@ public class GasSupplierService {
 
     @Transactional
     public GasSupplier save(GasSupplier gasSupplier) {
-
-        if(gasSupplier.getName() == null && gasSupplier.getName().isBlank()){
-            throw new IllegalArgumentException("O nome do fornecedor é obrigatório");
-        }
-
         return repository.save(gasSupplier);
     }
 

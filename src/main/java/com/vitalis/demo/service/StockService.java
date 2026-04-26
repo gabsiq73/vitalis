@@ -2,11 +2,11 @@ package com.vitalis.demo.service;
 
 import com.vitalis.demo.infra.exception.BusinessException;
 import com.vitalis.demo.infra.exception.OutOfStockException;
+import com.vitalis.demo.infra.exception.ResourceNotFoundException;
 import com.vitalis.demo.model.Product;
 import com.vitalis.demo.model.Stock;
 import com.vitalis.demo.model.enums.ProductType;
 import com.vitalis.demo.repository.StockRepository;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,13 +24,13 @@ public class StockService {
     @Transactional(readOnly = true)
     public Stock findById(UUID id){
         return repository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Id de estoque não encontrado!"));
+                .orElseThrow(() -> new ResourceNotFoundException("Estoque de ID: "+ id +" não encontrado!"));
     }
 
     @Transactional(readOnly = true)
     public Stock findByProduct(Product product){
         return repository.findByProduct(product)
-                .orElseThrow(() -> new EntityNotFoundException("Registro de estoque não encontrado!"));
+                .orElseThrow(() -> new ResourceNotFoundException("Registro de estoque não encontrado!"));
     }
 
     @Transactional(readOnly = true)
