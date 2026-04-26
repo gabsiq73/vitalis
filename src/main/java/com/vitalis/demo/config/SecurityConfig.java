@@ -1,10 +1,11 @@
 package com.vitalis.demo.config;
 
+import com.vitalis.demo.security.CustomAcessDeniedHandler;
+import com.vitalis.demo.security.CustomAuthenticationEntryPoint;
 import com.vitalis.demo.security.CustomUserDetailsService;
 import com.vitalis.demo.service.UserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -22,20 +23,27 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception{
-        return http
-                .csrf(AbstractHttpConfigurer::disable)
-                .httpBasic(Customizer.withDefaults())
-                .authorizeHttpRequests(authorize -> {
-                    authorize.requestMatchers(HttpMethod.POST, "/users/**").permitAll();
-                    authorize.requestMatchers(
-                            "/v3/api-docs/**",
-                            "/swagger-ui/**",
-                            "/swagger-ui.html"
-                     ).permitAll();
-                    authorize.anyRequest().authenticated();
-                })
-                .build();
+    public SecurityFilterChain securityFilterChain(HttpSecurity http,
+                                                   CustomAuthenticationEntryPoint authEntryPoint,
+                                                   CustomAcessDeniedHandler accessDeniedHandler) throws Exception{
+       http
+            .csrf(AbstractHttpConfigurer::disable)
+            .httpBasic(Customizer.withDefaults())
+            .authorizeHttpRequests(authorize -> {
+                authorize.requestMatchers(HttpMethod.POST, "/users/**").permitAll();
+                authorize.requestMatchers(
+                        "/v3/api-docs/**",
+                        "/swagger-ui/**",
+                        "/swagger-ui.html"
+                 ).permitAll();
+                authorize.anyRequest().authenticated();
+            })
+               .exceptionHandling(ex -> ex
+                       .authenticationEntryPoint(authEntryPoint)
+                       .accessDeniedHandler(accessDeniedHandler)
+               );
+
+       return http.build();
     }
 
     @Bean

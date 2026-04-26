@@ -1,4 +1,4 @@
-package com.vitalis.demo.infra.exception;
+package com.vitalis.demo.handler;
 
 import java.time.LocalDateTime;
 import java.util.List;

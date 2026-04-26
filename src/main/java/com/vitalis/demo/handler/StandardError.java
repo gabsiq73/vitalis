@@ -1,6 +1,5 @@
-package com.vitalis.demo.infra.exception;
+package com.vitalis.demo.handler;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 
 public record StandardError(
