@@ -151,6 +151,12 @@ public class ClientService {
         repository.save(client);
     }
 
+    @Transactional
+    public void addPointsFidelity(UUID id, Integer points){
+        Client client = findById(id);
+        client.getFidelity().addPoints(points);
+    }
+
     private BigDecimal sumOrderItems(Order order){
         return order.getItems().stream()
                 .map(item -> item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
@@ -169,6 +175,7 @@ public class ClientService {
         client.setBottlesDebt(newDebt);
         repository.save(client);
     }
+
 
 
 }

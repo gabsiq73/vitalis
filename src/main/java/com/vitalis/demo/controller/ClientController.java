@@ -53,6 +53,12 @@ public class ClientController {
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDTO);
     }
 
+    @PatchMapping("/{id}/add-fidelity-points")
+    public ResponseEntity<Void> addPoints(@PathVariable UUID id, @RequestParam Integer points) {
+        clientService.addPointsFidelity(id, points);
+        return ResponseEntity.noContent().build();
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<Void> update(@PathVariable("id") UUID id, @RequestBody @Valid ClientUpdateDTO dto){
         clientService.update(id,dto);
