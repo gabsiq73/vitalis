@@ -59,6 +59,13 @@ public class ProductController {
         return ResponseEntity.noContent().build();
     }
 
+    @PatchMapping("/{id}/toggle-active")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> toggleActive(@PathVariable UUID id){
+        productService.toggleActive(id);
+        return ResponseEntity.ok().build();
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable("id") UUID id){

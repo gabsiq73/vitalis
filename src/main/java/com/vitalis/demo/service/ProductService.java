@@ -55,6 +55,12 @@ public class ProductService {
     }
 
     @Transactional
+    public void toggleActive(UUID id){
+        Product product = findById(id);
+        product.setActive(!product.isActive());
+    }
+
+    @Transactional
     public void delete(UUID id){
         Product product = findById(id);
 
