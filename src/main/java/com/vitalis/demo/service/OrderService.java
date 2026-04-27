@@ -233,10 +233,17 @@ public class OrderService {
                 .mapToInt(OrderItem::getQuantity)
                 .sum();
 
+        ClientFidelity fidelity = subOrder.getClient().getFidelity();
+
+        // Saldo Total = (Águas que já tem * 10) + pontos soltos + o que vai ganhar agora
+        int availableRawPoints = fidelity.getTotalPoints() + paidWatersInThisOrder;
+
         for (OrderItem item : items) {
-            processItemBeforeAdding(subOrder, item, isGas, isDelivery, paidWatersInThisOrder);
+            availableRawPoints = processItemBeforeAdding(subOrder, item, isGas, isDelivery, availableRawPoints);
             subOrder.addItem(item);
         }
+
+        fidelity.updateFromRawPoints(availableRawPoints);
 
         return subOrder;
     }
@@ -257,15 +264,18 @@ public class OrderService {
      * Pipeline de processamento de um único item antes de entrar no sub-pedido:
      * validação → preço → fornecedor de gás.
      */
-    private void processItemBeforeAdding(Order subOrder, OrderItem item, boolean isGas, Boolean isDelivery, int paidWatersInThisOrder) {
+    private int processItemBeforeAdding(Order subOrder, OrderItem item, boolean isGas, Boolean isDelivery, int currentRawPoints) {
         validateProductAvailability(item.getProduct());
         stockService.checkStockAvailability(item.getProduct(), item.getQuantity());
 
-        resolveItemPrice(subOrder.getClient(), item, isDelivery, paidWatersInThisOrder);
+        // Atualizamos o preço e retornamos o novo saldo bruto
+        int remainingPoints = resolveItemPrice(subOrder.getClient(), item, isDelivery, currentRawPoints);
 
         if (isGas) {
             resolveGasSupplier(item);
         }
+
+        return remainingPoints;
     }
 
     /**
@@ -277,53 +287,34 @@ public class OrderService {
      *                                GÁS: tratado como nulo — busca ClientPrice ou basePrice (gás não tem brinde).</li>
      * </ul>
      */
-    private void resolveItemPrice(Client client, OrderItem item, Boolean isDelivery, int paidWaterInThisOrder) {
+    private int resolveItemPrice(Client client, OrderItem item, Boolean isDelivery, int currentRawPoints) {
         boolean isExplicitZero = item.getUnitPrice() != null
                 && item.getUnitPrice().compareTo(BigDecimal.ZERO) == 0;
 
         if (isExplicitZero && item.getProduct().getType() == ProductType.WATER) {
-            validateAndConsumeFidelityBonus(client, item, paidWaterInThisOrder);
-            return; // brinde validado → mantém preço zero
+            // Retorna o saldo após consumir o brinde
+            return validateAndConsumeFidelityBonus(item, currentRawPoints);
         }
 
-        boolean needsCalculation = item.getUnitPrice() == null
-                || item.getUnitPrice().compareTo(BigDecimal.ZERO) <= 0;
-
-        if (needsCalculation) {
-            BigDecimal calculatedPrice = calculateFinalPrice(client, item.getProduct(), isDelivery);
-            item.setUnitPrice(calculatedPrice);
+        // Lógica normal de preço...
+        if (item.getUnitPrice() == null || item.getUnitPrice().compareTo(BigDecimal.ZERO) <= 0) {
+            item.setUnitPrice(calculateFinalPrice(client, item.getProduct(), isDelivery));
         }
-        // Se unitPrice > 0, é preço manual → mantém sem alteração
+        return currentRawPoints; // Não consumiu pontos, retorna o que recebeu
     }
 
     /**
      * Valida se o cliente tem brindes disponíveis e desconta do saldo de fidelidade.
      */
-    private void validateAndConsumeFidelityBonus(Client client, OrderItem item, int paidWatersInThisOrder) {
-        ClientFidelity fidelity = client.getFidelity();
-        if (fidelity == null) throw new BusinessException("Cliente não possui registro de fidelidade.");
-
-        // Cálculo dos Pontos Brutos: (Brindes que já tem * 10) + pontos soltos + pontos que VAI ganhar agora
-        int currentPoints = (fidelity.getPoints() != null) ? fidelity.getPoints() : 0;
-        int totalAvailableRawPoints = (fidelity.getPendingBonusWater() * 10) + currentPoints + paidWatersInThisOrder;
-
+    private int validateAndConsumeFidelityBonus(OrderItem item, int availableRawPoints) {
         int neededPoints = item.getQuantity() * 10;
 
-        if (totalAvailableRawPoints < neededPoints) {
-            throw new BusinessException("Saldo insuficiente! O cliente terá " + totalAvailableRawPoints +
-                    " pontos com esta compra, mas precisa de " + neededPoints + " para o resgate.");
+        if (availableRawPoints < neededPoints) {
+            throw new BusinessException("Saldo insuficiente! Você tem " + availableRawPoints +
+                    " pontos totais, mas precisa de " + neededPoints);
         }
 
-        // Deduz do saldo (pode deixar o fidelity.points negativo temporariamente até o confirmDelivery)
-        int newRawPoints = (fidelity.getPendingBonusWater() * 10) + currentPoints - neededPoints;
-
-        if (newRawPoints < 0) {
-            fidelity.setPendingBonusWater(0);
-            fidelity.setPoints(newRawPoints); // Ex: -1
-        } else {
-            fidelity.setPendingBonusWater(newRawPoints / 10);
-            fidelity.setPoints(newRawPoints % 10);
-        }
+        return availableRawPoints - neededPoints; // Retorna o saldo deduzido
     }
 
     /**
@@ -483,17 +474,9 @@ public class OrderService {
 
         if (!isEligibleBrand || fidelity == null) return;
 
-        int totalRawPoints = (fidelity.getPendingBonusWater() * 10) + fidelity.getPoints();
-        int pointsAfterReversal = totalRawPoints - item.getQuantity();
-
-        if (pointsAfterReversal < 0) {
-            // O cliente já usou brinde gerado por compras que estão sendo canceladas
-            fidelity.setPendingBonusWater(0);
-            fidelity.setPoints(pointsAfterReversal); // mantém negativo como débito
-        } else {
-            fidelity.setPendingBonusWater(pointsAfterReversal / 10);
-            fidelity.setPoints(pointsAfterReversal % 10);
-        }
+        // Uso dos novos métodos:
+        int pointsAfterReversal = fidelity.getTotalPoints() - item.getQuantity();
+        fidelity.updateFromRawPoints(pointsAfterReversal);
     }
 
     // Métodos privados — Guards e Resolvers simples

@@ -31,20 +31,22 @@ public class ClientFidelity extends BaseEntity{
 
     public void addPoints(Integer incomingPoints) {
         if (incomingPoints == null || incomingPoints <= 0) return;
+        updateFromRawPoints(getTotalPoints() + incomingPoints);
+    }
 
-        // 1. Soma o que ele já tinha com o que chegou
-        int totalPoints = this.points + incomingPoints;
+    public Integer getTotalPoints(){
+        int currentPoints = (this.points != null) ? this.points : 0;
+        int currentBonus = (this.pendingBonusWater != null) ? this.pendingBonusWater : 0;
+        return currentPoints + (currentBonus * POINTS_PER_WATER);
+    }
 
-        // 2. Calcula quantas novas águas ele ganhou (Divisão inteira)
-        // Se totalPoints for 15, 15 / 10 = 1
-        int newWaters = totalPoints / POINTS_PER_WATER;
-
-        // 3. Calcula o que sobra de pontos (Resto da divisão)
-        // Se totalPoints for 15, 15 % 10 = 5
-        int remainingPoints = totalPoints % POINTS_PER_WATER;
-
-        // 4. Atualiza o estado da entidade
-        this.pendingBonusWater += newWaters;
-        this.points = remainingPoints;
+    public void updateFromRawPoints(int totalRawPoints) {
+        if (totalRawPoints < 0) {
+            this.pendingBonusWater = 0;
+            this.points = totalRawPoints;
+        } else {
+            this.pendingBonusWater = totalRawPoints / POINTS_PER_WATER;
+            this.points = totalRawPoints % POINTS_PER_WATER;
+        }
     }
 }
