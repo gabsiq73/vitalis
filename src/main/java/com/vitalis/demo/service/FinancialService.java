@@ -31,118 +31,203 @@ public class FinancialService {
     private final PaymentRepository paymentRepository;
     private final GasSettlementRepository gasSettlementRepository;
 
-    public FinancialReportDTO findDailyFinancialPerformance(LocalDate date) {return generateFinancialReport(date, date);
+    // Relatório Financeiro
+
+    /**
+     * Atalho para o relatório financeiro de um único dia.
+     * Equivale a chamar {@link #generateFinancialReport} com start == end.
+     */
+    @Transactional(readOnly = true)
+    public FinancialReportDTO findDailyFinancialPerformance(LocalDate date) {
+        return generateFinancialReport(date, date);
     }
 
+    /**
+     * Gera o relatório financeiro consolidado para um intervalo de datas.
+     *
+     * <ul>
+     *   <li><b>Faturado:</b> soma dos pedidos com status DELIVERED no período.</li>
+     *   <li><b>Recebido:</b> soma de todos os pagamentos registrados no período.</li>
+     *   <li><b>Lucro do gás:</b> soma dos acertos de gás liquidados no período.</li>
+     * </ul>
+     */
+    @Transactional(readOnly = true)
     public FinancialReportDTO generateFinancialReport(LocalDate startDate, LocalDate endDate) {
         LocalDateTime start = startDate.atStartOfDay();
         LocalDateTime end = endDate.atTime(LocalTime.MAX);
 
-        BigDecimal invoiced = Optional.ofNullable(
-                orderRepository.sumTotalAmount(OrderStatus.DELIVERED, start, end)
-        ).orElse(BigDecimal.ZERO);
-
-        BigDecimal received = Optional.ofNullable(
-                paymentRepository.sumTotalReceived(start, end)
-        ).orElse(BigDecimal.ZERO);
-
-        BigDecimal gasProfit = Optional.ofNullable(
-                gasSettlementRepository.sumTotalProfit(start, end)
-        ).orElse(BigDecimal.ZERO);
+        BigDecimal invoiced  = safeQuery(orderRepository.sumTotalAmount(OrderStatus.DELIVERED, start, end));
+        BigDecimal received  = safeQuery(paymentRepository.sumTotalReceived(start, end));
+        BigDecimal gasProfit = safeQuery(gasSettlementRepository.sumTotalProfit(start, end));
 
         return new FinancialReportDTO(invoiced, received, gasProfit);
     }
 
-    // Método para instanciar o resumo diário de vendas
+    // Resumo Operacional Diário
+
+    /**
+     * Gera o resumo operacional do período, consolidando:
+     * totais por método de pagamento, fiados, créditos gerados e quantidades vendidas por tipo de produto.
+     */
     @Transactional(readOnly = true)
-    public DailyReportDTO generateOperationalSummary(LocalDate start, LocalDate end){
-        LocalDateTime startOfDay = start.atStartOfDay();
-        LocalDateTime endOfDay = end.atTime(LocalTime.MAX);
+    public DailyReportDTO generateOperationalSummary(LocalDate start, LocalDate end) {
+        List<Order> orders = fetchOrdersInPeriod(start, end);
 
-        //Busca todos os pedidos criar hoje
-        List<Order> dailyOrders = orderRepository.findByCreateDateBetween(startOfDay, endOfDay);
+        BigDecimal totalPix              = sumPaymentsByMethod(orders, Method.PIX);
+        BigDecimal totalCash             = sumPaymentsByMethod(orders, Method.DINHEIRO);
+        BigDecimal totalBalanceUsed      = sumPaymentsByMethod(orders, Method.SALDO);
+        BigDecimal totalDebt             = sumUnpaidBalances(orders);
+        BigDecimal totalCreditGenerated  = sumCreditGenerated(orders);
+        int totalWater                   = countItemsByType(orders, ProductType.WATER);
+        int totalGas                     = countItemsByType(orders, ProductType.GAS);
 
-        BigDecimal totalPix = BigDecimal.ZERO;
-        BigDecimal totalCash = BigDecimal.ZERO;
-        BigDecimal totalBalanceUsed = BigDecimal.ZERO;
-        BigDecimal totalDebt = BigDecimal.ZERO;
-        BigDecimal totalCreditGenerated = BigDecimal.ZERO;
-        Integer totalWater = 0;
-        Integer totalGas = 0;
-
-        for(Order order: dailyOrders){
-
-            //Somar pagamentos
-            for(Payment p : order.getPayments()){
-                if(p.getMethod() == Method.PIX){
-                    totalPix = totalPix.add(p.getAmount());
-                }
-                else if(p.getMethod() == Method.DINHEIRO){
-                    totalCash = totalCash.add(p.getAmount());
-                }
-                else if(p.getMethod() == Method.SALDO){
-                    totalBalanceUsed = totalBalanceUsed.add(p.getAmount());
-                }
-            }
-
-            //Calcular fiados
-            BigDecimal totalPaid = order.getPayments().stream()
-                    .map(Payment::getAmount)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            BigDecimal balance = order.getTotalValue().subtract(totalPaid);
-
-            if(balance.compareTo(BigDecimal.ZERO) > 0){
-                totalDebt = totalDebt.add(balance);
-            }
-
-            else if (balance.compareTo(BigDecimal.ZERO) < 0){
-                totalCreditGenerated = totalCreditGenerated.add(balance.abs());
-            }
-
-            // Contar as quantidades de produtos vendidos
-            for(OrderItem item : order.getItems()){
-                if(item.getProduct().getType() == ProductType.WATER){
-                    totalWater += item.getQuantity();
-                }
-                else if(item.getProduct().getType() == ProductType.GAS){
-                    totalGas += item.getQuantity();
-                }
-            }
-        }
-
-        return new DailyReportDTO(totalPix, totalCash, totalBalanceUsed, totalDebt, totalCreditGenerated, totalWater, totalGas);
+        return new DailyReportDTO(
+                totalPix, totalCash, totalBalanceUsed,
+                totalDebt, totalCreditGenerated,
+                totalWater, totalGas
+        );
     }
 
-    public InventoryFlowDTO findInventoryFlowByDate(LocalDate date){
-        LocalDateTime start = date.atStartOfDay();
-        LocalDateTime end = date.atTime(LocalTime.MAX);
+    // =========================================================================
+    // Fluxo de Estoque
+    // =========================================================================
 
-        List<Order> orders = orderRepository.findByStatusAndDeliveryDateBetween(OrderStatus.DELIVERED, start, end);
+    /**
+     * Calcula o fluxo de saída de estoque para um dia específico, com base nos pedidos entregues.
+     *
+     * <ul>
+     *   <li><b>waterRefill:</b> galões de recarga (sem a palavra "COMPLETO" no nome).</li>
+     *   <li><b>waterComplete:</b> galões completos (com vasilhame novo).</li>
+     *   <li><b>gasOut:</b> botijões de gás saídos.</li>
+     * </ul>
+     */
+    @Transactional(readOnly = true)
+    public InventoryFlowDTO findInventoryFlowByDate(LocalDate date) {
+        List<Order> deliveredOrders = fetchDeliveredOrdersOnDate(date);
 
-        Integer waterRefill = 0;
-        Integer waterComplete = 0;
-        Integer gasOut = 0;
+        int waterRefill  = countWaterRefills(deliveredOrders);
+        int waterComplete = countWaterComplete(deliveredOrders);
+        int gasOut       = countItemsByType(deliveredOrders, ProductType.GAS);
 
-        for(Order order: orders){
-            for(OrderItem item : order.getItems()){
-                String productName = item.getProduct().getName().toUpperCase();
-
-                if(item.getProduct().getType() == ProductType.GAS){
-                    gasOut += item.getQuantity();
-                }
-                else if(item.getProduct().getType() == ProductType.WATER){
-                    if(productName.contains("COMPLETO")) {
-                        waterComplete += item.getQuantity();
-                    }
-                    else{
-                        waterRefill += item.getQuantity();
-                    }
-                }
-            }
-        }
         return new InventoryFlowDTO(waterRefill, waterComplete, gasOut);
     }
 
+    // Métodos privados — Busca de Pedidos
 
+    /**
+     * Retorna todos os pedidos criados no intervalo (independente de status).
+     */
+    private List<Order> fetchOrdersInPeriod(LocalDate start, LocalDate end) {
+        return orderRepository.findByCreateDateBetween(
+                start.atStartOfDay(),
+                end.atTime(LocalTime.MAX)
+        );
+    }
+
+    /**
+     * Retorna os pedidos com status DELIVERED cuja data de entrega está dentro do dia informado.
+     */
+    private List<Order> fetchDeliveredOrdersOnDate(LocalDate date) {
+        return orderRepository.findByStatusAndDeliveryDateBetween(
+                OrderStatus.DELIVERED,
+                date.atStartOfDay(),
+                date.atTime(LocalTime.MAX)
+        );
+    }
+
+    // Métodos privados — Acumuladores de Pagamento
+
+    /**
+     * Soma todos os pagamentos de um método específico em uma lista de pedidos.
+     */
+    private BigDecimal sumPaymentsByMethod(List<Order> orders, Method method) {
+        return orders.stream()
+                .flatMap(order -> order.getPayments().stream())
+                .filter(p -> p.getMethod() == method)
+                .map(Payment::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * Soma o saldo devedor de todos os pedidos parcialmente pagos (fiados).
+     * Considera apenas o saldo positivo — ignora pedidos com crédito.
+     */
+    private BigDecimal sumUnpaidBalances(List<Order> orders) {
+        return orders.stream()
+                .map(this::calculateOrderBalance)
+                .filter(balance -> balance.compareTo(BigDecimal.ZERO) > 0)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * Soma o crédito gerado por pedidos em que o cliente pagou mais do que o valor do pedido.
+     * Usa o valor absoluto para garantir que o crédito seja sempre positivo no relatório.
+     */
+    private BigDecimal sumCreditGenerated(List<Order> orders) {
+        return orders.stream()
+                .map(this::calculateOrderBalance)
+                .filter(balance -> balance.compareTo(BigDecimal.ZERO) < 0)
+                .map(BigDecimal::abs)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * Calcula o saldo de um pedido = valor total − total pago.
+     * Positivo = ainda deve. Negativo = pagou a mais (crédito).
+     */
+    private BigDecimal calculateOrderBalance(Order order) {
+        BigDecimal totalPaid = order.getPayments().stream()
+                .map(Payment::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        return order.getTotalValue().subtract(totalPaid);
+    }
+
+    // Métodos privados — Contadores de Estoque
+
+    /**
+     * Conta o total de unidades vendidas de um tipo de produto em uma lista de pedidos.
+     */
+    private int countItemsByType(List<Order> orders, ProductType type) {
+        return orders.stream()
+                .flatMap(order -> order.getItems().stream())
+                .filter(item -> item.getProduct().getType() == type)
+                .mapToInt(OrderItem::getQuantity)
+                .sum();
+    }
+
+    /**
+     * Conta apenas os galões de recarga — água sem "COMPLETO" no nome do produto.
+     */
+    private int countWaterRefills(List<Order> orders) {
+        return orders.stream()
+                .flatMap(order -> order.getItems().stream())
+                .filter(item -> item.getProduct().getType() == ProductType.WATER)
+                .filter(item -> !item.getProduct().getName().toUpperCase().contains("COMPLETO"))
+                .mapToInt(OrderItem::getQuantity)
+                .sum();
+    }
+
+    /**
+     * Conta apenas os galões completos (com vasilhame) — água com "COMPLETO" no nome.
+     */
+    private int countWaterComplete(List<Order> orders) {
+        return orders.stream()
+                .flatMap(order -> order.getItems().stream())
+                .filter(item -> item.getProduct().getType() == ProductType.WATER)
+                .filter(item -> item.getProduct().getName().toUpperCase().contains("COMPLETO"))
+                .mapToInt(OrderItem::getQuantity)
+                .sum();
+    }
+    
+    // Métodos privados — Utilitários
+
+    /**
+     * Protege contra retorno nulo de queries de agregação do JPA.
+     * Repositories que usam {@code SUM} retornam {@code null} quando não há registros,
+     * em vez de zero — este helper normaliza esse comportamento.
+     */
+    private BigDecimal safeQuery(BigDecimal value) {
+        return Optional.ofNullable(value).orElse(BigDecimal.ZERO);
+    }
 }
