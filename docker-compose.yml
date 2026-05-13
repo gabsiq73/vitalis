@@ -1,0 +1,31 @@
+version: '3.9'
+
+services:
+  vitalisdb:
+    image: postgres:16.3
+    container_name: vitalisdb
+
+    restart: "no"
+
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: vitalis
+      PGDATA: /var/lib/postgresql/data
+
+    ports:
+      - "5433:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    networks:
+      - vitalis-network
+
+volumes:
+  postgres_data:
+
+#rodar o comando: docker network create vitalis-network antes de subir o docker compose
+networks:
+  vitalis-network:
+    external: true
