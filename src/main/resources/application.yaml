@@ -5,7 +5,7 @@ spring:
   exclude: org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
 
   datasource:
-    url: jdbc:postgresql://localhost:5433/vitalis
+    url: jdbc:postgresql://localhost:${DB_PORT}/vitalis
     username: postgres
     password: postgres
 
