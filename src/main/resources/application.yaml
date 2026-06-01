@@ -16,3 +16,12 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
+logging:
+  file:
+    name: app.log
+  level:
+    root: warn
+    com:
+      vitalis:
+        demo: trace
