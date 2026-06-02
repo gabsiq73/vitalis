@@ -22,10 +22,29 @@ services:
     networks:
       - vitalis-network
 
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: vitalis-pgadmin
+
+    restart: "no"
+
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@vitalis.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+
+    ports:
+      - "5050:80"
+
+    depends_on:
+      - vitalisdb
+
+    networks:
+      - vitalis-network
+
 volumes:
   postgres_data:
 
-#rodar o comando: docker network create vitalis-network antes de subir o docker compose
+# rodar antes: docker network create vitalis-network
 networks:
   vitalis-network:
     external: true
