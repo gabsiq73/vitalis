@@ -16,8 +16,4 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
 
     List<Product> findByType(ProductType type);
 
-    @Modifying
-    @Query(value = "UPDATE tb_product SET PROD_is_active = NOT PROD_is_active WHERE PROD_id = :id", nativeQuery = true)
-    int toggleActive(@Param("id") UUID id);
-
 }

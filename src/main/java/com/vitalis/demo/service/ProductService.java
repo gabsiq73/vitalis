@@ -56,10 +56,9 @@ public class ProductService {
 
     @Transactional
     public void toggleActive(UUID id){
-        int updated = repository.toggleActive(id);
-        if (updated == 0) {
-            throw new ResourceNotFoundException("Produto com ID: " + id + " não encontrado!");
-        }
+        Product product = findById(id);
+        product.toggleActive();
+        repository.save(product);
     }
 
     @Transactional

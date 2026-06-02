@@ -59,5 +59,13 @@ public class Product extends BaseEntity {
         return this.orderItems != null && !this.orderItems.isEmpty();
     }
 
+    public void toggleActive(){
+        if(this.isActive){
+            this.isActive = false;
+        } else {
+            this.isActive = true;
+        }
+    }
+
 }
 
