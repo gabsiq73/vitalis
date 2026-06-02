@@ -410,9 +410,10 @@ public class OrderService {
     // Métodos privados — Fidelidade
 
     /**
-     * Concede 1 ponto por unidade de água paga. Converte automaticamente 10 pontos em 1 galão bônus.
+     * Concede 1 ponto por unidade de água paga. Clientes avulsos não acumulam pontos.
      */
     private void awardFidelityPointsIfEligible(Client client, OrderItem item) {
+        if (client.getClientType() == com.vitalis.demo.model.enums.ClientType.AVULSO) return;
         if (item.getProduct().getType() != ProductType.WATER) return;
 
         boolean isPaidPurchase = item.getUnitPrice() != null
