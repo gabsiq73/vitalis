@@ -152,6 +152,8 @@ public class OrderService {
         order.setDeliveryDate(LocalDateTime.now());
         order.setStatus(OrderStatus.DELIVERED);
         repository.save(order);
+
+        clientService.calculateDebtBalance(order.getClient().getId());
     }
 
     // Atualização de Status
