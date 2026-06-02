@@ -55,7 +55,14 @@ public class OrderService {
     }
 
     @Transactional(readOnly = true)
-    public Page<Order> listOrders(Pageable pageable) {
+    public Page<Order> listOrders(OrderStatus status, PaymentStatus paymentStatus, Pageable pageable) {
+        if (status != null && paymentStatus != null) {
+            return repository.findByStatusAndPaymentStatus(status, paymentStatus, pageable);
+        } else if (status != null) {
+            return repository.findByStatus(status, pageable);
+        } else if (paymentStatus != null) {
+            return repository.findByPaymentStatus(paymentStatus, pageable);
+        }
         return repository.findAll(pageable);
     }
 

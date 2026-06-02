@@ -6,6 +6,7 @@ import com.vitalis.demo.mapper.OrderItemMapper;
 import com.vitalis.demo.mapper.OrderMapper;
 import com.vitalis.demo.model.Order;
 import com.vitalis.demo.model.enums.OrderStatus;
+import com.vitalis.demo.model.enums.PaymentStatus;
 import com.vitalis.demo.service.OrderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -41,8 +42,10 @@ public class OrderController {
 
     @GetMapping
     public ResponseEntity<Page<OrderResponseDTO>> listOrders(
+            @RequestParam(required = false) OrderStatus status,
+            @RequestParam(required = false) PaymentStatus paymentStatus,
             @PageableDefault(size = 10, sort = "createDate", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
-        Page<Order> pageEntity = orderService.listOrders(pageable);
+        Page<Order> pageEntity = orderService.listOrders(status, paymentStatus, pageable);
         Page<OrderResponseDTO> pageDTO = pageEntity.map(orderMapper::toResponseDTO);
         return ResponseEntity.ok(pageDTO);
     }
