@@ -6,12 +6,16 @@ import com.vitalis.demo.dto.update.ProductUpdateDTO;
 import com.vitalis.demo.model.Product;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.NullValuePropertyMappingStrategy;
 
 @Mapper(componentModel = "spring")
 public interface ProductMapper {
     Product toEntity(ProductRequestDTO requestDTO);
+
+    @Mapping(source = "active", target = "isActive")
+    @Mapping(source = "costPrice", target = "lastCostPrice")
     ProductResponseDTO toResponseDTO(Product product);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
