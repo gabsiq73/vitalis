@@ -5,6 +5,7 @@ import com.vitalis.demo.model.Payment;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -15,6 +16,9 @@ import java.util.UUID;
 public interface PaymentRepository extends JpaRepository<Payment, UUID> {
 
     List<Payment> findByOrder_Id(UUID orderId);
+
+    @Transactional
+    void deleteByOrder(Order order);
 
     List<Payment> findByCreateDateBetween(LocalDate start, LocalDate end);
 

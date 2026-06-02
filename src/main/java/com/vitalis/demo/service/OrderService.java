@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 public class OrderService {
 
     private final OrderRepository repository;
+    private final com.vitalis.demo.repository.PaymentRepository paymentRepository;
 
     private final ClientService clientService;
     private final ClientPriceService clientPriceService;
@@ -177,6 +178,8 @@ public class OrderService {
         if (order.getStatus() == OrderStatus.DELIVERED) {
             revertDeliveredOrder(order);
         }
+
+        paymentRepository.deleteByOrder(order);
 
         order.setStatus(OrderStatus.CANCELLED);
         repository.save(order);
