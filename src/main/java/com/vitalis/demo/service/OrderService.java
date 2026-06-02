@@ -410,24 +410,17 @@ public class OrderService {
     // Métodos privados — Fidelidade
 
     /**
-     * Concede pontos de fidelidade ao cliente se o item for uma água elegível (Nieta ou Pinheiro)
-     * e for uma compra paga (não brinde). Também verifica e converte pontos em brindes.
+     * Concede 1 ponto por unidade de água paga. Converte automaticamente 10 pontos em 1 galão bônus.
      */
     private void awardFidelityPointsIfEligible(Client client, OrderItem item) {
         if (item.getProduct().getType() != ProductType.WATER) return;
 
-        String productName = item.getProduct().getName().toUpperCase();
-        boolean isEligibleBrand = productName.contains("NIETA") || productName.contains("PINHEIRO");
         boolean isPaidPurchase = item.getUnitPrice() != null
                 && item.getUnitPrice().compareTo(BigDecimal.ZERO) > 0;
 
-        if (!isEligibleBrand || !isPaidPurchase) return;
+        if (!isPaidPurchase) return;
 
-        ClientFidelity fidelity = client.getFidelity();
-        int currentPoints = fidelity.getPoints() != null ? fidelity.getPoints() : 0;
-        fidelity.setPoints(currentPoints + item.getQuantity());
-
-        convertPointsToBonusIfReached(fidelity);
+        client.getFidelity().addPoints(item.getQuantity());
     }
 
     /**
