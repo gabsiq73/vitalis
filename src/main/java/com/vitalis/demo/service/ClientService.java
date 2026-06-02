@@ -60,6 +60,16 @@ public class ClientService {
     }
 
     @Transactional
+    public Client saveAvulso(String name) {
+        Client client = new Client();
+        client.setName(name != null && !name.isBlank() ? name : "Avulso");
+        client.setClientType(ClientType.RETAIL);
+        client.setClientStatus(ClientStatus.PAID);
+        client.setActive(true);
+        return repository.save(client);
+    }
+
+    @Transactional
     public void update(UUID id, ClientUpdateDTO dto) {
         Client client = findById(id);
         clientMapper.updateEntityFromDto(dto, client);

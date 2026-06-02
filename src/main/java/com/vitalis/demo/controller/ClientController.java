@@ -53,6 +53,14 @@ public class ClientController {
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDTO);
     }
 
+    @PostMapping("/avulso")
+    public ResponseEntity<ClientResponseDTO> createAvulso(
+            @RequestParam(required = false, defaultValue = "Avulso") String name) {
+        Client client = clientService.saveAvulso(name);
+        ClientResponseDTO responseDTO = clientMapper.toResponseDTO(client);
+        return ResponseEntity.status(HttpStatus.CREATED).body(responseDTO);
+    }
+
     @PatchMapping("/{id}/add-fidelity-points")
     public ResponseEntity<Void> addPoints(@PathVariable UUID id, @RequestParam Integer points) {
         clientService.addPointsFidelity(id, points);
