@@ -12,10 +12,13 @@ import org.mapstruct.NullValuePropertyMappingStrategy;
 
 @Mapper(componentModel = "spring")
 public interface ProductMapper {
+    @Mapping(source = "lastCostPrice", target = "costPrice")
     Product toEntity(ProductRequestDTO requestDTO);
 
     @Mapping(source = "active", target = "isActive")
     @Mapping(source = "costPrice", target = "lastCostPrice")
+    @Mapping(source = "defaultSupplier.id", target = "defaultSupplierId")
+    @Mapping(source = "defaultSupplier.name", target = "defaultSupplierName")
     ProductResponseDTO toResponseDTO(Product product);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)

@@ -46,16 +46,14 @@ public class StockService {
 
     @Transactional
     public void createInitialStock(Product product){
+        if (product.getType() == ProductType.GAS) {
+            return;
+        }
+
         Stock initialStock = new Stock();
         initialStock.setProduct(product);
         initialStock.setQuantityInStock(0);
-
-        if(product.getType() == ProductType.GAS){
-            initialStock.setMinimumStock(0);
-        }
-        else {
-            initialStock.setMinimumStock(5);
-        }
+        initialStock.setMinimumStock(5);
 
         repository.save(initialStock);
     }
@@ -64,6 +62,10 @@ public class StockService {
     public void decreaseStock(Product product, Integer quantity){
         if(quantity <= 0){
             throw new BusinessException("A quantidade para baixar deve ser maior que 0");
+        }
+
+        if (product.getType() == ProductType.GAS) {
+            return;
         }
 
         Stock stock = findByProduct(product);
@@ -78,6 +80,10 @@ public class StockService {
 
     @Transactional
     public void increaseStock(Product product, Integer quantity){
+        if (product.getType() == ProductType.GAS) {
+            return;
+        }
+
         Stock stock = findByProduct(product);
         stock.setQuantityInStock(stock.getQuantityInStock() + quantity);
         repository.save(stock);

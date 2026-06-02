@@ -23,6 +23,7 @@ public class ProductService {
     private final ProductRepository repository;
     private final StockService stockService;
     private final ProductMapper productMapper;
+    private final GasSupplierService gasSupplierService;
 
     @Transactional(readOnly = true)
     public Product findById(UUID id) {
@@ -41,10 +42,14 @@ public class ProductService {
     }
 
     @Transactional
-    public Product save(Product product){
+    public Product save(Product product, UUID defaultSupplierId){
 
         if(product.getType() == ProductType.GAS && product.getCostPrice() == null){
             throw new BusinessException("Erro: Para produtos do tipo GÁS, o preço de custo deve ser informado!");
+        }
+
+        if (defaultSupplierId != null) {
+            product.setDefaultSupplier(gasSupplierService.findById(defaultSupplierId));
         }
 
         product.setActive(true);
@@ -77,6 +82,16 @@ public class ProductService {
     public void update(UUID id, ProductUpdateDTO dto){
         Product product = findById(id);
         productMapper.updateEntityFromDto(dto, product);
+        
+        if (dto.lastCostPrice() != null) {
+            product.setCostPrice(dto.lastCostPrice());
+        }
+        if (dto.defaultSupplierId() != null) {
+            product.setDefaultSupplier(gasSupplierService.findById(dto.defaultSupplierId()));
+        } else if (dto.type() == ProductType.WATER) {
+            product.setDefaultSupplier(null);
+        }
+        
         repository.save(product);
     }
 

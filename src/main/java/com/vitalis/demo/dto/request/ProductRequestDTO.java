@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 public record ProductRequestDTO(
         @NotBlank(message = "Nome do produto é obrigatório")
@@ -19,7 +20,8 @@ public record ProductRequestDTO(
         @Positive(message = "O preço deve ser maior que zero")
         BigDecimal lastCostPrice,
         @NotNull(message = "Tipo do produto é obrigatório!")
-        ProductType type) {
+        ProductType type,
+        UUID defaultSupplierId) {
 
     public Product toModel(){
         Product product = new Product();

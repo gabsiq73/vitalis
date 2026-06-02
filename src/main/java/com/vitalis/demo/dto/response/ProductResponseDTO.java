@@ -1,6 +1,5 @@
 package com.vitalis.demo.dto.response;
 
-import com.vitalis.demo.model.Product;
 import com.vitalis.demo.model.enums.ProductType;
 
 import java.math.BigDecimal;
@@ -12,7 +11,10 @@ public record ProductResponseDTO(
         BigDecimal basePrice,
         BigDecimal lastCostPrice,
         ProductType type,
-        boolean isActive
+        boolean isActive,
+        UUID defaultSupplierId,
+        String defaultSupplierName
 ) {
 
 }
+

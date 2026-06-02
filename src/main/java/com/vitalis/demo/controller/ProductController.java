@@ -47,8 +47,9 @@ public class ProductController {
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ProductResponseDTO> create(@RequestBody @Valid ProductRequestDTO dto){
-        Product product = productService.save(productMapper.toEntity(dto));
-        ProductResponseDTO responseDTO = productMapper.toResponseDTO(product);
+        Product product = productMapper.toEntity(dto);
+        Product savedProduct = productService.save(product, dto.defaultSupplierId());
+        ProductResponseDTO responseDTO = productMapper.toResponseDTO(savedProduct);
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDTO);
     }
 

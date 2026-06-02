@@ -1,8 +1,10 @@
 package com.vitalis.demo.controller;
 
 import com.vitalis.demo.dto.response.StockResponseDTO;
+import com.vitalis.demo.infra.exception.BusinessException;
 import com.vitalis.demo.mapper.StockMapper;
 import com.vitalis.demo.model.Stock;
+import com.vitalis.demo.model.enums.ProductType;
 import com.vitalis.demo.service.ProductService;
 import com.vitalis.demo.service.StockService;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +37,10 @@ public class StockController {
     @PatchMapping("/products/{productId}")
     public  ResponseEntity<Void> updateQuantity(@PathVariable("productId")UUID productId,@RequestBody Integer quantity){
         var product = productService.findById(productId);
+
+        if (product.getType() == ProductType.GAS) {
+            throw new BusinessException("Produtos do tipo GÁS não possuem controle de estoque.");
+        }
 
         if(quantity >= 0){
             service.increaseStock(product, quantity);

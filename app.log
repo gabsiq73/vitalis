@@ -11,3 +11,276 @@
 2026-06-02T18:53:04.243-03:00  WARN 10348 --- [Vitalis] [restartedMain] o.h.engine.jdbc.spi.SqlExceptionHelper   : constraint "ukig8f9fkp6x3vcbjski1u91wds" of relation "tb_user" does not exist, skipping
 2026-06-02T18:53:06.787-03:00  WARN 10348 --- [Vitalis] [restartedMain] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
 2026-06-02T18:53:08.018-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Started Application in 10.039 seconds (process running for 11.467)
+2026-06-02T18:56:00.147-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-10] ration$PageModule$WarningLoggingModifier : Serializing PageImpl instances as-is is not supported, meaning that there is no guarantee about the stability of the resulting JSON structure!
+	For a stable JSON structure, please use Spring Data's PagedModel (globally via @EnableSpringDataWebSupport(pageSerializationMode = VIA_DTO))
+	or Spring HATEOAS and Spring Data's PagedResourcesAssembler as documented in https://docs.spring.io/spring-data/commons/reference/repositories/core-extensions.html#core.web.pageables.
+
+2026-06-02T19:06:59.271-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-7] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.vitalis.demo.infra.exception.BusinessException: Erro: Para produtos do tipo GÁS, o preço de custo deve ser informado!]
+2026-06-02T19:16:46.997-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-1] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.vitalis.demo.infra.exception.BusinessException: Erro: Para produtos do tipo GÁS, o preço de custo deve ser informado!]
+2026-06-02T19:17:37.619-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-10] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.vitalis.demo.infra.exception.BusinessException: Erro: Para produtos do tipo GÁS, o preço de custo deve ser informado!]
+2026-06-02T19:20:49.484-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Starting Application using Java 21.0.11 with PID 10348 (C:\temp\vitalis\target\classes started by felip in C:\temp\vitalis)
+2026-06-02T19:20:49.486-03:00 DEBUG 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Running with Spring Boot v3.4.0, Spring v6.2.0
+2026-06-02T19:20:49.486-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : No active profile set, falling back to 1 default profile: "default"
+2026-06-02T19:20:52.315-03:00  WARN 10348 --- [Vitalis] [restartedMain] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-06-02T19:20:52.875-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Started Application in 3.462 seconds (process running for 1676.324)
+2026-06-02T19:20:54.590-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Starting Application using Java 21.0.11 with PID 10348 (C:\temp\vitalis\target\classes started by felip in C:\temp\vitalis)
+2026-06-02T19:20:54.590-03:00 DEBUG 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Running with Spring Boot v3.4.0, Spring v6.2.0
+2026-06-02T19:20:54.591-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : No active profile set, falling back to 1 default profile: "default"
+2026-06-02T19:20:56.246-03:00  WARN 10348 --- [Vitalis] [restartedMain] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-06-02T19:20:56.709-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Started Application in 2.16 seconds (process running for 1680.158)
+2026-06-02T19:21:12.724-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Starting Application using Java 21.0.11 with PID 10348 (C:\temp\vitalis\target\classes started by felip in C:\temp\vitalis)
+2026-06-02T19:21:12.724-03:00 DEBUG 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Running with Spring Boot v3.4.0, Spring v6.2.0
+2026-06-02T19:21:12.725-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : No active profile set, falling back to 1 default profile: "default"
+2026-06-02T19:21:12.781-03:00  WARN 10348 --- [Vitalis] [restartedMain] ConfigServletWebServerApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.BeanDefinitionStoreException: I/O failure while processing configuration class [com.vitalis.demo.Application]
+2026-06-02T19:21:12.815-03:00 ERROR 10348 --- [Vitalis] [restartedMain] o.s.boot.SpringApplication               : Application run failed
+
+org.springframework.beans.factory.BeanDefinitionStoreException: I/O failure while processing configuration class [com.vitalis.demo.Application]
+	at org.springframework.context.annotation.ConfigurationClassParser.processConfigurationClass(ConfigurationClassParser.java:272) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.annotation.ConfigurationClassParser.parse(ConfigurationClassParser.java:193) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.annotation.ConfigurationClassParser.parse(ConfigurationClassParser.java:171) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.annotation.ConfigurationClassPostProcessor.processConfigBeanDefinitions(ConfigurationClassPostProcessor.java:418) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.annotation.ConfigurationClassPostProcessor.postProcessBeanDefinitionRegistry(ConfigurationClassPostProcessor.java:290) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.support.PostProcessorRegistrationDelegate.invokeBeanDefinitionRegistryPostProcessors(PostProcessorRegistrationDelegate.java:349) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.support.PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(PostProcessorRegistrationDelegate.java:118) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.support.AbstractApplicationContext.invokeBeanFactoryPostProcessors(AbstractApplicationContext.java:791) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:609) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:146) ~[spring-boot-3.4.0.jar:3.4.0]
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:752) ~[spring-boot-3.4.0.jar:3.4.0]
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:439) ~[spring-boot-3.4.0.jar:3.4.0]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:318) ~[spring-boot-3.4.0.jar:3.4.0]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361) ~[spring-boot-3.4.0.jar:3.4.0]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350) ~[spring-boot-3.4.0.jar:3.4.0]
+	at com.vitalis.demo.Application.main(Application.java:10) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.boot.devtools.restart.RestartLauncher.run(RestartLauncher.java:50) ~[spring-boot-devtools-3.4.0.jar:3.4.0]
+Caused by: java.io.FileNotFoundException: class path resource [com/vitalis/demo/controller/ClientController.class] cannot be opened because it does not exist
+	at org.springframework.core.io.ClassPathResource.getInputStream(ClassPathResource.java:215) ~[spring-core-6.2.0.jar:6.2.0]
+	at org.springframework.core.type.classreading.SimpleMetadataReader.getClassReader(SimpleMetadataReader.java:54) ~[spring-core-6.2.0.jar:6.2.0]
+	at org.springframework.core.type.classreading.SimpleMetadataReader.<init>(SimpleMetadataReader.java:48) ~[spring-core-6.2.0.jar:6.2.0]
+	at org.springframework.core.type.classreading.SimpleMetadataReaderFactory.getMetadataReader(SimpleMetadataReaderFactory.java:103) ~[spring-core-6.2.0.jar:6.2.0]
+	at org.springframework.boot.type.classreading.ConcurrentReferenceCachingMetadataReaderFactory.createMetadataReader(ConcurrentReferenceCachingMetadataReaderFactory.java:98) ~[spring-boot-3.4.0.jar:3.4.0]
+	at org.springframework.boot.type.classreading.ConcurrentReferenceCachingMetadataReaderFactory.getMetadataReader(ConcurrentReferenceCachingMetadataReaderFactory.java:85) ~[spring-boot-3.4.0.jar:3.4.0]
+	at org.springframework.core.type.classreading.SimpleMetadataReaderFactory.getMetadataReader(SimpleMetadataReaderFactory.java:81) ~[spring-core-6.2.0.jar:6.2.0]
+	at org.springframework.boot.type.classreading.ConcurrentReferenceCachingMetadataReaderFactory.getMetadataReader(ConcurrentReferenceCachingMetadataReaderFactory.java:75) ~[spring-boot-3.4.0.jar:3.4.0]
+	at org.springframework.context.annotation.ConfigurationClassParser.parse(ConfigurationClassParser.java:204) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.annotation.ConfigurationClassParser.doProcessConfigurationClass(ConfigurationClassParser.java:340) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.annotation.ConfigurationClassParser.processConfigurationClass(ConfigurationClassParser.java:267) ~[spring-context-6.2.0.jar:6.2.0]
+	... 18 common frames omitted
+
+2026-06-02T19:21:14.379-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Starting Application using Java 21.0.11 with PID 10348 (C:\temp\vitalis\target\classes started by felip in C:\temp\vitalis)
+2026-06-02T19:21:14.379-03:00 DEBUG 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Running with Spring Boot v3.4.0, Spring v6.2.0
+2026-06-02T19:21:14.379-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : No active profile set, falling back to 1 default profile: "default"
+2026-06-02T19:21:14.395-03:00  WARN 10348 --- [Vitalis] [restartedMain] ConfigServletWebServerApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.BeanDefinitionStoreException: I/O failure while processing configuration class [com.vitalis.demo.mapper.ClientMapperImpl]
+2026-06-02T19:21:14.399-03:00 ERROR 10348 --- [Vitalis] [restartedMain] o.s.boot.SpringApplication               : Application run failed
+
+org.springframework.beans.factory.BeanDefinitionStoreException: I/O failure while processing configuration class [com.vitalis.demo.mapper.ClientMapperImpl]
+	at org.springframework.context.annotation.ConfigurationClassParser.processConfigurationClass(ConfigurationClassParser.java:272) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.annotation.ConfigurationClassParser.parse(ConfigurationClassParser.java:205) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.annotation.ConfigurationClassParser.doProcessConfigurationClass(ConfigurationClassParser.java:340) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.annotation.ConfigurationClassParser.processConfigurationClass(ConfigurationClassParser.java:267) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.annotation.ConfigurationClassParser.parse(ConfigurationClassParser.java:193) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.annotation.ConfigurationClassParser.parse(ConfigurationClassParser.java:171) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.annotation.ConfigurationClassPostProcessor.processConfigBeanDefinitions(ConfigurationClassPostProcessor.java:418) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.annotation.ConfigurationClassPostProcessor.postProcessBeanDefinitionRegistry(ConfigurationClassPostProcessor.java:290) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.support.PostProcessorRegistrationDelegate.invokeBeanDefinitionRegistryPostProcessors(PostProcessorRegistrationDelegate.java:349) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.support.PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(PostProcessorRegistrationDelegate.java:118) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.support.AbstractApplicationContext.invokeBeanFactoryPostProcessors(AbstractApplicationContext.java:791) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:609) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:146) ~[spring-boot-3.4.0.jar:3.4.0]
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:752) ~[spring-boot-3.4.0.jar:3.4.0]
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:439) ~[spring-boot-3.4.0.jar:3.4.0]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:318) ~[spring-boot-3.4.0.jar:3.4.0]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361) ~[spring-boot-3.4.0.jar:3.4.0]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350) ~[spring-boot-3.4.0.jar:3.4.0]
+	at com.vitalis.demo.Application.main(Application.java:10) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.boot.devtools.restart.RestartLauncher.run(RestartLauncher.java:50) ~[spring-boot-devtools-3.4.0.jar:3.4.0]
+Caused by: java.io.FileNotFoundException: class path resource [com/vitalis/demo/mapper/ClientMapper.class] cannot be opened because it does not exist
+	at org.springframework.core.io.ClassPathResource.getInputStream(ClassPathResource.java:215) ~[spring-core-6.2.0.jar:6.2.0]
+	at org.springframework.core.type.classreading.SimpleMetadataReader.getClassReader(SimpleMetadataReader.java:54) ~[spring-core-6.2.0.jar:6.2.0]
+	at org.springframework.core.type.classreading.SimpleMetadataReader.<init>(SimpleMetadataReader.java:48) ~[spring-core-6.2.0.jar:6.2.0]
+	at org.springframework.core.type.classreading.SimpleMetadataReaderFactory.getMetadataReader(SimpleMetadataReaderFactory.java:103) ~[spring-core-6.2.0.jar:6.2.0]
+	at org.springframework.boot.type.classreading.ConcurrentReferenceCachingMetadataReaderFactory.createMetadataReader(ConcurrentReferenceCachingMetadataReaderFactory.java:98) ~[spring-boot-3.4.0.jar:3.4.0]
+	at org.springframework.boot.type.classreading.ConcurrentReferenceCachingMetadataReaderFactory.getMetadataReader(ConcurrentReferenceCachingMetadataReaderFactory.java:85) ~[spring-boot-3.4.0.jar:3.4.0]
+	at org.springframework.core.type.classreading.SimpleMetadataReaderFactory.getMetadataReader(SimpleMetadataReaderFactory.java:81) ~[spring-core-6.2.0.jar:6.2.0]
+	at org.springframework.boot.type.classreading.ConcurrentReferenceCachingMetadataReaderFactory.getMetadataReader(ConcurrentReferenceCachingMetadataReaderFactory.java:75) ~[spring-boot-3.4.0.jar:3.4.0]
+	at org.springframework.context.annotation.ConfigurationClassParser.asSourceClass(ConfigurationClassParser.java:697) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.annotation.ConfigurationClassParser$SourceClass.getInterfaces(ConfigurationClassParser.java:1046) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.annotation.ConfigurationClassParser.processInterfaces(ConfigurationClassParser.java:427) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.annotation.ConfigurationClassParser.doProcessConfigurationClass(ConfigurationClassParser.java:371) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.annotation.ConfigurationClassParser.processConfigurationClass(ConfigurationClassParser.java:267) ~[spring-context-6.2.0.jar:6.2.0]
+	... 21 common frames omitted
+
+2026-06-02T19:21:24.144-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Starting Application using Java 21.0.11 with PID 10348 (C:\temp\vitalis\target\classes started by felip in C:\temp\vitalis)
+2026-06-02T19:21:24.144-03:00 DEBUG 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Running with Spring Boot v3.4.0, Spring v6.2.0
+2026-06-02T19:21:24.144-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : No active profile set, falling back to 1 default profile: "default"
+2026-06-02T19:21:26.963-03:00  WARN 10348 --- [Vitalis] [restartedMain] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-06-02T19:21:27.811-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Started Application in 3.712 seconds (process running for 1711.261)
+2026-06-02T19:22:29.051-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Starting Application using Java 21.0.11 with PID 10348 (C:\temp\vitalis\target\classes started by felip in C:\temp\vitalis)
+2026-06-02T19:22:29.051-03:00 DEBUG 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Running with Spring Boot v3.4.0, Spring v6.2.0
+2026-06-02T19:22:29.051-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : No active profile set, falling back to 1 default profile: "default"
+2026-06-02T19:22:29.114-03:00  WARN 10348 --- [Vitalis] [restartedMain] ConfigServletWebServerApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.BeanDefinitionStoreException: I/O failure while processing configuration class [com.vitalis.demo.mapper.ProductMapperImpl]
+2026-06-02T19:22:29.119-03:00 ERROR 10348 --- [Vitalis] [restartedMain] o.s.boot.SpringApplication               : Application run failed
+
+org.springframework.beans.factory.BeanDefinitionStoreException: I/O failure while processing configuration class [com.vitalis.demo.mapper.ProductMapperImpl]
+	at org.springframework.context.annotation.ConfigurationClassParser.processConfigurationClass(ConfigurationClassParser.java:272) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.annotation.ConfigurationClassParser.parse(ConfigurationClassParser.java:205) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.annotation.ConfigurationClassParser.doProcessConfigurationClass(ConfigurationClassParser.java:340) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.annotation.ConfigurationClassParser.processConfigurationClass(ConfigurationClassParser.java:267) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.annotation.ConfigurationClassParser.parse(ConfigurationClassParser.java:193) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.annotation.ConfigurationClassParser.parse(ConfigurationClassParser.java:171) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.annotation.ConfigurationClassPostProcessor.processConfigBeanDefinitions(ConfigurationClassPostProcessor.java:418) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.annotation.ConfigurationClassPostProcessor.postProcessBeanDefinitionRegistry(ConfigurationClassPostProcessor.java:290) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.support.PostProcessorRegistrationDelegate.invokeBeanDefinitionRegistryPostProcessors(PostProcessorRegistrationDelegate.java:349) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.support.PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(PostProcessorRegistrationDelegate.java:118) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.support.AbstractApplicationContext.invokeBeanFactoryPostProcessors(AbstractApplicationContext.java:791) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:609) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:146) ~[spring-boot-3.4.0.jar:3.4.0]
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:752) ~[spring-boot-3.4.0.jar:3.4.0]
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:439) ~[spring-boot-3.4.0.jar:3.4.0]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:318) ~[spring-boot-3.4.0.jar:3.4.0]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361) ~[spring-boot-3.4.0.jar:3.4.0]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350) ~[spring-boot-3.4.0.jar:3.4.0]
+	at com.vitalis.demo.Application.main(Application.java:10) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.boot.devtools.restart.RestartLauncher.run(RestartLauncher.java:50) ~[spring-boot-devtools-3.4.0.jar:3.4.0]
+Caused by: java.io.FileNotFoundException: class path resource [com/vitalis/demo/mapper/ProductMapper.class] cannot be opened because it does not exist
+	at org.springframework.core.io.ClassPathResource.getInputStream(ClassPathResource.java:215) ~[spring-core-6.2.0.jar:6.2.0]
+	at org.springframework.core.type.classreading.SimpleMetadataReader.getClassReader(SimpleMetadataReader.java:54) ~[spring-core-6.2.0.jar:6.2.0]
+	at org.springframework.core.type.classreading.SimpleMetadataReader.<init>(SimpleMetadataReader.java:48) ~[spring-core-6.2.0.jar:6.2.0]
+	at org.springframework.core.type.classreading.SimpleMetadataReaderFactory.getMetadataReader(SimpleMetadataReaderFactory.java:103) ~[spring-core-6.2.0.jar:6.2.0]
+	at org.springframework.boot.type.classreading.ConcurrentReferenceCachingMetadataReaderFactory.createMetadataReader(ConcurrentReferenceCachingMetadataReaderFactory.java:98) ~[spring-boot-3.4.0.jar:3.4.0]
+	at org.springframework.boot.type.classreading.ConcurrentReferenceCachingMetadataReaderFactory.getMetadataReader(ConcurrentReferenceCachingMetadataReaderFactory.java:85) ~[spring-boot-3.4.0.jar:3.4.0]
+	at org.springframework.core.type.classreading.SimpleMetadataReaderFactory.getMetadataReader(SimpleMetadataReaderFactory.java:81) ~[spring-core-6.2.0.jar:6.2.0]
+	at org.springframework.boot.type.classreading.ConcurrentReferenceCachingMetadataReaderFactory.getMetadataReader(ConcurrentReferenceCachingMetadataReaderFactory.java:75) ~[spring-boot-3.4.0.jar:3.4.0]
+	at org.springframework.context.annotation.ConfigurationClassParser.asSourceClass(ConfigurationClassParser.java:697) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.annotation.ConfigurationClassParser$SourceClass.getInterfaces(ConfigurationClassParser.java:1046) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.annotation.ConfigurationClassParser.processInterfaces(ConfigurationClassParser.java:427) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.annotation.ConfigurationClassParser.doProcessConfigurationClass(ConfigurationClassParser.java:371) ~[spring-context-6.2.0.jar:6.2.0]
+	at org.springframework.context.annotation.ConfigurationClassParser.processConfigurationClass(ConfigurationClassParser.java:267) ~[spring-context-6.2.0.jar:6.2.0]
+	... 21 common frames omitted
+
+2026-06-02T19:22:32.794-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Starting Application using Java 21.0.11 with PID 10348 (C:\temp\vitalis\target\classes started by felip in C:\temp\vitalis)
+2026-06-02T19:22:32.795-03:00 DEBUG 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Running with Spring Boot v3.4.0, Spring v6.2.0
+2026-06-02T19:22:32.795-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : No active profile set, falling back to 1 default profile: "default"
+2026-06-02T19:22:34.840-03:00  WARN 10348 --- [Vitalis] [restartedMain] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-06-02T19:22:35.359-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Started Application in 2.595 seconds (process running for 1778.814)
+2026-06-02T19:22:54.638-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Starting Application using Java 21.0.11 with PID 10348 (C:\temp\vitalis\target\classes started by felip in C:\temp\vitalis)
+2026-06-02T19:22:54.638-03:00 DEBUG 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Running with Spring Boot v3.4.0, Spring v6.2.0
+2026-06-02T19:22:54.638-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : No active profile set, falling back to 1 default profile: "default"
+2026-06-02T19:22:55.966-03:00  WARN 10348 --- [Vitalis] [restartedMain] ConfigServletWebServerApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'clientPriceController' defined in file [C:\temp\vitalis\target\classes\com\vitalis\demo\controller\ClientPriceController.class]: Unsatisfied dependency expressed through constructor parameter 0: Error creating bean with name 'clientPriceService' defined in file [C:\temp\vitalis\target\classes\com\vitalis\demo\service\ClientPriceService.class]: Unsatisfied dependency expressed through constructor parameter 2: No qualifying bean of type 'com.vitalis.demo.service.ProductService' available: expected at least 1 bean which qualifies as autowire candidate. Dependency annotations: {}
+2026-06-02T19:22:56.030-03:00 ERROR 10348 --- [Vitalis] [restartedMain] o.s.b.d.LoggingFailureAnalysisReporter   : 
+
+***************************
+APPLICATION FAILED TO START
+***************************
+
+Description:
+
+Parameter 2 of constructor in com.vitalis.demo.service.ClientPriceService required a bean of type 'com.vitalis.demo.service.ProductService' that could not be found.
+
+
+Action:
+
+Consider defining a bean of type 'com.vitalis.demo.service.ProductService' in your configuration.
+
+2026-06-02T19:22:57.567-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Starting Application using Java 21.0.11 with PID 10348 (C:\temp\vitalis\target\classes started by felip in C:\temp\vitalis)
+2026-06-02T19:22:57.568-03:00 DEBUG 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Running with Spring Boot v3.4.0, Spring v6.2.0
+2026-06-02T19:22:57.568-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : No active profile set, falling back to 1 default profile: "default"
+2026-06-02T19:22:59.840-03:00  WARN 10348 --- [Vitalis] [restartedMain] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-06-02T19:23:01.825-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Started Application in 4.283 seconds (process running for 1805.274)
+2026-06-02T19:24:17.433-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Starting Application using Java 21.0.11 with PID 10348 (C:\temp\vitalis\target\classes started by felip in C:\temp\vitalis)
+2026-06-02T19:24:17.433-03:00 DEBUG 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Running with Spring Boot v3.4.0, Spring v6.2.0
+2026-06-02T19:24:17.437-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : No active profile set, falling back to 1 default profile: "default"
+2026-06-02T19:24:18.522-03:00  WARN 10348 --- [Vitalis] [restartedMain] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-06-02T19:24:18.867-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Started Application in 1.5 seconds (process running for 1882.315)
+2026-06-02T19:24:25.605-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Starting Application using Java 21.0.11 with PID 10348 (C:\temp\vitalis\target\classes started by felip in C:\temp\vitalis)
+2026-06-02T19:24:25.606-03:00 DEBUG 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Running with Spring Boot v3.4.0, Spring v6.2.0
+2026-06-02T19:24:25.606-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : No active profile set, falling back to 1 default profile: "default"
+2026-06-02T19:24:27.631-03:00  WARN 10348 --- [Vitalis] [restartedMain] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-06-02T19:24:28.358-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Started Application in 2.784 seconds (process running for 1891.807)
+2026-06-02T19:24:50.841-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Starting Application using Java 21.0.11 with PID 10348 (C:\temp\vitalis\target\classes started by felip in C:\temp\vitalis)
+2026-06-02T19:24:50.841-03:00 DEBUG 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Running with Spring Boot v3.4.0, Spring v6.2.0
+2026-06-02T19:24:50.841-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : No active profile set, falling back to 1 default profile: "default"
+2026-06-02T19:24:52.474-03:00  WARN 10348 --- [Vitalis] [restartedMain] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-06-02T19:24:52.971-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Started Application in 2.152 seconds (process running for 1916.42)
+2026-06-02T19:24:54.530-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Starting Application using Java 21.0.11 with PID 10348 (C:\temp\vitalis\target\classes started by felip in C:\temp\vitalis)
+2026-06-02T19:24:54.531-03:00 DEBUG 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Running with Spring Boot v3.4.0, Spring v6.2.0
+2026-06-02T19:24:54.531-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : No active profile set, falling back to 1 default profile: "default"
+2026-06-02T19:24:56.923-03:00  WARN 10348 --- [Vitalis] [restartedMain] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-06-02T19:24:57.946-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Started Application in 3.439 seconds (process running for 1921.394)
+2026-06-02T19:25:02.739-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-3] ration$PageModule$WarningLoggingModifier : Serializing PageImpl instances as-is is not supported, meaning that there is no guarantee about the stability of the resulting JSON structure!
+	For a stable JSON structure, please use Spring Data's PagedModel (globally via @EnableSpringDataWebSupport(pageSerializationMode = VIA_DTO))
+	or Spring HATEOAS and Spring Data's PagedResourcesAssembler as documented in https://docs.spring.io/spring-data/commons/reference/repositories/core-extensions.html#core.web.pageables.
+
+2026-06-02T19:30:53.514-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-1] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.vitalis.demo.infra.exception.OutOfStockException: Estoque insuficiente! Disponível: 0]
+2026-06-02T19:30:55.114-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-3] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.vitalis.demo.infra.exception.OutOfStockException: Estoque insuficiente! Disponível: 0]
+2026-06-02T19:30:55.765-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-4] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.vitalis.demo.infra.exception.OutOfStockException: Estoque insuficiente! Disponível: 0]
+2026-06-02T19:30:56.107-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-2] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.vitalis.demo.infra.exception.OutOfStockException: Estoque insuficiente! Disponível: 0]
+2026-06-02T19:30:57.818-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-10] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.vitalis.demo.infra.exception.OutOfStockException: Estoque insuficiente! Disponível: 0]
+2026-06-02T19:30:57.978-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-9] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.vitalis.demo.infra.exception.OutOfStockException: Estoque insuficiente! Disponível: 0]
+2026-06-02T19:30:58.144-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-8] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.vitalis.demo.infra.exception.OutOfStockException: Estoque insuficiente! Disponível: 0]
+2026-06-02T19:33:09.764-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-1] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.vitalis.demo.infra.exception.OutOfStockException: Estoque insuficiente! Disponível: 0]
+2026-06-02T19:33:24.622-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-9] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.vitalis.demo.infra.exception.OutOfStockException: Estoque insuficiente! Disponível: 0]
+2026-06-02T19:33:25.388-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-3] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.vitalis.demo.infra.exception.OutOfStockException: Estoque insuficiente! Disponível: 0]
+2026-06-02T19:33:27.978-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-10] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.vitalis.demo.infra.exception.OutOfStockException: Estoque insuficiente! Disponível: 0]
+2026-06-02T19:33:28.116-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-2] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.vitalis.demo.infra.exception.OutOfStockException: Estoque insuficiente! Disponível: 0]
+2026-06-02T19:33:28.283-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-5] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.vitalis.demo.infra.exception.OutOfStockException: Estoque insuficiente! Disponível: 0]
+2026-06-02T19:33:28.784-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-6] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.vitalis.demo.infra.exception.OutOfStockException: Estoque insuficiente! Disponível: 0]
+2026-06-02T19:33:28.993-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-1] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.vitalis.demo.infra.exception.OutOfStockException: Estoque insuficiente! Disponível: 0]
+2026-06-02T19:33:29.523-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-4] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.vitalis.demo.infra.exception.OutOfStockException: Estoque insuficiente! Disponível: 0]
+2026-06-02T19:33:29.671-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-7] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.vitalis.demo.infra.exception.OutOfStockException: Estoque insuficiente! Disponível: 0]
+2026-06-02T19:33:29.845-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-9] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.vitalis.demo.infra.exception.OutOfStockException: Estoque insuficiente! Disponível: 0]
+2026-06-02T19:33:30.120-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-3] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.vitalis.demo.infra.exception.OutOfStockException: Estoque insuficiente! Disponível: 0]
+2026-06-02T19:33:30.290-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-10] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.vitalis.demo.infra.exception.OutOfStockException: Estoque insuficiente! Disponível: 0]
+2026-06-02T19:33:30.454-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-2] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.vitalis.demo.infra.exception.OutOfStockException: Estoque insuficiente! Disponível: 0]
+2026-06-02T19:33:30.636-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-5] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.vitalis.demo.infra.exception.OutOfStockException: Estoque insuficiente! Disponível: 0]
+2026-06-02T19:33:30.852-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-6] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.vitalis.demo.infra.exception.OutOfStockException: Estoque insuficiente! Disponível: 0]
+2026-06-02T19:33:31.053-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-1] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.vitalis.demo.infra.exception.OutOfStockException: Estoque insuficiente! Disponível: 0]
+2026-06-02T19:33:32.521-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-4] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.vitalis.demo.infra.exception.OutOfStockException: Estoque insuficiente! Disponível: 0]
+2026-06-02T19:33:38.967-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-7] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.vitalis.demo.infra.exception.OutOfStockException: Estoque insuficiente! Disponível: 0]
+2026-06-02T19:33:40.323-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-9] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.vitalis.demo.infra.exception.OutOfStockException: Estoque insuficiente! Disponível: 0]
+2026-06-02T19:33:42.168-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-3] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.vitalis.demo.infra.exception.OutOfStockException: Estoque insuficiente! Disponível: 0]
+2026-06-02T19:33:44.691-03:00  WARN 10348 --- [Vitalis] [http-nio-8080-exec-2] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.vitalis.demo.infra.exception.OutOfStockException: Estoque insuficiente! Disponível: 0]
+2026-06-02T19:40:13.710-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Starting Application using Java 21.0.11 with PID 10348 (C:\temp\vitalis\target\classes started by felip in C:\temp\vitalis)
+2026-06-02T19:40:13.710-03:00 DEBUG 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Running with Spring Boot v3.4.0, Spring v6.2.0
+2026-06-02T19:40:13.710-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : No active profile set, falling back to 1 default profile: "default"
+2026-06-02T19:40:15.785-03:00  WARN 10348 --- [Vitalis] [restartedMain] ConfigServletWebServerApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'clientPriceController' defined in file [C:\temp\vitalis\target\classes\com\vitalis\demo\controller\ClientPriceController.class]: Unsatisfied dependency expressed through constructor parameter 0: Error creating bean with name 'clientPriceService' defined in file [C:\temp\vitalis\target\classes\com\vitalis\demo\service\ClientPriceService.class]: Unsatisfied dependency expressed through constructor parameter 2: Error creating bean with name 'productService' defined in file [C:\temp\vitalis\target\classes\com\vitalis\demo\service\ProductService.class]: Unsatisfied dependency expressed through constructor parameter 1: No qualifying bean of type 'com.vitalis.demo.service.StockService' available: expected at least 1 bean which qualifies as autowire candidate. Dependency annotations: {}
+2026-06-02T19:40:15.816-03:00 ERROR 10348 --- [Vitalis] [restartedMain] o.s.b.d.LoggingFailureAnalysisReporter   : 
+
+***************************
+APPLICATION FAILED TO START
+***************************
+
+Description:
+
+Parameter 1 of constructor in com.vitalis.demo.service.ProductService required a bean of type 'com.vitalis.demo.service.StockService' that could not be found.
+
+
+Action:
+
+Consider defining a bean of type 'com.vitalis.demo.service.StockService' in your configuration.
+
+2026-06-02T19:40:17.452-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Starting Application using Java 21.0.11 with PID 10348 (C:\temp\vitalis\target\classes started by felip in C:\temp\vitalis)
+2026-06-02T19:40:17.452-03:00 DEBUG 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Running with Spring Boot v3.4.0, Spring v6.2.0
+2026-06-02T19:40:17.453-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : No active profile set, falling back to 1 default profile: "default"
+2026-06-02T19:40:19.151-03:00  WARN 10348 --- [Vitalis] [restartedMain] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-06-02T19:40:19.812-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Started Application in 2.411 seconds (process running for 2843.26)
+2026-06-02T19:40:51.694-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Starting Application using Java 21.0.11 with PID 10348 (C:\temp\vitalis\target\classes started by felip in C:\temp\vitalis)
+2026-06-02T19:40:51.694-03:00 DEBUG 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Running with Spring Boot v3.4.0, Spring v6.2.0
+2026-06-02T19:40:51.694-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : No active profile set, falling back to 1 default profile: "default"
+2026-06-02T19:40:52.980-03:00  WARN 10348 --- [Vitalis] [restartedMain] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-06-02T19:40:53.610-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Started Application in 1.937 seconds (process running for 2877.058)
+2026-06-02T19:40:55.206-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Starting Application using Java 21.0.11 with PID 10348 (C:\temp\vitalis\target\classes started by felip in C:\temp\vitalis)
+2026-06-02T19:40:55.208-03:00 DEBUG 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Running with Spring Boot v3.4.0, Spring v6.2.0
+2026-06-02T19:40:55.209-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : No active profile set, falling back to 1 default profile: "default"
+2026-06-02T19:40:57.616-03:00  WARN 10348 --- [Vitalis] [restartedMain] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-06-02T19:40:58.307-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Started Application in 3.151 seconds (process running for 2881.755)
+2026-06-02T19:40:59.905-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Starting Application using Java 21.0.11 with PID 10348 (C:\temp\vitalis\target\classes started by felip in C:\temp\vitalis)
+2026-06-02T19:40:59.906-03:00 DEBUG 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Running with Spring Boot v3.4.0, Spring v6.2.0
+2026-06-02T19:40:59.906-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : No active profile set, falling back to 1 default profile: "default"
+2026-06-02T19:41:00.455-03:00  WARN 10348 --- [Vitalis] [restartedMain] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-06-02T19:41:00.942-03:00  INFO 10348 --- [Vitalis] [restartedMain] com.vitalis.demo.Application             : Started Application in 1.085 seconds (process running for 2884.391)
