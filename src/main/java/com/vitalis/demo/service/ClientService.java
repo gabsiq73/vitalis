@@ -45,11 +45,11 @@ public class ClientService {
 
     @Transactional(readOnly = true)
     public Page<Client> listClient(String name, ClientType type, Pageable pageable){
-        if(name != null & type != null) return repository.findByNameContainingIgnoreCaseAndClientType(pageable, name, type);
-        if(name != null) return repository.findByNameContainingIgnoreCase(pageable, name);
+        if(name != null && type != null) return repository.findByNameContainingIgnoreCaseAndClientType(pageable, name, type);
+        if(name != null) return repository.findByNameContainingIgnoreCaseAndClientTypeNot(pageable, name, ClientType.AVULSO);
         if(type != null) return repository.findByClientType(pageable, type);
 
-        return repository.findAll(pageable);
+        return repository.findByClientTypeNot(pageable, ClientType.AVULSO);
     }
 
     @Transactional
@@ -63,7 +63,7 @@ public class ClientService {
     public Client saveAvulso(String name) {
         Client client = new Client();
         client.setName(name != null && !name.isBlank() ? name : "Avulso");
-        client.setClientType(ClientType.RETAIL);
+        client.setClientType(ClientType.AVULSO);
         client.setClientStatus(ClientStatus.PAID);
         client.setActive(true);
         return repository.save(client);

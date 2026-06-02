@@ -2,7 +2,8 @@ package com.vitalis.demo.model.enums;
 
 public enum ClientType {
     RETAIL("retail"),
-    RESELLER("reseller");
+    RESELLER("reseller"),
+    AVULSO("avulso");
 
     private final String valor;
 
