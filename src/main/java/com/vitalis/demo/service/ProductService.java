@@ -58,6 +58,7 @@ public class ProductService {
     public void toggleActive(UUID id){
         Product product = findById(id);
         product.setActive(!product.isActive());
+        repository.save(product);
     }
 
     @Transactional
