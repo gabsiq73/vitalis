@@ -31,7 +31,12 @@ public class ClientFidelity extends BaseEntity{
 
     public void addPoints(Integer incomingPoints) {
         if (incomingPoints == null || incomingPoints <= 0) return;
-        updateFromRawPoints(getTotalPoints() + incomingPoints);
+        updateFromRawPoints(getTotalPoints() + incomingPoints, POINTS_PER_WATER);
+    }
+
+    public void addPoints(Integer incomingPoints, int pointsPerWater) {
+        if (incomingPoints == null || incomingPoints <= 0) return;
+        updateFromRawPoints(getTotalPoints() + incomingPoints, pointsPerWater);
     }
 
     public Integer getTotalPoints(){
@@ -41,12 +46,16 @@ public class ClientFidelity extends BaseEntity{
     }
 
     public void updateFromRawPoints(int totalRawPoints) {
+        updateFromRawPoints(totalRawPoints, POINTS_PER_WATER);
+    }
+
+    public void updateFromRawPoints(int totalRawPoints, int pointsPerWater) {
         if (totalRawPoints < 0) {
             this.pendingBonusWater = 0;
             this.points = totalRawPoints;
         } else {
-            this.pendingBonusWater = totalRawPoints / POINTS_PER_WATER;
-            this.points = totalRawPoints % POINTS_PER_WATER;
+            this.pendingBonusWater = totalRawPoints / pointsPerWater;
+            this.points = totalRawPoints % pointsPerWater;
         }
     }
 }

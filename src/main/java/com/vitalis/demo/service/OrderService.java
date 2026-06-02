@@ -31,6 +31,7 @@ public class OrderService {
 
     private final OrderRepository repository;
     private final com.vitalis.demo.repository.PaymentRepository paymentRepository;
+    private final SystemConfigService systemConfigService;
 
     private final ClientService clientService;
     private final ClientPriceService clientPriceService;
@@ -196,7 +197,10 @@ public class OrderService {
         boolean hasSpecialPrice = price.compareTo(product.getBasePrice()) < 0;
 
         if (!isDelivery && client.getClientType() == ClientType.RETAIL && !hasSpecialPrice) {
-            price = price.subtract(BigDecimal.valueOf(0.5));
+            var config = systemConfigService.getConfig();
+            price = price.subtract(
+                BigDecimal.valueOf(config.getPickupDiscountCents()).divide(BigDecimal.valueOf(100))
+            );
         }
 
         return price;
@@ -410,7 +414,8 @@ public class OrderService {
     // Métodos privados — Fidelidade
 
     /**
-     * Concede 1 ponto por unidade de água paga. Clientes avulsos não acumulam pontos.
+     * Concede pontos por unidade de água paga conforme configuração do sistema.
+     * Clientes avulsos não acumulam pontos.
      */
     private void awardFidelityPointsIfEligible(Client client, OrderItem item) {
         if (client.getClientType() == com.vitalis.demo.model.enums.ClientType.AVULSO) return;
@@ -421,7 +426,9 @@ public class OrderService {
 
         if (!isPaidPurchase) return;
 
-        client.getFidelity().addPoints(item.getQuantity());
+        var config = systemConfigService.getConfig();
+        int pointsToAward = item.getQuantity() * config.getPointsPerWaterItem();
+        client.getFidelity().addPoints(pointsToAward, config.getPointsPerFreeWater());
     }
 
     /**
