@@ -130,9 +130,38 @@ public class ClientService {
         // Calcula o resultado final = comprado - pago
         BigDecimal outstandingBalance = totalBought.subtract(totalPaid);
 
+        // Persiste a dívida como saldo negativo para leitura direta no frontend.
+        // Saldo positivo (crédito) só é ajustado pelo fluxo de pagamento.
+        if (outstandingBalance.compareTo(BigDecimal.ZERO) > 0) {
+            client.setBalance(outstandingBalance.negate());
+        } else if (outstandingBalance.compareTo(BigDecimal.ZERO) == 0) {
+            // Sem dívida: zera o saldo negativo, mas não toca crédito existente
+            BigDecimal current = client.getBalance() != null ? client.getBalance() : BigDecimal.ZERO;
+            if (current.compareTo(BigDecimal.ZERO) < 0) {
+                client.setBalance(BigDecimal.ZERO);
+            }
+        }
+
         this.updateStatusByDebt(client, outstandingBalance);
 
         return outstandingBalance;
+    }
+
+    @Transactional(readOnly = true)
+    public BigDecimal getOutstandingDebt(UUID clientId) {
+        Client client = findById(clientId);
+        List<Order> orders = orderRepository.findByClientAndStatus(client, OrderStatus.DELIVERED);
+
+        BigDecimal totalBought = orders.stream()
+                .map(this::sumOrderItems)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalPaid = orders.stream()
+                .flatMap(order -> order.getPayments().stream())
+                .map(Payment::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        return totalBought.subtract(totalPaid);
     }
 
     @Transactional

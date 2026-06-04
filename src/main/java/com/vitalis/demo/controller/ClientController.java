@@ -16,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @RestController
@@ -71,6 +72,11 @@ public class ClientController {
     public ResponseEntity<Void> update(@PathVariable("id") UUID id, @RequestBody @Valid ClientUpdateDTO dto){
         clientService.update(id,dto);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/outstanding-debt")
+    public ResponseEntity<BigDecimal> getOutstandingDebt(@PathVariable UUID id) {
+        return ResponseEntity.ok(clientService.getOutstandingDebt(id));
     }
 
     //Implementar soft delete no futuro
