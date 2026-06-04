@@ -13,11 +13,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -44,8 +46,10 @@ public class OrderController {
     public ResponseEntity<Page<OrderResponseDTO>> listOrders(
             @RequestParam(required = false) OrderStatus status,
             @RequestParam(required = false) PaymentStatus paymentStatus,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end,
             @PageableDefault(size = 10, sort = "createDate", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
-        Page<Order> pageEntity = orderService.listOrders(status, paymentStatus, pageable);
+        Page<Order> pageEntity = orderService.listOrders(status, paymentStatus, start, end, pageable);
         Page<OrderResponseDTO> pageDTO = pageEntity.map(orderMapper::toResponseDTO);
         return ResponseEntity.ok(pageDTO);
     }

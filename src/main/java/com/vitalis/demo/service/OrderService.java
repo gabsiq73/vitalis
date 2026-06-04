@@ -57,15 +57,10 @@ public class OrderService {
     }
 
     @Transactional(readOnly = true)
-    public Page<Order> listOrders(OrderStatus status, PaymentStatus paymentStatus, Pageable pageable) {
-        if (status != null && paymentStatus != null) {
-            return repository.findByStatusAndPaymentStatus(status, paymentStatus, pageable);
-        } else if (status != null) {
-            return repository.findByStatus(status, pageable);
-        } else if (paymentStatus != null) {
-            return repository.findByPaymentStatus(paymentStatus, pageable);
-        }
-        return repository.findAll(pageable);
+    public Page<Order> listOrders(OrderStatus status, PaymentStatus paymentStatus, java.time.LocalDate start, java.time.LocalDate end, Pageable pageable) {
+        java.time.LocalDateTime startDt = start != null ? start.atStartOfDay() : null;
+        java.time.LocalDateTime endDt   = end   != null ? end.atTime(java.time.LocalTime.MAX) : null;
+        return repository.findWithFilters(status, paymentStatus, startDt, endDt, pageable);
     }
 
     @Transactional(readOnly = true)
