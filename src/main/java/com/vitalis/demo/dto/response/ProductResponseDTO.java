@@ -9,6 +9,7 @@ public record ProductResponseDTO(
         UUID id,
         String name,
         BigDecimal basePrice,
+        BigDecimal resellerPrice,
         BigDecimal lastCostPrice,
         ProductType type,
         boolean isActive,

@@ -17,6 +17,7 @@ public record ProductRequestDTO(
         @NotNull(message = "Preço base do produto é obrigatório!")
         @Positive(message = "O preço deve ser maior que zero")
         BigDecimal basePrice,
+        BigDecimal resellerPrice,
         @Positive(message = "O preço deve ser maior que zero")
         BigDecimal lastCostPrice,
         @NotNull(message = "Tipo do produto é obrigatório!")
@@ -27,6 +28,7 @@ public record ProductRequestDTO(
         Product product = new Product();
         product.setName(this.name);
         product.setBasePrice(this.basePrice);
+        product.setResellerPrice(this.resellerPrice);
         product.setType(this.type);
         return product;
     }

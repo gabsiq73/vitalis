@@ -20,6 +20,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -48,8 +49,9 @@ public class OrderController {
             @RequestParam(required = false) PaymentStatus paymentStatus,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime deliveryAfter,
             @PageableDefault(size = 10, sort = "createDate", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
-        Page<Order> pageEntity = orderService.listOrders(status, paymentStatus, start, end, pageable);
+        Page<Order> pageEntity = orderService.listOrders(status, paymentStatus, start, end, deliveryAfter, pageable);
         Page<OrderResponseDTO> pageDTO = pageEntity.map(orderMapper::toResponseDTO);
         return ResponseEntity.ok(pageDTO);
     }

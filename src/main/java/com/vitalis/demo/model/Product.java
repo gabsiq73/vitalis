@@ -38,6 +38,9 @@ public class Product extends BaseEntity {
     @Column(name = "PROD_basePrice", precision = 10, scale = 2)
     private BigDecimal basePrice;
 
+    @Column(name = "PROD_resellerPrice", precision = 10, scale = 2)
+    private BigDecimal resellerPrice;
+
     @Column(name = "PROD_last_CostPrice", precision = 10, scale = 2)
     private BigDecimal costPrice;
 

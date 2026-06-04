@@ -53,6 +53,7 @@ public class ProductService {
         }
 
         product.setActive(true);
+        // resellerPrice já foi mapeado do DTO pelo ProductMapper
         Product savedProduct = repository.save(product);
         stockService.createInitialStock(savedProduct);
 
@@ -85,6 +86,9 @@ public class ProductService {
         
         if (dto.lastCostPrice() != null) {
             product.setCostPrice(dto.lastCostPrice());
+        }
+        if (dto.resellerPrice() != null) {
+            product.setResellerPrice(dto.resellerPrice());
         }
         if (dto.defaultSupplierId() != null) {
             product.setDefaultSupplier(gasSupplierService.findById(dto.defaultSupplierId()));

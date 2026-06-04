@@ -5,6 +5,7 @@ import com.vitalis.demo.infra.exception.ResourceNotFoundException;
 import com.vitalis.demo.model.Client;
 import com.vitalis.demo.model.ClientPrice;
 import com.vitalis.demo.model.Product;
+import com.vitalis.demo.model.enums.ClientType;
 import com.vitalis.demo.repository.ClientPriceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -87,11 +88,28 @@ public class ClientPriceService {
         clientPriceRepository.delete(cp);
     }
 
+    /**
+     * Hierarquia de preços:
+     * 1. ClientPrice individual (sobrescreve tudo)
+     * 2. resellerPrice do produto (apenas para clientes RESELLER)
+     * 3. basePrice do produto (fallback)
+     */
     @Transactional(readOnly = true)
-    public BigDecimal findEffectivePrice(Client client, Product product){
-        return clientPriceRepository.findByClientAndProduct(client, product)
+    public BigDecimal findEffectivePrice(Client client, Product product) {
+        // 1. Preço individual do cliente
+        var individual = clientPriceRepository.findByClientAndProduct(client, product)
                 .map(ClientPrice::getPrice)
-                .filter(price -> price != null)
-                .orElse(product.getBasePrice());
+                .filter(p -> p != null);
+        if (individual.isPresent()) return individual.get();
+
+        // 2. Preço de revenda (apenas RESELLER sem preço individual)
+        if (client.getClientType() == ClientType.RESELLER
+                && product.getResellerPrice() != null
+                && product.getResellerPrice().compareTo(java.math.BigDecimal.ZERO) > 0) {
+            return product.getResellerPrice();
+        }
+
+        // 3. Preço base
+        return product.getBasePrice();
     }
 }

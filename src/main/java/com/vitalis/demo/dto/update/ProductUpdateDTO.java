@@ -10,6 +10,7 @@ public record ProductUpdateDTO(
         String name,
         @Positive(message = "O preço base deve ser positivo!")
         BigDecimal basePrice,
+        BigDecimal resellerPrice,
         ProductType type,
         @Positive(message = "O estoque minimo deve ser positivo!")
         Integer minimumStock,

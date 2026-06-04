@@ -57,7 +57,9 @@ public class OrderService {
     }
 
     @Transactional(readOnly = true)
-    public Page<Order> listOrders(OrderStatus status, PaymentStatus paymentStatus, java.time.LocalDate start, java.time.LocalDate end, Pageable pageable) {
+    public Page<Order> listOrders(OrderStatus status, PaymentStatus paymentStatus,
+                                  java.time.LocalDate start, java.time.LocalDate end,
+                                  java.time.LocalDateTime deliveryAfter, Pageable pageable) {
         return repository.findAll((root, query, cb) -> {
             java.util.List<jakarta.persistence.criteria.Predicate> predicates = new java.util.ArrayList<>();
             if (status != null)
@@ -68,6 +70,8 @@ public class OrderService {
                 predicates.add(cb.greaterThanOrEqualTo(root.get("createDate"), start.atStartOfDay()));
             if (end != null)
                 predicates.add(cb.lessThanOrEqualTo(root.get("createDate"), end.atTime(java.time.LocalTime.MAX)));
+            if (deliveryAfter != null)
+                predicates.add(cb.greaterThan(root.get("deliveryDate"), deliveryAfter));
             return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
         }, pageable);
     }
@@ -200,6 +204,7 @@ public class OrderService {
         boolean isDelivery = resolveIsDelivery(isDeliveryDTO, product);
         boolean hasSpecialPrice = price.compareTo(product.getBasePrice()) < 0;
 
+        // Desconto de retirada: apenas RETAIL sem preço especial (RESELLER já tem preço negociado)
         if (!isDelivery && client.getClientType() == ClientType.RETAIL && !hasSpecialPrice) {
             var config = systemConfigService.getConfig();
             price = price.subtract(
@@ -253,10 +258,12 @@ public class OrderService {
                 .mapToInt(OrderItem::getQuantity)
                 .sum();
 
+        var config = systemConfigService.getConfig();
         ClientFidelity fidelity = subOrder.getClient().getFidelity();
 
-        // Saldo Total = (Águas que já tem * 10) + pontos soltos + o que vai ganhar agora
-        int availableRawPoints = fidelity.getTotalPoints() + paidWatersInThisOrder;
+        // Previsão: pontos atuais + o que vai ganhar neste pedido (usando config)
+        int availableRawPoints = fidelity.getTotalPoints()
+                + paidWatersInThisOrder * config.getPointsPerWaterItem();
 
         for (OrderItem item : items) {
             availableRawPoints = processItemBeforeAdding(subOrder, item, isGas, isDelivery, availableRawPoints);
@@ -264,11 +271,11 @@ public class OrderService {
         }
 
         if (!isGas) {
-            // Subtracts the new paid-water count so points from this order are only
-            // formally awarded at delivery (awardFidelityPointsIfEligible). Without
-            // this subtraction the order-creation path and the delivery path both
-            // add points, causing a double-award.
-            fidelity.updateFromRawPoints(availableRawPoints - paidWatersInThisOrder);
+            // Salva apenas as deduções de bônus resgatados neste pedido.
+            // Os pontos pelos galões pagos serão concedidos em confirmDelivery
+            // via awardFidelityPointsIfEligible (evita dupla contagem).
+            int pointsEarnedPreview = paidWatersInThisOrder * config.getPointsPerWaterItem();
+            fidelity.updateFromRawPoints(availableRawPoints - pointsEarnedPreview);
         }
 
         return subOrder;
@@ -333,14 +340,15 @@ public class OrderService {
      * Valida se o cliente tem brindes disponíveis e desconta do saldo de fidelidade.
      */
     private int validateAndConsumeFidelityBonus(OrderItem item, int availableRawPoints) {
-        int neededPoints = item.getQuantity() * 10;
+        var config = systemConfigService.getConfig();
+        int neededPoints = item.getQuantity() * config.getPointsPerFreeWater();
 
         if (availableRawPoints < neededPoints) {
             throw new BusinessException("Saldo insuficiente! Você tem " + availableRawPoints +
-                    " pontos totais, mas precisa de " + neededPoints);
+                    " pontos totais, mas precisa de " + neededPoints + " para resgatar " + item.getQuantity() + " galão(ões).");
         }
 
-        return availableRawPoints - neededPoints; // Retorna o saldo deduzido
+        return availableRawPoints - neededPoints;
     }
 
     /**
@@ -491,15 +499,12 @@ public class OrderService {
         if (item.getProduct().getType() != ProductType.WATER) return;
         if (item.getUnitPrice() == null || item.getUnitPrice().compareTo(BigDecimal.ZERO) <= 0) return;
 
-        String productName = item.getProduct().getName().toUpperCase();
-        boolean isEligibleBrand = productName.contains("NIETA") || productName.contains("PINHEIRO");
         ClientFidelity fidelity = client.getFidelity();
+        if (fidelity == null) return;
 
-        if (!isEligibleBrand || fidelity == null) return;
-
-        // Uso dos novos métodos:
-        int pointsAfterReversal = fidelity.getTotalPoints() - item.getQuantity();
-        fidelity.updateFromRawPoints(pointsAfterReversal);
+        var config = systemConfigService.getConfig();
+        int pointsToReverse = item.getQuantity() * config.getPointsPerWaterItem();
+        fidelity.updateFromRawPoints(fidelity.getTotalPoints() - pointsToReverse);
     }
 
     // Métodos privados — Guards e Resolvers simples
