@@ -90,11 +90,9 @@ public class StockService {
     }
 
     public void checkStockAvailability(Product product, Integer requestedQuantity){
-        Stock stock = findByProduct(product);
-
-        // Ignora se for gás
         if (product.getType() == ProductType.GAS) return;
 
+        Stock stock = findByProduct(product);
         Integer available = stock.getQuantityInStock();
 
         if (requestedQuantity > available) {

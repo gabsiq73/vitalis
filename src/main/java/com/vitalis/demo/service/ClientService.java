@@ -81,13 +81,6 @@ public class ClientService {
     @Transactional
     public void delete(UUID id){
         Client client = findById(id);
-
-        long orderCount = orderRepository.countByClientId(id);
-
-        if(orderCount > 0){
-            throw new BusinessException("Não é possível deletar o cliente pois ele possuí pedidos vinculados. Desativando...");
-        }
-
         client.setActive(false);
         repository.save(client);
     }
