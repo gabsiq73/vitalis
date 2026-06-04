@@ -11,8 +11,14 @@ public record GasSettlementResponseDTO(
         String supplierName,
         BigDecimal amount,
         Boolean settled,
+        LocalDateTime settledDate,
         SettlementType settlementType,
         UUID orderItemId,
-        LocalDateTime createDate
+        LocalDateTime createDate,
+        String clientName,
+        String productName,
+        Integer quantity,
+        BigDecimal salePrice,
+        BigDecimal costPrice
 ) {
 }

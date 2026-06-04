@@ -133,6 +133,18 @@ public class GasSettlementService {
         return new GasSettlementReportDTO(supplierName, toPay, toReceive, netBalance, detailsDTO);
     }
 
+    @Transactional(readOnly = true)
+    public List<GasSettlementResponseDTO> findSettlements(UUID supplierId, LocalDate start, LocalDate end) {
+        LocalDateTime startDt = start.atStartOfDay();
+        LocalDateTime endDt = end.atTime(LocalTime.MAX);
+
+        List<GasSettlement> settlements = supplierId != null
+                ? repository.findByGasSupplier_IdAndCreateDateBetweenOrderByCreateDateDesc(supplierId, startDt, endDt)
+                : repository.findByCreateDateBetweenOrderByCreateDateDesc(startDt, endDt);
+
+        return mapper.toResponseDTOList(settlements);
+    }
+
     @Transactional
     public void delete(UUID id) {
         GasSettlement settlement = findById(id);

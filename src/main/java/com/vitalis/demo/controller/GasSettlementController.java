@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -19,6 +20,15 @@ public class GasSettlementController {
 
     private final GasSettlementService settlementService;
     private final GasSettlementMapper settlementMapper;
+
+    @GetMapping
+    public ResponseEntity<List<GasSettlementResponseDTO>> list(
+            @RequestParam(required = false) UUID supplierId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
+
+        return ResponseEntity.ok(settlementService.findSettlements(supplierId, start, end));
+    }
 
     @GetMapping("/report")
     public ResponseEntity<GasSettlementReportDTO> getReport(

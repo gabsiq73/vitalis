@@ -37,4 +37,8 @@ public interface GasSettlementRepository extends JpaRepository<GasSettlement, UU
     List<GasSettlement> findBySettledFalse();
 
     List<GasSettlement> findByGasSupplier_IdAndSettledFalseAndCreateDateBetween(UUID supplierId, LocalDateTime start, LocalDateTime end);
+
+    List<GasSettlement> findByCreateDateBetweenOrderByCreateDateDesc(LocalDateTime start, LocalDateTime end);
+
+    List<GasSettlement> findByGasSupplier_IdAndCreateDateBetweenOrderByCreateDateDesc(UUID supplierId, LocalDateTime start, LocalDateTime end);
 }
