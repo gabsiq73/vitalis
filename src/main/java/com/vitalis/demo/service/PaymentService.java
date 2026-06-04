@@ -217,6 +217,7 @@ public class PaymentService {
         return orderRepository
                 .findByClientAndPaymentStatusNotOrderByCreateDateAsc(client, PaymentStatus.PAID)
                 .stream()
+                .filter(o -> o.getStatus() != com.vitalis.demo.model.enums.OrderStatus.CANCELLED)
                 .filter(o -> excludedOrderId == null || !o.getId().equals(excludedOrderId))
                 .toList();
     }
