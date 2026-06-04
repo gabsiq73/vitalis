@@ -324,8 +324,9 @@ public class OrderService {
         boolean isExplicitZero = item.getUnitPrice() != null
                 && item.getUnitPrice().compareTo(BigDecimal.ZERO) == 0;
 
-        if (isExplicitZero && item.getProduct().getType() == ProductType.WATER) {
-            // Retorna o saldo após consumir o brinde
+        if (isExplicitZero && item.getProduct().getType() == ProductType.WATER
+                && client.getClientType() != com.vitalis.demo.model.enums.ClientType.RESELLER) {
+            // Retorna o saldo após consumir o brinde (RESELLER não participa do programa de fidelidade)
             return validateAndConsumeFidelityBonus(item, currentRawPoints);
         }
 
@@ -437,6 +438,7 @@ public class OrderService {
      */
     private void awardFidelityPointsIfEligible(Client client, OrderItem item) {
         if (client.getClientType() == com.vitalis.demo.model.enums.ClientType.AVULSO) return;
+        if (client.getClientType() == com.vitalis.demo.model.enums.ClientType.RESELLER) return;
         if (item.getProduct().getType() != ProductType.WATER) return;
 
         boolean isPaidPurchase = item.getUnitPrice() != null
