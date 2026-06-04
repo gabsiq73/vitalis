@@ -6,6 +6,7 @@ import com.vitalis.demo.model.enums.OrderStatus;
 import com.vitalis.demo.model.enums.PaymentStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -15,7 +16,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-public interface OrderRepository extends JpaRepository<Order, UUID> {
+public interface OrderRepository extends JpaRepository<Order, UUID>, JpaSpecificationExecutor<Order> {
 
     Page<Order> findByClient(Client client, Pageable pageable);
 
@@ -24,18 +25,6 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
     Page<Order> findByPaymentStatus(PaymentStatus paymentStatus, Pageable pageable);
 
     Page<Order> findByStatusAndPaymentStatus(OrderStatus status, PaymentStatus paymentStatus, Pageable pageable);
-
-    @Query("SELECT o FROM Order o WHERE " +
-           "(:status IS NULL OR o.status = :status) AND " +
-           "(:paymentStatus IS NULL OR o.paymentStatus = :paymentStatus) AND " +
-           "(:start IS NULL OR o.createDate >= :start) AND " +
-           "(:end IS NULL OR o.createDate <= :end)")
-    Page<Order> findWithFilters(
-            @Param("status") OrderStatus status,
-            @Param("paymentStatus") PaymentStatus paymentStatus,
-            @Param("start") LocalDateTime start,
-            @Param("end") LocalDateTime end,
-            Pageable pageable);
 
     List<Order> findByStatus(OrderStatus status);
 

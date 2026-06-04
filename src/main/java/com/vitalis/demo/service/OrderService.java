@@ -58,9 +58,18 @@ public class OrderService {
 
     @Transactional(readOnly = true)
     public Page<Order> listOrders(OrderStatus status, PaymentStatus paymentStatus, java.time.LocalDate start, java.time.LocalDate end, Pageable pageable) {
-        java.time.LocalDateTime startDt = start != null ? start.atStartOfDay() : null;
-        java.time.LocalDateTime endDt   = end   != null ? end.atTime(java.time.LocalTime.MAX) : null;
-        return repository.findWithFilters(status, paymentStatus, startDt, endDt, pageable);
+        return repository.findAll((root, query, cb) -> {
+            java.util.List<jakarta.persistence.criteria.Predicate> predicates = new java.util.ArrayList<>();
+            if (status != null)
+                predicates.add(cb.equal(root.get("status"), status));
+            if (paymentStatus != null)
+                predicates.add(cb.equal(root.get("paymentStatus"), paymentStatus));
+            if (start != null)
+                predicates.add(cb.greaterThanOrEqualTo(root.get("createDate"), start.atStartOfDay()));
+            if (end != null)
+                predicates.add(cb.lessThanOrEqualTo(root.get("createDate"), end.atTime(java.time.LocalTime.MAX)));
+            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+        }, pageable);
     }
 
     @Transactional(readOnly = true)
