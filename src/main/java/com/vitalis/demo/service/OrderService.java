@@ -264,7 +264,11 @@ public class OrderService {
         }
 
         if (!isGas) {
-            fidelity.updateFromRawPoints(availableRawPoints);
+            // Subtracts the new paid-water count so points from this order are only
+            // formally awarded at delivery (awardFidelityPointsIfEligible). Without
+            // this subtraction the order-creation path and the delivery path both
+            // add points, causing a double-award.
+            fidelity.updateFromRawPoints(availableRawPoints - paidWatersInThisOrder);
         }
 
         return subOrder;
