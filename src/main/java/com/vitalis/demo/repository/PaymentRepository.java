@@ -22,6 +22,8 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
 
     List<Payment> findByCreateDateBetween(LocalDate start, LocalDate end);
 
+    List<Payment> findByDateBetweenOrderByDateDesc(LocalDateTime start, LocalDateTime end);
+
     @Query("SELECT SUM(p.amount) FROM Payment p " +
            "WHERE p.date BETWEEN :start AND :end")
     BigDecimal sumTotalReceived(@Param("start")LocalDateTime start, @Param("end") LocalDateTime end);

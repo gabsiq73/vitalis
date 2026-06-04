@@ -1,5 +1,6 @@
 package com.vitalis.demo.service;
 
+import com.vitalis.demo.dto.response.DailyCashPaymentDTO;
 import com.vitalis.demo.dto.response.OrderBalanceDTO;
 import com.vitalis.demo.dto.response.PaymentResponseDTO;
 import com.vitalis.demo.infra.exception.ResourceNotFoundException;
@@ -16,7 +17,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -61,6 +64,25 @@ public class PaymentService {
                 calculatePaidAmount(order),
                 calculateOrderDebt(order)
         );
+    }
+
+    @Transactional(readOnly = true)
+    public List<DailyCashPaymentDTO> findDailyPayments(LocalDate date) {
+        LocalDateTime start = date.atStartOfDay();
+        LocalDateTime end   = date.atTime(LocalTime.MAX);
+
+        return repository.findByDateBetweenOrderByDateDesc(start, end).stream()
+                .map(p -> new DailyCashPaymentDTO(
+                        p.getId(),
+                        p.getOrder().getId(),
+                        "#" + p.getOrder().getId().toString().replace("-", "").substring(26).toUpperCase(),
+                        p.getOrder().getClient().getName(),
+                        p.getDate(),
+                        p.getAmount(),
+                        p.getMethod(),
+                        p.getNotes()
+                ))
+                .toList();
     }
 
     // Pagamento Individual (registerPayment)

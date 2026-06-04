@@ -1,6 +1,7 @@
 package com.vitalis.demo.controller;
 
 import com.vitalis.demo.dto.request.PaymentRequestDTO;
+import com.vitalis.demo.dto.response.DailyCashPaymentDTO;
 import com.vitalis.demo.dto.response.OrderBalanceDTO;
 import com.vitalis.demo.dto.response.PaymentResponseDTO;
 import com.vitalis.demo.mapper.PaymentMapper;
@@ -9,11 +10,13 @@ import com.vitalis.demo.model.enums.Method;
 import com.vitalis.demo.service.PaymentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -51,6 +54,12 @@ public class PaymentController {
     public ResponseEntity<List<PaymentResponseDTO>> listByOrder(@PathVariable UUID orderId){
         List<PaymentResponseDTO> payments = paymentService.findByOrderId(orderId);
         return ResponseEntity.ok(payments);
+    }
+
+    @GetMapping("/daily")
+    public ResponseEntity<List<DailyCashPaymentDTO>> getDailyPayments(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ResponseEntity.ok(paymentService.findDailyPayments(date));
     }
 
     @GetMapping("/{id}")
