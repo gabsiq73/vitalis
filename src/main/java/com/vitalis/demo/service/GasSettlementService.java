@@ -145,6 +145,15 @@ public class GasSettlementService {
         return mapper.toResponseDTOList(settlements);
     }
 
+    @Transactional(readOnly = true)
+    public List<GasSettlementResponseDTO> findDailySettlements(LocalDate date) {
+        LocalDateTime startDt = date.atStartOfDay();
+        LocalDateTime endDt = date.atTime(LocalTime.MAX);
+        List<GasSettlement> settlements = repository
+                .findBySettledTrueAndSettledDateBetweenOrderBySettledDateDesc(startDt, endDt);
+        return mapper.toResponseDTOList(settlements);
+    }
+
     @Transactional
     public void delete(UUID id) {
         GasSettlement settlement = findById(id);

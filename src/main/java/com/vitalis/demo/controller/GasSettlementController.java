@@ -21,6 +21,12 @@ public class GasSettlementController {
     private final GasSettlementService settlementService;
     private final GasSettlementMapper settlementMapper;
 
+    @GetMapping("/daily")
+    public ResponseEntity<List<GasSettlementResponseDTO>> listDaily(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ResponseEntity.ok(settlementService.findDailySettlements(date));
+    }
+
     @GetMapping
     public ResponseEntity<List<GasSettlementResponseDTO>> list(
             @RequestParam(required = false) UUID supplierId,

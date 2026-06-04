@@ -263,7 +263,9 @@ public class OrderService {
             subOrder.addItem(item);
         }
 
-        fidelity.updateFromRawPoints(availableRawPoints);
+        if (!isGas) {
+            fidelity.updateFromRawPoints(availableRawPoints);
+        }
 
         return subOrder;
     }
