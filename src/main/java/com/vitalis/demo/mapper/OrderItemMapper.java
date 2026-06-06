@@ -12,7 +12,6 @@ public abstract class OrderItemMapper {
     @Mapping(target = "order", ignore = true)
     @Mapping(target = "product", ignore = true)
     @Mapping(target = "gasSupplier", ignore = true)
-    @Mapping(target = "unitPrice", ignore = true)
     public abstract OrderItem toEntity(OrderItemRequestDTO dto);
 
     @Mapping(target = "productId", source = "product.id")
