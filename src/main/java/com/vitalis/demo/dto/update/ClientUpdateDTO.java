@@ -13,7 +13,7 @@ public record ClientUpdateDTO(
         String phone,
         @Size(min = 2, max = 200, message = "O endereço deve ter entre 2 e 200 caracteres!")
         String address,
-        @Size(min = 5, max = 255, message = "Anotações devem ter entre 5 e 255 caracteres!")
+        @Size(min = 1, max = 255, message = "Anotações devem ter no máximo 255 caracteres!")
         String notes,
         ClientType clientType,
         ClientStatus clientStatus

@@ -12,6 +12,7 @@ public record ClientResponseDTO(
         String name,
         String phone,
         String address,
+        String notes,
         BigDecimal balance,
         Integer fidelityPoints,
         Integer pendingBonusWater,
