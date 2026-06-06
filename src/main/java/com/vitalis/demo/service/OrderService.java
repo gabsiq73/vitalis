@@ -114,6 +114,7 @@ public class OrderService {
                 Order subOrder = prepareSubOrder(prototype, items, isGas, dto.isDelivery());
                 Order saved = repository.save(subOrder);
                 if (isGas) processGasSettlementsForOrder(saved, financialMap);
+                if (!Boolean.TRUE.equals(dto.isDelivery())) confirmDelivery(saved.getId());
                 savedOrders.add(saved);
             }
         });
