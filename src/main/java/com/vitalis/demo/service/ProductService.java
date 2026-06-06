@@ -44,6 +44,10 @@ public class ProductService {
     @Transactional
     public Product save(Product product, UUID defaultSupplierId){
 
+        if (!repository.findByName(product.getName()).isEmpty()) {
+            throw new BusinessException("Já existe um produto cadastrado com o nome \"" + product.getName() + "\".");
+        }
+
         if(product.getType() == ProductType.GAS && product.getCostPrice() == null){
             throw new BusinessException("Erro: Para produtos do tipo GÁS, o preço de custo deve ser informado!");
         }
@@ -82,6 +86,15 @@ public class ProductService {
     @Transactional
     public void update(UUID id, ProductUpdateDTO dto){
         Product product = findById(id);
+
+        if (dto.name() != null && !dto.name().equalsIgnoreCase(product.getName())) {
+            boolean nameTaken = repository.findByName(dto.name()).stream()
+                    .anyMatch(p -> !p.getId().equals(id));
+            if (nameTaken) {
+                throw new BusinessException("Já existe um produto cadastrado com o nome \"" + dto.name() + "\".");
+            }
+        }
+
         productMapper.updateEntityFromDto(dto, product);
         
         if (dto.lastCostPrice() != null) {
