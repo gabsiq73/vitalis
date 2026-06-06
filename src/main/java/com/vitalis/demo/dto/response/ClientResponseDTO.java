@@ -17,7 +17,8 @@ public record ClientResponseDTO(
         Integer fidelityPoints,
         Integer pendingBonusWater,
         ClientType clientType,
-        ClientStatus clientStatus
+        ClientStatus clientStatus,
+        Long orderCount
 ) {
 
 }
