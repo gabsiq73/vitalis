@@ -11,7 +11,7 @@ public interface ClientMapper {
 
     @Mapping(source = "fidelity.totalPoints", target = "fidelityPoints")
     @Mapping(source = "fidelity.pendingBonusWater", target = "pendingBonusWater")
-    @Mapping(expression = "java((long) client.getOrders().size())", target = "orderCount")
+    @Mapping(expression = "java(client.getOrders() != null ? (long) client.getOrders().size() : 0L)", target = "orderCount")
     ClientResponseDTO toResponseDTO(Client client);
     Client toEntity(ClientRequestDTO requestDTO);
 
@@ -21,6 +21,4 @@ public interface ClientMapper {
 
 
 }
-
-
 
