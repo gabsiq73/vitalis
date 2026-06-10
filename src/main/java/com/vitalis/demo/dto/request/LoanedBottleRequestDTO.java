@@ -14,6 +14,7 @@ public record LoanedBottleRequestDTO(
         @NotNull(message = "Campo obrigatório!")
         @Positive(message = "O número deve ser positivo!")
         Integer quantity,
-        LocalDateTime loanDate
+        LocalDateTime loanDate,
+        UUID orderId
 ) {
 }

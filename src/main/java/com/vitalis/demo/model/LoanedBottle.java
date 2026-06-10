@@ -39,6 +39,10 @@ public class LoanedBottle extends BaseEntity {
     @JoinColumn(name = "CLI_id", nullable = false)
     private Client client;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ORD_id")
+    private Order order;
+
     @Column(name = "LB_loanDate")
     private LocalDateTime loanDate;
 

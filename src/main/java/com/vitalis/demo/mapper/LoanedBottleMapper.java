@@ -14,6 +14,8 @@ public interface LoanedBottleMapper {
     @Mapping(source = "client.name", target = "clientName")
     @Mapping(source = "product.id", target = "productId")
     @Mapping(source = "product.name", target = "productName")
+    @Mapping(source = "loanStatus", target = "status")
+    @Mapping(source = "order.id", target = "orderId")
     LoanedBottleResponseDTO toResponseDTO(LoanedBottle loanedBottle);
 
 }

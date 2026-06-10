@@ -15,6 +15,7 @@ public record LoanedBottleResponseDTO(
         Integer quantity,
         LocalDateTime loanDate,
         LocalDateTime returnDate,
-        LoanStatus status
+        LoanStatus status,
+        UUID orderId
 ) {
 }

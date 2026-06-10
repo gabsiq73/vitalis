@@ -6,6 +6,7 @@ import com.vitalis.demo.mapper.LoanedBottleMapper;
 import com.vitalis.demo.model.LoanedBottle;
 import com.vitalis.demo.service.ClientService;
 import com.vitalis.demo.service.LoanedBottleService;
+import com.vitalis.demo.service.OrderService;
 import com.vitalis.demo.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -27,6 +29,7 @@ public class LoanedBottleController {
     private final LoanedBottleMapper loanedBottleMapper;
     private final ClientService clientService;
     private final ProductService productService;
+    private final OrderService orderService;
 
     @PostMapping
     public ResponseEntity<LoanedBottleResponseDTO> createLoan(@Valid @RequestBody LoanedBottleRequestDTO dto) {
@@ -34,6 +37,9 @@ public class LoanedBottleController {
 
         entity.setClient(clientService.findById(dto.clientId()));
         entity.setProduct(productService.findById(dto.productId()));
+        if (dto.orderId() != null) {
+            entity.setOrder(orderService.findById(dto.orderId()));
+        }
 
         LoanedBottle savedEntity = loanedBottleService.save(entity);
         return ResponseEntity.status(HttpStatus.CREATED).body(loanedBottleMapper.toResponseDTO(savedEntity));
@@ -63,6 +69,13 @@ public class LoanedBottleController {
         Page<LoanedBottle> entities = loanedBottleService.findPendingByClient(clientId, pageable);
         Page<LoanedBottleResponseDTO> dtos = entities.map(loanedBottleMapper::toResponseDTO);
 
+        return ResponseEntity.ok(dtos);
+    }
+
+    @GetMapping("/order/{orderId}")
+    public ResponseEntity<List<LoanedBottleResponseDTO>> getByOrder(@PathVariable UUID orderId){
+        List<LoanedBottle> entities = loanedBottleService.findByOrderId(orderId);
+        List<LoanedBottleResponseDTO> dtos = entities.stream().map(loanedBottleMapper::toResponseDTO).toList();
         return ResponseEntity.ok(dtos);
     }
 

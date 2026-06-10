@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -37,6 +38,11 @@ public class LoanedBottleService {
     @Transactional(readOnly = true)
     public Page<LoanedBottle> findPendingByClient(UUID clientId, Pageable pageable){
         return repository.findByClient_IdAndLoanStatus(clientId, LoanStatus.LOANED, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public List<LoanedBottle> findByOrderId(UUID orderId){
+        return repository.findByOrder_Id(orderId);
     }
 
     // Lista de todos os garrafões emprestados
