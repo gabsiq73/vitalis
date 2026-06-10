@@ -53,7 +53,7 @@ public class Order extends BaseEntity{
     @OneToMany(mappedBy = "order", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> items = new ArrayList<>();
 
-    @Formula("(SELECT COALESCE(SUM(lb.\"LB_qtd\"), 0) FROM \"tb_loanedBottle\" lb WHERE lb.\"ORD_id\" = \"ORD_id\")")
+    @Formula("(SELECT COALESCE(SUM(lb.lb_qtd), 0) FROM tb_loaned_bottle lb WHERE lb.ord_id = ord_id)")
     private Integer loanedBottlesCount;
 
     public void addItem(OrderItem item) {
