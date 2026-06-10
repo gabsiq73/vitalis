@@ -3,6 +3,7 @@ package com.vitalis.demo.model;
 import com.vitalis.demo.model.enums.OrderStatus;
 import com.vitalis.demo.model.enums.PaymentStatus;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Formula;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
@@ -51,6 +52,9 @@ public class Order extends BaseEntity{
 
     @OneToMany(mappedBy = "order", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> items = new ArrayList<>();
+
+    @Formula("(SELECT COALESCE(SUM(lb.LB_qtd), 0) FROM tb_loanedBottle lb WHERE lb.ORD_id = ORD_id)")
+    private Integer loanedBottlesCount;
 
     public void addItem(OrderItem item) {
         if (items == null) {

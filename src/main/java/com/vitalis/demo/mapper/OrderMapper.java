@@ -47,6 +47,7 @@ public abstract class OrderMapper {
     @Mapping(target = "totalValue", expression = "java(order.getTotalValue())")
     @Mapping(target = "clientId", source = "client.id")
     @Mapping(target = "clientName", source = "client.name")
+    @Mapping(target = "loanedBottlesCount", source = "loanedBottlesCount")
     public abstract OrderResponseDTO toResponseDTO(Order order);
 
     public Map<UUID, GasFinancialInfoRequest> extractFinancialInfo(OrderRequestDTOv2 dto) {

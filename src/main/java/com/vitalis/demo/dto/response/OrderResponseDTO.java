@@ -19,5 +19,6 @@ public record OrderResponseDTO(
         List<OrderItemResponseDTO> items,
 
         BigDecimal totalValue,
-        LocalDateTime createDate
+        LocalDateTime createDate,
+        Integer loanedBottlesCount
 ) {}
