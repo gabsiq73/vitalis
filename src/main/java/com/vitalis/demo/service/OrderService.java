@@ -194,6 +194,7 @@ public class OrderService {
         paymentRepository.deleteByOrder(order);
 
         order.setStatus(OrderStatus.CANCELLED);
+        order.setPaymentStatus(PaymentStatus.CANCELLED);
         repository.save(order);
     }
 
