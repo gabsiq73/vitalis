@@ -95,6 +95,12 @@ public class OrderController {
         return ResponseEntity.noContent().build();
     }
 
+    @DeleteMapping("/{id}/void")
+    public ResponseEntity<Void> voidOrder(@PathVariable UUID id) {
+        orderService.voidOrder(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<OrderResponseDTO> update(
             @PathVariable UUID id,

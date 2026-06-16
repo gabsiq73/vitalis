@@ -178,6 +178,14 @@ public class OrderService {
         repository.save(order);
     }
 
+    // Hard delete used for rollback when payment/loan fails right after order creation
+    @Transactional
+    public void voidOrder(UUID orderId) {
+        if (repository.existsById(orderId)) {
+            repository.deleteById(orderId);
+        }
+    }
+
     // Cancelamento
     @Transactional
     public void cancelOrder(UUID orderId) {
