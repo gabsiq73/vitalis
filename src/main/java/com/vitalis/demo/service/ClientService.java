@@ -130,13 +130,13 @@ public class ClientService {
         // Calcula o resultado final = comprado - pago
         BigDecimal outstandingBalance = totalBought.subtract(totalPaid);
 
-        // Persiste a dívida como saldo negativo para leitura direta no frontend.
-        // Saldo positivo (crédito) só é ajustado pelo fluxo de pagamento.
+        // Persiste o saldo líquido: crédito existente abatido pela dívida dos pedidos entregues.
+        BigDecimal current = client.getBalance() != null ? client.getBalance() : BigDecimal.ZERO;
+        BigDecimal credit = current.compareTo(BigDecimal.ZERO) > 0 ? current : BigDecimal.ZERO;
         if (outstandingBalance.compareTo(BigDecimal.ZERO) > 0) {
-            client.setBalance(outstandingBalance.negate());
+            client.setBalance(credit.subtract(outstandingBalance));
         } else if (outstandingBalance.compareTo(BigDecimal.ZERO) == 0) {
-            // Sem dívida: zera o saldo negativo, mas não toca crédito existente
-            BigDecimal current = client.getBalance() != null ? client.getBalance() : BigDecimal.ZERO;
+            // Sem dívida: zera saldo negativo, mas preserva crédito
             if (current.compareTo(BigDecimal.ZERO) < 0) {
                 client.setBalance(BigDecimal.ZERO);
             }

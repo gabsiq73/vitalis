@@ -10,9 +10,11 @@ import com.vitalis.demo.mapper.OrderItemMapper;
 import com.vitalis.demo.mapper.OrderMapper;
 import com.vitalis.demo.model.*;
 import com.vitalis.demo.model.enums.ClientType;
+import com.vitalis.demo.model.enums.Method;
 import com.vitalis.demo.model.enums.OrderStatus;
 import com.vitalis.demo.model.enums.PaymentStatus;
 import com.vitalis.demo.model.enums.ProductType;
+import com.vitalis.demo.repository.LoanedBottleRepository;
 import com.vitalis.demo.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -31,6 +33,7 @@ public class OrderService {
 
     private final OrderRepository repository;
     private final com.vitalis.demo.repository.PaymentRepository paymentRepository;
+    private final com.vitalis.demo.repository.LoanedBottleRepository loanedBottleRepository;
     private final SystemConfigService systemConfigService;
 
     private final ClientService clientService;
@@ -181,9 +184,13 @@ public class OrderService {
     // Hard delete used for rollback when payment/loan fails right after order creation
     @Transactional
     public void voidOrder(UUID orderId) {
-        if (repository.existsById(orderId)) {
+        repository.findById(orderId).ifPresent(order -> {
+            if (order.getStatus() == OrderStatus.DELIVERED) {
+                throw new BusinessException("Não é possível anular um pedido já entregue.");
+            }
+            refundSaldoPayments(order);
             repository.deleteById(orderId);
-        }
+        });
     }
 
     // Cancelamento
@@ -199,11 +206,24 @@ public class OrderService {
             revertDeliveredOrder(order);
         }
 
+        refundSaldoPayments(order);
         paymentRepository.deleteByOrder(order);
 
         order.setStatus(OrderStatus.CANCELLED);
         order.setPaymentStatus(PaymentStatus.CANCELLED);
         repository.save(order);
+
+        clientService.calculateDebtBalance(order.getClient().getId());
+    }
+
+    private void refundSaldoPayments(Order order) {
+        BigDecimal saldoTotal = order.getPayments().stream()
+                .filter(p -> p.getMethod() == Method.SALDO)
+                .map(p -> p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (saldoTotal.compareTo(BigDecimal.ZERO) > 0) {
+            clientService.addCreditBalance(order.getClient().getId(), saldoTotal);
+        }
     }
 
     // Cálculo de Preço
@@ -500,6 +520,8 @@ public class OrderService {
 
             reverseFidelityPointsIfEligible(order.getClient(), item);
         });
+
+        loanedBottleRepository.deleteAll(loanedBottleRepository.findByOrder_Id(order.getId()));
     }
 
     /**
