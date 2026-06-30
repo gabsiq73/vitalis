@@ -207,7 +207,7 @@ public class OrderService {
         }
 
         refundSaldoPayments(order);
-        paymentRepository.deleteByOrder(order);
+        order.getPayments().clear(); // orphanRemoval=true deletes them on save
 
         order.setStatus(OrderStatus.CANCELLED);
         order.setPaymentStatus(PaymentStatus.CANCELLED);
