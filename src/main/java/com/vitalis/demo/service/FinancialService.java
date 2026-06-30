@@ -71,7 +71,9 @@ public class FinancialService {
      */
     @Transactional(readOnly = true)
     public DailyReportDTO generateOperationalSummary(LocalDate start, LocalDate end) {
-        List<Order> orders = fetchOrdersInPeriod(start, end);
+        List<Order> orders = fetchOrdersInPeriod(start, end).stream()
+                .filter(o -> o.getStatus() != OrderStatus.CANCELLED)
+                .toList();
 
         BigDecimal totalPix              = sumPaymentsByMethod(orders, Method.PIX);
         BigDecimal totalCash             = sumPaymentsByMethod(orders, Method.DINHEIRO);
