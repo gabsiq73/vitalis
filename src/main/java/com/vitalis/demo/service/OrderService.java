@@ -320,6 +320,7 @@ public class OrderService {
         subOrder.setDeliveryDate(prototype.getDeliveryDate());
         subOrder.setStatus(OrderStatus.PENDING);
         subOrder.setPaymentStatus(PaymentStatus.PENDING);
+        subOrder.setNotes(prototype.getNotes());
         return subOrder;
     }
 

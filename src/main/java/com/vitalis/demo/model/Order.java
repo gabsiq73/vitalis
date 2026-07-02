@@ -47,6 +47,9 @@ public class Order extends BaseEntity{
     @JoinColumn(name = "CLI_id", nullable = false)
     private Client client;
 
+    @Column(name = "ORD_notes", length = 2000)
+    private String notes;
+
     @OneToMany(mappedBy = "order", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Payment> payments = new ArrayList<>();
 

@@ -20,5 +20,6 @@ public record OrderResponseDTO(
 
         BigDecimal totalValue,
         LocalDateTime createDate,
-        Integer loanedBottlesCount
+        Integer loanedBottlesCount,
+        String notes
 ) {}

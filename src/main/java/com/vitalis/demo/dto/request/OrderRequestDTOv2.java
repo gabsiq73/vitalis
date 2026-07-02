@@ -14,7 +14,8 @@ public record OrderRequestDTOv2(
         List<OrderItemRequestDTO> items,
         LocalDateTime deliveryDate,
         @NotNull(message = "Campo obrigatório!")
-        Boolean isDelivery
+        Boolean isDelivery,
+        String notes
 ) {
 }
 
