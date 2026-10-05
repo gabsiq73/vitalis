@@ -55,7 +55,7 @@ public abstract class OrderMapper {
                 .filter(item -> item.productId() != null)
                 .collect(Collectors.toMap(
                         OrderItemRequestDTO::productId,
-                        item -> new GasFinancialInfoRequest(item.gasCostPrice(), item.receivedByUs()),
+                        item -> new GasFinancialInfoRequest(item.gasCostPrice(), item.receivedByUs(), item.gasPaymentMethod()),
                         (existing, replacement) -> existing
                 ));
     }

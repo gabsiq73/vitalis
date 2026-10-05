@@ -111,6 +111,9 @@ public class PaymentService {
         if (orderBalanceService.hasSupplierCollectedGas(order)) {
             throw new BusinessException("Gás recebido pelo entregador não aceita pagamento no depósito");
         }
+        if (order.getPayments().stream().anyMatch(Payment::isAutomaticGas)) {
+            throw new BusinessException("Pagamento do gás já registrado automaticamente no pedido.");
+        }
 
         consumeSaldoIfApplicable(payment, order.getClient().getId());
 
@@ -233,6 +236,7 @@ public class PaymentService {
                 .filter(o -> o.getStatus() != com.vitalis.demo.model.enums.OrderStatus.CANCELLED)
                 .filter(o -> excludedOrderId == null || !o.getId().equals(excludedOrderId))
                 .filter(o -> !orderBalanceService.hasSupplierCollectedGas(o))
+                .filter(o -> calculateOrderDebt(o).signum() > 0)
                 .toList();
     }
 

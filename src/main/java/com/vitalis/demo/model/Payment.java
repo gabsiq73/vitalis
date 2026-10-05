@@ -45,4 +45,7 @@ public class Payment extends BaseEntity {
     @Column(name = "PAY_notes")
     private String notes;
 
+    @Column(name = "PAY_automatic_gas", nullable = false, columnDefinition = "boolean default false")
+    private boolean automaticGas;
+
 }

@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -126,10 +127,7 @@ public class OrderService {
                 Order saved = repository.save(subOrder);
                 if (isGas) {
                     processGasSettlementsForOrder(saved, financialMap);
-                    if (orderBalanceService.calculateRemainingBalance(saved).signum() == 0) {
-                        saved.setPaymentStatus(PaymentStatus.PAID);
-                        repository.save(saved);
-                    }
+                    syncAutomaticGasPayment(saved, financialMap);
                 }
                 if (!Boolean.TRUE.equals(dto.isDelivery())) confirmDelivery(saved.getId());
                 savedOrders.add(saved);
@@ -151,6 +149,13 @@ public class OrderService {
 
         // 2. CHAMA O MESMO MÉTODO ÚNICO
         List<OrderItem> newItems = resolveItemsFromDto(dto.items());
+        boolean wasGas = existingOrder.getItems().stream()
+                .anyMatch(item -> item.getProduct().getType() == ProductType.GAS);
+        boolean hasGas = newItems.stream().anyMatch(item -> item.getProduct().getType() == ProductType.GAS);
+        boolean hasOther = newItems.stream().anyMatch(item -> item.getProduct().getType() != ProductType.GAS);
+        if (wasGas != hasGas || (hasGas && hasOther)) {
+            throw new BusinessException("Edite os subpedidos de água e gás separadamente.");
+        }
 
         // 3. Aplica a lógica de negócio de substituição
         Map<UUID, GasFinancialInfoRequest> financialMap = orderMapper.extractFinancialInfo(dto);
@@ -158,6 +163,7 @@ public class OrderService {
 
         Order savedOrder = repository.save(existingOrder);
         processGasSettlementsOnUpdate(savedOrder, financialMap);
+        syncAutomaticGasPayment(savedOrder, financialMap);
 
         return orderMapper.toResponseDTO(savedOrder);
     }
@@ -473,9 +479,55 @@ public class OrderService {
         });
     }
 
-    /**
-     * Determina o custo do gás: prioriza o valor do financialMap, cai no custo do produto.
-     */
+    /** Registra apenas o valor de gás recebido no depósito e reconcilia edições. */
+    private void syncAutomaticGasPayment(Order order, Map<UUID, GasFinancialInfoRequest> financialMap) {
+        BigDecimal gasReceived = BigDecimal.ZERO;
+        Method method = null;
+        for (OrderItem item : order.getItems()) {
+            if (item.getProduct().getType() != ProductType.GAS) continue;
+            GasFinancialInfoRequest info = financialMap.get(item.getProduct().getId());
+            if (info == null || !Boolean.TRUE.equals(info.receivedByUs())) continue;
+            Method itemMethod = info.gasPaymentMethod();
+            if (itemMethod != Method.PIX && itemMethod != Method.DINHEIRO) {
+                throw new BusinessException("Gás recebido pelo depósito exige pagamento em PIX ou DINHEIRO.");
+            }
+            if (method != null && method != itemMethod) {
+                throw new BusinessException("Itens de gás do mesmo pedido exigem o mesmo método de pagamento.");
+            }
+            method = itemMethod;
+            gasReceived = gasReceived.add(item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
+        }
+        gasReceived = gasReceived.setScale(2, RoundingMode.HALF_UP);
+
+        Payment automatic = order.getPayments().stream().filter(Payment::isAutomaticGas).findFirst().orElse(null);
+        BigDecimal manualPaid = order.getPayments().stream()
+                .filter(payment -> !payment.isAutomaticGas())
+                .map(Payment::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal amountToRecord = gasReceived.subtract(manualPaid).max(BigDecimal.ZERO);
+        if (amountToRecord.signum() == 0) {
+            if (automatic != null) order.getPayments().remove(automatic);
+        } else if (automatic != null) {
+            automatic.setAmount(amountToRecord);
+            automatic.setMethod(method);
+            paymentRepository.save(automatic);
+        } else {
+            Payment payment = new Payment();
+            payment.setAutomaticGas(true);
+            payment.setAmount(amountToRecord);
+            payment.setMethod(method);
+            payment.setDate(LocalDateTime.now());
+            order.addPayment(payment);
+            paymentRepository.save(payment);
+        }
+        BigDecimal remaining = orderBalanceService.calculateRemainingBalance(order);
+        BigDecimal paid = orderBalanceService.calculatePaidAmount(order);
+        order.setPaymentStatus(remaining.signum() <= 0 ? PaymentStatus.PAID
+                : paid.signum() > 0 ? PaymentStatus.PARTIAL : PaymentStatus.PENDING);
+        repository.save(order);
+        clientService.calculateDebtBalance(order.getClient().getId());
+    }
+
+    /** Determina o custo do gás: prioriza o valor informado, senão usa o custo do produto. */
     private BigDecimal resolveGasCostPrice(OrderItem item, GasFinancialInfoRequest info) {
         return (info != null && info.gasCostPrice() != null)
                 ? info.gasCostPrice()
@@ -488,6 +540,9 @@ public class OrderService {
      * Substitui todos os itens do pedido existente pelos novos itens, aplicando validações e preços.
      */
     private void replaceOrderItems(Order existingOrder, List<OrderItem> newItems, Boolean isDelivery) {
+        existingOrder.getItems().stream()
+                .filter(item -> item.getProduct().getType() == ProductType.GAS)
+                .forEach(gasSettlementService::deleteByOrderItem);
         existingOrder.getItems().clear();
 
         int paidWatersInThisUpdate = (int) newItems.stream()
