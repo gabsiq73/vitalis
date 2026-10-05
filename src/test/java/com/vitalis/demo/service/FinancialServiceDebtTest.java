@@ -13,7 +13,6 @@ import com.vitalis.demo.repository.OrderRepository;
 import com.vitalis.demo.repository.PaymentRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -33,7 +32,7 @@ class FinancialServiceDebtTest {
     @Mock private GasSettlementRepository gasSettlementRepository;
     @Mock private CashMovementService cashMovementService;
     @Mock private CashMovementMapper cashMovementMapper;
-    @InjectMocks private FinancialService service;
+    private FinancialService service;
 
     private final LocalDate day = LocalDate.of(2026, 10, 5);
 
@@ -95,6 +94,9 @@ class FinancialServiceDebtTest {
     private DailyReportDTO summary(List<Order> orders) {
         when(orderRepository.findByCreateDateBetween(day.atStartOfDay(), day.atTime(LocalTime.MAX)))
                 .thenReturn(orders);
+        service = new FinancialService(orderRepository, paymentRepository, null, gasSettlementRepository,
+                cashMovementService, cashMovementMapper,
+                new OrderBalanceService(gasSettlementRepository), null);
         return service.generateOperationalSummary(day, day);
     }
 

@@ -7,6 +7,7 @@ import com.vitalis.demo.model.enums.CashMovementDirection;
 import com.vitalis.demo.model.enums.CashMovementType;
 import com.vitalis.demo.model.enums.OrderStatus;
 import com.vitalis.demo.repository.GasSettlementRepository;
+import com.vitalis.demo.repository.ClientCreditEntryRepository;
 import com.vitalis.demo.repository.OrderRepository;
 import com.vitalis.demo.repository.PaymentRepository;
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,7 @@ import static org.mockito.Mockito.*;
 class FinancialServiceCashTest {
     @Mock private OrderRepository orderRepository;
     @Mock private PaymentRepository paymentRepository;
+    @Mock private ClientCreditEntryRepository clientCreditEntryRepository;
     @Mock private GasSettlementRepository gasSettlementRepository;
     @Mock private CashMovementService cashMovementService;
     @Mock private CashMovementMapper cashMovementMapper;
@@ -51,7 +53,7 @@ class FinancialServiceCashTest {
         assertThat(report.totalEntries()).isEqualByComparingTo("30.00");
         assertThat(report.totalAdjustments()).isEqualByComparingTo("5.00");
         assertThat(report.totalWithdrawals()).isEqualByComparingTo("50.00");
-        assertThat(report.finalBalance()).isEqualByComparingTo("85.00");
+        assertThat(report.finalBalance()).isEqualByComparingTo("65.00");
         assertThat(report.getBalance()).isEqualByComparingTo("-20.00");
         verify(cashMovementService).findEntitiesBetween(day, day, null);
     }

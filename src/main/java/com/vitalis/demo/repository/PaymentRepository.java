@@ -2,6 +2,7 @@ package com.vitalis.demo.repository;
 
 import com.vitalis.demo.model.Order;
 import com.vitalis.demo.model.Payment;
+import com.vitalis.demo.model.enums.Method;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -22,9 +23,11 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
 
     List<Payment> findByCreateDateBetween(LocalDate start, LocalDate end);
 
-    List<Payment> findByDateBetweenOrderByDateDesc(LocalDateTime start, LocalDateTime end);
+    List<Payment> findByDateBetweenAndMethodNotOrderByDateDesc(LocalDateTime start, LocalDateTime end,
+                                                                Method method);
 
     @Query("SELECT SUM(p.amount) FROM Payment p " +
-           "WHERE p.date BETWEEN :start AND :end")
+           "WHERE p.date BETWEEN :start AND :end " +
+           "AND p.method <> com.vitalis.demo.model.enums.Method.SALDO")
     BigDecimal sumTotalReceived(@Param("start")LocalDateTime start, @Param("end") LocalDateTime end);
 }

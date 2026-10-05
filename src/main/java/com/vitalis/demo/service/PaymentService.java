@@ -3,26 +3,32 @@ package com.vitalis.demo.service;
 import com.vitalis.demo.dto.response.DailyCashPaymentDTO;
 import com.vitalis.demo.dto.response.OrderBalanceDTO;
 import com.vitalis.demo.dto.response.PaymentResponseDTO;
+import com.vitalis.demo.infra.exception.BusinessException;
 import com.vitalis.demo.infra.exception.ResourceNotFoundException;
 import com.vitalis.demo.mapper.PaymentMapper;
 import com.vitalis.demo.model.Client;
+import com.vitalis.demo.model.ClientCreditEntry;
 import com.vitalis.demo.model.Order;
 import com.vitalis.demo.model.Payment;
 import com.vitalis.demo.model.enums.Method;
 import com.vitalis.demo.model.enums.PaymentStatus;
 import com.vitalis.demo.repository.OrderRepository;
 import com.vitalis.demo.repository.PaymentRepository;
+import com.vitalis.demo.repository.ClientCreditEntryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +39,8 @@ public class PaymentService {
     private final OrderService orderService;
     private final ClientService clientService;
     private final PaymentMapper mapper;
+    private final OrderBalanceService orderBalanceService;
+    private final ClientCreditEntryRepository clientCreditEntryRepository;
 
     // Consultas
 
@@ -71,17 +79,12 @@ public class PaymentService {
         LocalDateTime start = date.atStartOfDay();
         LocalDateTime end   = date.atTime(LocalTime.MAX);
 
-        return repository.findByDateBetweenOrderByDateDesc(start, end).stream()
-                .map(p -> new DailyCashPaymentDTO(
-                        p.getId(),
-                        p.getOrder().getId(),
-                        "#" + p.getOrder().getId().toString().replace("-", "").substring(26).toUpperCase(),
-                        p.getOrder().getClient().getName(),
-                        p.getDate(),
-                        p.getAmount(),
-                        p.getMethod(),
-                        p.getNotes()
-                ))
+        return Stream.concat(
+                    repository.findByDateBetweenAndMethodNotOrderByDateDesc(start, end, Method.SALDO)
+                            .stream().map(mapper::toDailyCashPaymentDTO),
+                    clientCreditEntryRepository.findByDateBetweenOrderByDateDesc(start, end)
+                            .stream().map(mapper::toDailyCashPaymentDTO))
+                .sorted(Comparator.comparing(DailyCashPaymentDTO::paymentDate).reversed())
                 .toList();
     }
 
@@ -101,6 +104,9 @@ public class PaymentService {
     @Transactional
     public Payment registerPayment(Payment payment, UUID orderId) {
         Order order = orderService.findById(orderId);
+        if (orderBalanceService.hasSupplierCollectedGas(order)) {
+            throw new BusinessException("Gás recebido pelo entregador não aceita pagamento no depósito");
+        }
 
         consumeSaldoIfApplicable(payment, order.getClient().getId());
 
@@ -128,7 +134,8 @@ public class PaymentService {
      */
     @Transactional
     public void processBulkPayment(UUID clientId, BigDecimal amountReceived, Method paymentMethod) {
-        processBulkPaymentExcluding(clientId, amountReceived, paymentMethod, null);
+        processBulkPaymentExcluding(clientId, amountReceived, paymentMethod, null,
+                LocalDateTime.now(), null);
     }
 
     // Métodos privados — Fluxo de Pagamento Individual
@@ -176,7 +183,8 @@ public class PaymentService {
         Payment saved = applyPaymentToOrder(payment, order);
 
         BigDecimal excess = amountReceived.subtract(debtInThisOrder);
-        processBulkPaymentExcluding(order.getClient().getId(), excess, payment.getMethod(), order.getId());
+        processBulkPaymentExcluding(order.getClient().getId(), excess, payment.getMethod(), order.getId(),
+                payment.getDate(), saved);
 
         return saved;
     }
@@ -192,7 +200,8 @@ public class PaymentService {
      *                        Passe {@code null} quando não houver exclusão.
      */
     private void processBulkPaymentExcluding(UUID clientId, BigDecimal amountReceived,
-                                             Method paymentMethod, UUID excludedOrderId) {
+                                             Method paymentMethod, UUID excludedOrderId,
+                                             LocalDateTime receivedAt, Payment sourcePayment) {
         Client client = clientService.findById(clientId);
 
         List<Order> openOrders = fetchOpenOrdersExcluding(client, excludedOrderId);
@@ -202,10 +211,10 @@ public class PaymentService {
         for (Order order : openOrders) {
             if (fundsExhausted(remainingAmount)) break;
 
-            remainingAmount = applyFundsToOrder(order, remainingAmount, paymentMethod);
+            remainingAmount = applyFundsToOrder(order, remainingAmount, paymentMethod, receivedAt);
         }
 
-        creditRemainingFundsIfAny(clientId, remainingAmount);
+        creditRemainingFundsIfAny(client, remainingAmount, paymentMethod, receivedAt, sourcePayment);
         clientService.calculateDebtBalance(clientId);
     }
 
@@ -219,6 +228,7 @@ public class PaymentService {
                 .stream()
                 .filter(o -> o.getStatus() != com.vitalis.demo.model.enums.OrderStatus.CANCELLED)
                 .filter(o -> excludedOrderId == null || !o.getId().equals(excludedOrderId))
+                .filter(o -> !orderBalanceService.hasSupplierCollectedGas(o))
                 .toList();
     }
 
@@ -235,12 +245,13 @@ public class PaymentService {
      *
      * <p>Exemplo: disponível = R$ 100, dívida do pedido = R$ 40 → aplica R$ 40, retorna R$ 60.
      */
-    private BigDecimal applyFundsToOrder(Order order, BigDecimal availableAmount, Method paymentMethod) {
+    private BigDecimal applyFundsToOrder(Order order, BigDecimal availableAmount, Method paymentMethod,
+                                          LocalDateTime receivedAt) {
         BigDecimal debtInThisOrder = calculateOrderDebt(order);
         BigDecimal amountToApply = availableAmount.min(debtInThisOrder);
 
         if (amountToApply.compareTo(BigDecimal.ZERO) > 0) {
-            Payment payment = buildPayment(amountToApply, paymentMethod);
+            Payment payment = buildPayment(amountToApply, paymentMethod, receivedAt);
             applyPaymentToOrder(payment, order);
             return availableAmount.subtract(amountToApply);
         }
@@ -251,9 +262,19 @@ public class PaymentService {
     /**
      * Se sobrar crédito após quitar todos os pedidos abertos, adiciona ao saldo do cliente.
      */
-    private void creditRemainingFundsIfAny(UUID clientId, BigDecimal remainingAmount) {
+    private void creditRemainingFundsIfAny(Client client, BigDecimal remainingAmount, Method method,
+                                           LocalDateTime receivedAt, Payment sourcePayment) {
         if (remainingAmount.compareTo(BigDecimal.ZERO) > 0) {
-            clientService.addCreditBalance(clientId, remainingAmount);
+            clientService.addCreditBalance(client.getId(), remainingAmount);
+            if (method == Method.PIX || method == Method.DINHEIRO) {
+                ClientCreditEntry entry = new ClientCreditEntry();
+                entry.setClient(client);
+                entry.setAmount(remainingAmount.setScale(2, RoundingMode.HALF_UP));
+                entry.setMethod(method);
+                entry.setDate(receivedAt);
+                entry.setSourcePayment(sourcePayment);
+                clientCreditEntryRepository.save(entry);
+            }
         }
     }
 
@@ -298,10 +319,10 @@ public class PaymentService {
      * Constrói um {@link Payment} transiente para uso interno no fluxo de bulk.
      * A associação com o pedido é feita em {@link #applyPaymentToOrder}.
      */
-    private Payment buildPayment(BigDecimal amount, Method method) {
+    private Payment buildPayment(BigDecimal amount, Method method, LocalDateTime receivedAt) {
         Payment payment = new Payment();
         payment.setAmount(amount);
-        payment.setDate(LocalDateTime.now());
+        payment.setDate(receivedAt);
         payment.setMethod(method);
         return payment;
     }
@@ -312,24 +333,20 @@ public class PaymentService {
      * Dívida restante do pedido = valor total dos itens − total já pago.
      */
     private BigDecimal calculateOrderDebt(Order order) {
-        return calculateTotalAmount(order).subtract(calculatePaidAmount(order));
+        return orderBalanceService.calculateRemainingBalance(order);
     }
 
     /**
      * Soma o valor de todos os itens do pedido (unitPrice × quantidade).
      */
     private BigDecimal calculateTotalAmount(Order order) {
-        return order.getItems().stream()
-                .map(item -> item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return order.getTotalValue();
     }
 
     /**
-     * Soma todos os pagamentos já registrados no pedido.
+     * Soma pagamentos e itens de gás quitados diretamente com o entregador.
      */
     private BigDecimal calculatePaidAmount(Order order) {
-        return order.getPayments().stream()
-                .map(Payment::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return orderBalanceService.calculatePaidAmount(order);
     }
 }

@@ -14,6 +14,7 @@ public record DailyCashPaymentDTO(
         LocalDateTime paymentDate,
         BigDecimal amount,
         Method paymentMethod,
-        String notes
+        String notes,
+        String entryType
 ) {
 }

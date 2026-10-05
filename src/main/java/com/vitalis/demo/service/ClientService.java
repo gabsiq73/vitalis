@@ -6,7 +6,6 @@ import com.vitalis.demo.infra.exception.ResourceNotFoundException;
 import com.vitalis.demo.mapper.ClientMapper;
 import com.vitalis.demo.model.Client;
 import com.vitalis.demo.model.Order;
-import com.vitalis.demo.model.Payment;
 import com.vitalis.demo.model.enums.ClientStatus;
 import com.vitalis.demo.model.enums.ClientType;
 import com.vitalis.demo.model.enums.OrderStatus;
@@ -32,6 +31,7 @@ public class ClientService {
     private final OrderRepository orderRepository;
     private final ClientMapper clientMapper;
     private final ClientValidator validator;
+    private final OrderBalanceService orderBalanceService;
 
     public Client findById(UUID id) {
         return findByIdOptional(id)
@@ -116,19 +116,9 @@ public class ClientService {
         List<Order> orders = orderRepository.findByClientAndStatus(client, OrderStatus.DELIVERED);
 
 
-        //Soma de todos os pedidos DELIVERED do cliente
-        BigDecimal totalBought = orders.stream()
-                .map(this::sumOrderItems)
+        BigDecimal outstandingBalance = orders.stream()
+                .map(orderBalanceService::calculateRemainingBalance)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        //Pega o total pago pelo cliente
-        BigDecimal totalPaid = orders.stream()
-                .flatMap(order -> order.getPayments().stream())
-                .map(Payment::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        // Calcula o resultado final = comprado - pago
-        BigDecimal outstandingBalance = totalBought.subtract(totalPaid);
 
         // Persiste o saldo líquido: crédito existente abatido pela dívida dos pedidos entregues.
         BigDecimal current = client.getBalance() != null ? client.getBalance() : BigDecimal.ZERO;
@@ -152,16 +142,9 @@ public class ClientService {
         Client client = findById(clientId);
         List<Order> orders = orderRepository.findByClientAndStatus(client, OrderStatus.DELIVERED);
 
-        BigDecimal totalBought = orders.stream()
-                .map(this::sumOrderItems)
+        return orders.stream()
+                .map(orderBalanceService::calculateRemainingBalance)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        BigDecimal totalPaid = orders.stream()
-                .flatMap(order -> order.getPayments().stream())
-                .map(Payment::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        return totalBought.subtract(totalPaid);
     }
 
     @Transactional
@@ -187,12 +170,6 @@ public class ClientService {
     public void addPointsFidelity(UUID id, Integer points){
         Client client = findById(id);
         client.getFidelity().addPoints(points);
-    }
-
-    private BigDecimal sumOrderItems(Order order){
-        return order.getItems().stream()
-                .map(item -> item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     public void updateBottleBalance(UUID clientId, Integer quantity){

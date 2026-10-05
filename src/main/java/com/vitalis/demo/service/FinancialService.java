@@ -4,8 +4,11 @@ import com.vitalis.demo.dto.response.DailyReportDTO;
 import com.vitalis.demo.dto.response.FinancialReportDTO;
 import com.vitalis.demo.dto.response.InventoryFlowDTO;
 import com.vitalis.demo.dto.response.CashMovementResponseDTO;
+import com.vitalis.demo.dto.response.GasSettlementMovementDTO;
 import com.vitalis.demo.mapper.CashMovementMapper;
+import com.vitalis.demo.mapper.GasSettlementMapper;
 import com.vitalis.demo.model.CashMovement;
+import com.vitalis.demo.model.GasSettlement;
 import com.vitalis.demo.model.enums.CashMovementDirection;
 import com.vitalis.demo.model.enums.CashMovementType;
 import com.vitalis.demo.model.Order;
@@ -14,9 +17,11 @@ import com.vitalis.demo.model.Payment;
 import com.vitalis.demo.model.enums.Method;
 import com.vitalis.demo.model.enums.OrderStatus;
 import com.vitalis.demo.model.enums.ProductType;
+import com.vitalis.demo.model.enums.SettlementType;
 import com.vitalis.demo.repository.GasSettlementRepository;
 import com.vitalis.demo.repository.OrderRepository;
 import com.vitalis.demo.repository.PaymentRepository;
+import com.vitalis.demo.repository.ClientCreditEntryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,9 +42,12 @@ public class FinancialService {
 
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
+    private final ClientCreditEntryRepository clientCreditEntryRepository;
     private final GasSettlementRepository gasSettlementRepository;
     private final CashMovementService cashMovementService;
     private final CashMovementMapper cashMovementMapper;
+    private final OrderBalanceService orderBalanceService;
+    private final GasSettlementMapper gasSettlementMapper;
 
     // Relatório Financeiro
 
@@ -63,10 +71,26 @@ public class FinancialService {
             }
         }
         List<CashMovementResponseDTO> details = movements.stream().map(cashMovementMapper::toResponseDTO).toList();
+        List<GasSettlement> settlements = gasSettlementRepository
+                .findBySettledTrueAndSettledDateBetweenOrderBySettledDateDesc(
+                        date.atStartOfDay(), date.atTime(LocalTime.MAX));
+        BigDecimal gasIn = BigDecimal.ZERO;
+        BigDecimal gasOut = BigDecimal.ZERO;
+        for (GasSettlement settlement : settlements) {
+            if (settlement.getSettlementType() == SettlementType.SUPPLIER_OWE) {
+                gasIn = gasIn.add(settlement.getAmount());
+            } else if (settlement.getSettlementType() == SettlementType.YOU_OWE) {
+                gasOut = gasOut.add(settlement.getAmount());
+            }
+        }
+        List<GasSettlementMovementDTO> gasDetails = settlements.stream()
+                .map(gasSettlementMapper::toMovementDTO).toList();
+        // A margem já aparece no acerto liquidado; somar gasGrossProfit duplicaria o gás.
         return new FinancialReportDTO(base.totalInvoiced(), base.totalReceived(), base.gasGrossProfit(),
                 base.getBalance(), entries, adjustments, withdrawals,
-                base.totalReceived().add(base.gasGrossProfit()).add(entries).add(adjustments).subtract(withdrawals),
-                details);
+                base.totalReceived().add(entries).add(adjustments).subtract(withdrawals)
+                        .add(gasIn).subtract(gasOut),
+                details, gasIn, gasOut, gasDetails);
     }
 
     /**
@@ -84,7 +108,8 @@ public class FinancialService {
         LocalDateTime end = endDate.atTime(LocalTime.MAX);
 
         BigDecimal invoiced  = safeQuery(orderRepository.sumTotalAmount(OrderStatus.DELIVERED, start, end));
-        BigDecimal received  = safeQuery(paymentRepository.sumTotalReceived(start, end));
+        BigDecimal received  = safeQuery(paymentRepository.sumTotalReceived(start, end))
+                .add(safeQuery(clientCreditEntryRepository.sumAmountBetween(start, end)));
         BigDecimal gasProfit = safeQuery(gasSettlementRepository.sumTotalProfit(start, end));
 
         return new FinancialReportDTO(invoiced, received, gasProfit);
@@ -211,11 +236,7 @@ public class FinancialService {
      * Positivo = ainda deve. Negativo = pagou a mais (crédito).
      */
     private BigDecimal calculateOrderBalance(Order order) {
-        BigDecimal totalPaid = order.getPayments().stream()
-                .map(Payment::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        return order.getTotalValue().subtract(totalPaid);
+        return orderBalanceService.calculateRemainingBalance(order);
     }
 
     // Métodos privados — Contadores de Estoque

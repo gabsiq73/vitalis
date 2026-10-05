@@ -16,6 +16,7 @@ import com.vitalis.demo.model.enums.PaymentStatus;
 import com.vitalis.demo.model.enums.ProductType;
 import com.vitalis.demo.repository.LoanedBottleRepository;
 import com.vitalis.demo.repository.OrderRepository;
+import com.vitalis.demo.repository.ClientCreditEntryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -35,6 +36,8 @@ public class OrderService {
     private final com.vitalis.demo.repository.PaymentRepository paymentRepository;
     private final com.vitalis.demo.repository.LoanedBottleRepository loanedBottleRepository;
     private final SystemConfigService systemConfigService;
+    private final OrderBalanceService orderBalanceService;
+    private final ClientCreditEntryRepository clientCreditEntryRepository;
 
     private final ClientService clientService;
     private final ClientPriceService clientPriceService;
@@ -93,7 +96,10 @@ public class OrderService {
     @Transactional(readOnly = true)
     public List<Order> findOpenOrdersByClient(UUID id) {
         Client client = clientService.findById(id);
-        return repository.findByClientAndPaymentStatusNotOrderByCreateDateAsc(client, PaymentStatus.PAID);
+        return repository.findByClientAndPaymentStatusNotOrderByCreateDateAsc(client, PaymentStatus.PAID).stream()
+                .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
+                .filter(order -> orderBalanceService.calculateRemainingBalance(order).signum() > 0)
+                .toList();
     }
 
     @Transactional
@@ -116,7 +122,13 @@ public class OrderService {
             if (!items.isEmpty()) {
                 Order subOrder = prepareSubOrder(prototype, items, isGas, dto.isDelivery());
                 Order saved = repository.save(subOrder);
-                if (isGas) processGasSettlementsForOrder(saved, financialMap);
+                if (isGas) {
+                    processGasSettlementsForOrder(saved, financialMap);
+                    if (orderBalanceService.calculateRemainingBalance(saved).signum() == 0) {
+                        saved.setPaymentStatus(PaymentStatus.PAID);
+                        repository.save(saved);
+                    }
+                }
                 if (!Boolean.TRUE.equals(dto.isDelivery())) confirmDelivery(saved.getId());
                 savedOrders.add(saved);
             }
@@ -188,6 +200,7 @@ public class OrderService {
             if (order.getStatus() == OrderStatus.DELIVERED) {
                 throw new BusinessException("Não é possível anular um pedido já entregue.");
             }
+            removeCreditEntriesForPayments(order);
             refundSaldoPayments(order);
             repository.deleteById(orderId);
         });
@@ -206,6 +219,7 @@ public class OrderService {
             revertDeliveredOrder(order);
         }
 
+        removeCreditEntriesForPayments(order);
         refundSaldoPayments(order);
         order.getPayments().clear(); // orphanRemoval=true deletes them on save
 
@@ -223,6 +237,12 @@ public class OrderService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         if (saldoTotal.compareTo(BigDecimal.ZERO) > 0) {
             clientService.addCreditBalance(order.getClient().getId(), saldoTotal);
+        }
+    }
+
+    private void removeCreditEntriesForPayments(Order order) {
+        if (!order.getPayments().isEmpty()) {
+            clientCreditEntryRepository.deleteBySourcePaymentIn(order.getPayments());
         }
     }
 
