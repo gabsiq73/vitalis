@@ -4,6 +4,7 @@ import com.vitalis.demo.model.Order;
 import com.vitalis.demo.model.OrderItem;
 import com.vitalis.demo.model.Payment;
 import com.vitalis.demo.model.enums.ProductType;
+import com.vitalis.demo.model.enums.OrderStatus;
 import com.vitalis.demo.model.enums.SettlementType;
 import com.vitalis.demo.repository.GasSettlementRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class OrderBalanceService {
 
     @Transactional(readOnly = true)
     public BigDecimal calculatePaidAmount(Order order) {
+        if (order.getStatus() == OrderStatus.CANCELLED) return BigDecimal.ZERO;
         BigDecimal recordedPayments = order.getPayments().stream()
                 .map(Payment::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -38,6 +40,7 @@ public class OrderBalanceService {
 
     @Transactional(readOnly = true)
     public BigDecimal calculateRemainingBalance(Order order) {
+        if (order.getStatus() == OrderStatus.CANCELLED) return BigDecimal.ZERO;
         return order.getTotalValue().subtract(calculatePaidAmount(order));
     }
 

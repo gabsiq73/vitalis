@@ -11,6 +11,7 @@ import com.vitalis.demo.model.ClientCreditEntry;
 import com.vitalis.demo.model.Order;
 import com.vitalis.demo.model.Payment;
 import com.vitalis.demo.model.enums.Method;
+import com.vitalis.demo.model.enums.OrderStatus;
 import com.vitalis.demo.model.enums.PaymentStatus;
 import com.vitalis.demo.repository.OrderRepository;
 import com.vitalis.demo.repository.PaymentRepository;
@@ -68,7 +69,7 @@ public class PaymentService {
         Order order = orderService.findById(orderId);
         return new OrderBalanceDTO(
                 order.getId(),
-                calculateTotalAmount(order),
+                order.getStatus() == OrderStatus.CANCELLED ? BigDecimal.ZERO : calculateTotalAmount(order),
                 calculatePaidAmount(order),
                 calculateOrderDebt(order)
         );
@@ -104,6 +105,9 @@ public class PaymentService {
     @Transactional
     public Payment registerPayment(Payment payment, UUID orderId) {
         Order order = orderService.findById(orderId);
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            throw new BusinessException("Pedido cancelado não aceita pagamento.");
+        }
         if (orderBalanceService.hasSupplierCollectedGas(order)) {
             throw new BusinessException("Gás recebido pelo entregador não aceita pagamento no depósito");
         }

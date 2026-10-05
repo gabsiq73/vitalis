@@ -117,10 +117,12 @@ public class OrderService {
         // Segue a partição (Gás vs Água)
         Map<Boolean, List<OrderItem>> partitionedItems = partitionItemsByType(prototype);
         List<Order> savedOrders = new ArrayList<>();
+        UUID cancellationGroup = UUID.randomUUID();
 
         partitionedItems.forEach((isGas, items) -> {
             if (!items.isEmpty()) {
                 Order subOrder = prepareSubOrder(prototype, items, isGas, dto.isDelivery());
+                subOrder.setCancellationGroup(cancellationGroup);
                 Order saved = repository.save(subOrder);
                 if (isGas) {
                     processGasSettlementsForOrder(saved, financialMap);
@@ -166,6 +168,9 @@ public class OrderService {
     public void confirmDelivery(UUID orderId) {
         Order order = findById(orderId);
 
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            throw new BusinessException("Pedido cancelado não pode ser entregue.");
+        }
         checkOrderIsNotAlreadyDelivered(order);
         checkOrderHasItems(order);
 
@@ -189,6 +194,9 @@ public class OrderService {
         }
 
         Order order = findById(orderId);
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            throw new BusinessException("Pedido cancelado não pode mudar de status.");
+        }
         order.setStatus(newStatus);
         repository.save(order);
     }
@@ -210,13 +218,28 @@ public class OrderService {
     @Transactional
     public void cancelOrder(UUID orderId) {
         Order order = findById(orderId);
+        List<Order> group = order.getCancellationGroup() == null
+                ? List.of(order)
+                : repository.findByCancellationGroup(order.getCancellationGroup());
+        if (group.isEmpty()) group = List.of(order);
+        boolean changed = false;
+        for (Order member : group) {
+            if (member.getStatus() != OrderStatus.CANCELLED) {
+                cancelOneOrder(member);
+                changed = true;
+            }
+        }
+        if (changed) clientService.calculateDebtBalance(order.getClient().getId());
+    }
 
-        checkOrderIsNotAlreadyCancelled(order);
-
+    private void cancelOneOrder(Order order) {
         restoreBonusIfOrderUsedFidelityRedemption(order);
 
         if (order.getStatus() == OrderStatus.DELIVERED) {
             revertDeliveredOrder(order);
+        } else {
+            removeGasSettlements(order);
+            loanedBottleRepository.deleteAll(loanedBottleRepository.findByOrder_Id(order.getId()));
         }
 
         removeCreditEntriesForPayments(order);
@@ -226,8 +249,6 @@ public class OrderService {
         order.setStatus(OrderStatus.CANCELLED);
         order.setPaymentStatus(PaymentStatus.CANCELLED);
         repository.save(order);
-
-        clientService.calculateDebtBalance(order.getClient().getId());
     }
 
     private void refundSaldoPayments(Order order) {
@@ -242,6 +263,12 @@ public class OrderService {
 
     private void removeCreditEntriesForPayments(Order order) {
         if (!order.getPayments().isEmpty()) {
+            BigDecimal creditToReverse = clientCreditEntryRepository.findBySourcePaymentIn(order.getPayments()).stream()
+                    .map(ClientCreditEntry::getAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            if (creditToReverse.signum() > 0) {
+                clientService.consumeCreditBalance(order.getClient().getId(), creditToReverse);
+            }
             clientCreditEntryRepository.deleteBySourcePaymentIn(order.getPayments());
         }
     }
@@ -534,15 +561,18 @@ public class OrderService {
     private void revertDeliveredOrder(Order order) {
         order.getItems().forEach(item -> {
             stockService.increaseStock(item.getProduct(), item.getQuantity());
-
-            if (item.getProduct().getType() == ProductType.GAS) {
-                gasSettlementService.deleteByOrderItem(item);
-            }
-
             reverseFidelityPointsIfEligible(order.getClient(), item);
         });
 
+        removeGasSettlements(order);
+
         loanedBottleRepository.deleteAll(loanedBottleRepository.findByOrder_Id(order.getId()));
+    }
+
+    private void removeGasSettlements(Order order) {
+        order.getItems().stream()
+                .filter(item -> item.getProduct().getType() == ProductType.GAS)
+                .forEach(gasSettlementService::deleteByOrderItem);
     }
 
     /**
@@ -573,12 +603,6 @@ public class OrderService {
     private void checkOrderIsNotAlreadyDelivered(Order order) {
         if (order.getStatus() == OrderStatus.DELIVERED) {
             throw new BusinessException("Este pedido já foi entregue!");
-        }
-    }
-
-    private void checkOrderIsNotAlreadyCancelled(Order order) {
-        if (order.getStatus() == OrderStatus.CANCELLED) {
-            throw new BusinessException("Este pedido já foi cancelado!");
         }
     }
 

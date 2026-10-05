@@ -8,6 +8,7 @@ import com.vitalis.demo.mapper.GasSettlementMapper;
 import com.vitalis.demo.model.GasSettlement;
 import com.vitalis.demo.model.OrderItem;
 import com.vitalis.demo.model.enums.SettlementType;
+import com.vitalis.demo.model.enums.OrderStatus;
 import com.vitalis.demo.repository.GasSettlementRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -41,7 +42,9 @@ public class GasSettlementService {
 
     @Transactional(readOnly = true)
     public List<GasSettlement> findAll() {
-        return repository.findAll();
+        return repository.findAll().stream()
+                .filter(s -> s.getOrderItem() == null || s.getOrderItem().getOrder().getStatus() != OrderStatus.CANCELLED)
+                .toList();
     }
 
     @Transactional
@@ -92,6 +95,11 @@ public class GasSettlementService {
     public void settleIndividual(UUID settlementId){
         GasSettlement settlement = repository.findById(settlementId)
                 .orElseThrow(() -> new ResourceNotFoundException("Acerto não encontrado!"));
+
+        if (settlement.getOrderItem() != null
+                && settlement.getOrderItem().getOrder().getStatus() == OrderStatus.CANCELLED) {
+            throw new BusinessException("Acerto de pedido cancelado não pode ser liquidado.");
+        }
 
         if(Boolean.TRUE.equals(settlement.getSettled())){
             throw new BusinessException("Este acerto já foi liquidado!");

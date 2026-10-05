@@ -28,6 +28,8 @@ public interface OrderRepository extends JpaRepository<Order, UUID>, JpaSpecific
 
     List<Order> findByStatus(OrderStatus status);
 
+    List<Order> findByCancellationGroup(UUID cancellationGroup);
+
     List<Order> findByClientAndStatus(Client client, OrderStatus status);
 
     List<Order> findByClientAndPaymentStatusNotOrderByCreateDateAsc(Client client, PaymentStatus status);

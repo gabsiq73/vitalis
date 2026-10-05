@@ -32,6 +32,9 @@ public class Order extends BaseEntity{
     @Column(name = "ORD_id")
     private UUID id;
 
+    @Column(name = "ORD_cancellation_group")
+    private UUID cancellationGroup;
+
     @Column(name = "ORD_deliveryDate")
     private LocalDateTime deliveryDate;
 
