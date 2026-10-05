@@ -557,7 +557,8 @@ class GasSettlementServiceTest {
      * Necessário pois record não possui construtor vazio.
      */
     private GasSettlementResponseDTO stubGasSettlementResponseDTO() {
-        return new GasSettlementResponseDTO(null, null, null, null, null, null, null);
+        return new GasSettlementResponseDTO(null, null, null, null, null, null, null,
+                null, null, null, null, null, null);
     }
 
     private GasSettlement buildPendingSettlement() {

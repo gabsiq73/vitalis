@@ -696,7 +696,7 @@ class OrderServiceTest {
      * Ordem real do record: OrderRequestDTOv2(clientId, items, deliveryDate, isDelivery)
      */
     private OrderRequestDTOv2 buildDto(UUID clientId, OrderItemRequestDTO... items) {
-        return new OrderRequestDTOv2(clientId, List.of(items), null, true);
+        return new OrderRequestDTOv2(clientId, List.of(items), null, true, null);
     }
 
     /**
@@ -705,7 +705,7 @@ class OrderServiceTest {
      * Ordem real do record: (productId, quantity, bottleExpiration, supplierId, gasCostPrice, receivedByUs)
      */
     private OrderItemRequestDTO buildWaterItemDto(int quantity) {
-        return new OrderItemRequestDTO(waterProduct.getId(), quantity, null, null, null, null);
+        return new OrderItemRequestDTO(waterProduct.getId(), quantity, null, null, null, null, null);
     }
 
     /**
@@ -714,7 +714,7 @@ class OrderServiceTest {
      */
     private OrderItemRequestDTO buildGasItemDto(int quantity) {
         return new OrderItemRequestDTO(gasProduct.getId(), quantity, null,
-                supplier.getId(), gasProduct.getCostPrice(), true);
+                supplier.getId(), gasProduct.getCostPrice(), true, null);
     }
 
     /**
@@ -786,6 +786,6 @@ class OrderServiceTest {
     }
 
     private OrderResponseDTO stubDTO() {
-        return new OrderResponseDTO(null, null, null, null, null, null, List.of(), null, null);
+        return new OrderResponseDTO(null, null, null, null, null, null, List.of(), null, null, null, null);
     }
 }

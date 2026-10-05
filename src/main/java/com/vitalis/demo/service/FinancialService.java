@@ -3,6 +3,11 @@ package com.vitalis.demo.service;
 import com.vitalis.demo.dto.response.DailyReportDTO;
 import com.vitalis.demo.dto.response.FinancialReportDTO;
 import com.vitalis.demo.dto.response.InventoryFlowDTO;
+import com.vitalis.demo.dto.response.CashMovementResponseDTO;
+import com.vitalis.demo.mapper.CashMovementMapper;
+import com.vitalis.demo.model.CashMovement;
+import com.vitalis.demo.model.enums.CashMovementDirection;
+import com.vitalis.demo.model.enums.CashMovementType;
 import com.vitalis.demo.model.Order;
 import com.vitalis.demo.model.OrderItem;
 import com.vitalis.demo.model.Payment;
@@ -30,6 +35,8 @@ public class FinancialService {
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
     private final GasSettlementRepository gasSettlementRepository;
+    private final CashMovementService cashMovementService;
+    private final CashMovementMapper cashMovementMapper;
 
     // Relatório Financeiro
 
@@ -39,7 +46,24 @@ public class FinancialService {
      */
     @Transactional(readOnly = true)
     public FinancialReportDTO findDailyFinancialPerformance(LocalDate date) {
-        return generateFinancialReport(date, date);
+        FinancialReportDTO base = generateFinancialReport(date, date);
+        List<CashMovement> movements = cashMovementService.findEntitiesBetween(date, date, null);
+        BigDecimal entries = BigDecimal.ZERO;
+        BigDecimal adjustments = BigDecimal.ZERO;
+        BigDecimal withdrawals = BigDecimal.ZERO;
+        for (CashMovement movement : movements) {
+            if (movement.getType() == CashMovementType.ENTRY) entries = entries.add(movement.getAmount());
+            else if (movement.getType() == CashMovementType.WITHDRAWAL) withdrawals = withdrawals.add(movement.getAmount());
+            else if (movement.getType() == CashMovementType.ADJUSTMENT) {
+                adjustments = adjustments.add(movement.getDirection() == CashMovementDirection.IN
+                        ? movement.getAmount() : movement.getAmount().negate());
+            }
+        }
+        List<CashMovementResponseDTO> details = movements.stream().map(cashMovementMapper::toResponseDTO).toList();
+        return new FinancialReportDTO(base.totalInvoiced(), base.totalReceived(), base.gasGrossProfit(),
+                base.getBalance(), entries, adjustments, withdrawals,
+                base.totalReceived().add(base.gasGrossProfit()).add(entries).add(adjustments).subtract(withdrawals),
+                details);
     }
 
     /**
