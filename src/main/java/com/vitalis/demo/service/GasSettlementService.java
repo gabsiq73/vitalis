@@ -41,6 +41,20 @@ public class GasSettlementService {
     }
 
     @Transactional(readOnly = true)
+    public Optional<GasSettlement> findByOrderItem(OrderItem item) {
+        return repository.findByOrderItem(item);
+    }
+
+    @Transactional
+    public void updateAutomatedSettlement(GasSettlement settlement, OrderItem item,
+                                          boolean receivedByUs, BigDecimal costPrice) {
+        settlement.setGasSupplier(item.getGasSupplier());
+        settlement.setSettlementType(receivedByUs ? SettlementType.YOU_OWE : SettlementType.SUPPLIER_OWE);
+        settlement.setAmount(receivedByUs ? costPrice : item.getUnitPrice().subtract(costPrice));
+        repository.save(settlement);
+    }
+
+    @Transactional(readOnly = true)
     public List<GasSettlement> findAll() {
         return repository.findAll().stream()
                 .filter(s -> s.getOrderItem() == null || s.getOrderItem().getOrder().getStatus() != OrderStatus.CANCELLED)

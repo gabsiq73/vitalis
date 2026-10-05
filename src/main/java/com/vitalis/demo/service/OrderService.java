@@ -14,6 +14,7 @@ import com.vitalis.demo.model.enums.Method;
 import com.vitalis.demo.model.enums.OrderStatus;
 import com.vitalis.demo.model.enums.PaymentStatus;
 import com.vitalis.demo.model.enums.ProductType;
+import com.vitalis.demo.model.enums.SettlementType;
 import com.vitalis.demo.repository.LoanedBottleRepository;
 import com.vitalis.demo.repository.OrderRepository;
 import com.vitalis.demo.repository.ClientCreditEntryRepository;
@@ -159,11 +160,12 @@ public class OrderService {
 
         // 3. Aplica a lógica de negócio de substituição
         Map<UUID, GasFinancialInfoRequest> financialMap = orderMapper.extractFinancialInfo(dto);
-        replaceOrderItems(existingOrder, newItems, dto.isDelivery());
+        boolean gasChanged = replaceOrderItems(existingOrder, newItems, dto.isDelivery(), financialMap);
 
         Order savedOrder = repository.save(existingOrder);
-        processGasSettlementsOnUpdate(savedOrder, financialMap);
-        syncAutomaticGasPayment(savedOrder, financialMap);
+        if (gasChanged || gasPaymentMethodChanged(savedOrder, financialMap)) {
+            syncAutomaticGasPayment(savedOrder, financialMap);
+        }
 
         return orderMapper.toResponseDTO(savedOrder);
     }
@@ -465,18 +467,15 @@ public class OrderService {
         });
     }
 
-    /**
-     * Processa os acertos financeiros de todos os itens de gás de um pedido atualizado.
-     * Sempre usa o custo fixo do cadastro do produto (regra de negócio de atualização).
-     */
-    private void processGasSettlementsOnUpdate(Order savedOrder, Map<UUID, GasFinancialInfoRequest> financialMap) {
-        savedOrder.getItems().forEach(item -> {
-            if (item.getProduct().getType() == ProductType.GAS) {
-                GasFinancialInfoRequest info = financialMap.get(item.getProduct().getId());
-                Boolean receivedByUs = info != null ? info.receivedByUs() : false;
-                processGasFinancials(item, receivedByUs, item.getProduct().getCostPrice());
-            }
-        });
+    /** Detecta uma troca explícita do método de pagamento do gás. */
+    private boolean gasPaymentMethodChanged(Order order, Map<UUID, GasFinancialInfoRequest> financialMap) {
+        Method current = order.getPayments().stream().filter(Payment::isAutomaticGas).findFirst()
+                .or(() -> order.getPayments().stream().filter(payment -> !payment.isAutomaticGas()).findFirst())
+                .map(Payment::getMethod).orElse(null);
+        return order.getItems().stream().filter(item -> item.getProduct().getType() == ProductType.GAS)
+                .map(item -> financialMap.get(item.getProduct().getId()))
+                .filter(Objects::nonNull).map(GasFinancialInfoRequest::gasPaymentMethod)
+                .filter(Objects::nonNull).anyMatch(method -> method != current);
     }
 
     /** Registra apenas o valor de gás recebido no depósito e reconcilia edições. */
@@ -488,7 +487,16 @@ public class OrderService {
             GasFinancialInfoRequest info = financialMap.get(item.getProduct().getId());
             if (info == null || !Boolean.TRUE.equals(info.receivedByUs())) continue;
             Method itemMethod = info.gasPaymentMethod();
-            if (itemMethod != Method.PIX && itemMethod != Method.DINHEIRO) {
+            if (itemMethod == null) {
+                itemMethod = order.getPayments().stream().filter(Payment::isAutomaticGas).findFirst()
+                        .or(() -> order.getPayments().stream()
+                                .filter(payment -> !payment.isAutomaticGas()).findFirst())
+                        .map(Payment::getMethod).orElse(null);
+            }
+            boolean existingPayment = !order.getPayments().isEmpty();
+            if (itemMethod != Method.PIX && itemMethod != Method.DINHEIRO
+                    && item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())).signum() > 0
+                    && !(info.gasPaymentMethod() == null && existingPayment)) {
                 throw new BusinessException("Gás recebido pelo depósito exige pagamento em PIX ou DINHEIRO.");
             }
             if (method != null && method != itemMethod) {
@@ -504,6 +512,12 @@ public class OrderService {
                 .filter(payment -> !payment.isAutomaticGas())
                 .map(Payment::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal amountToRecord = gasReceived.subtract(manualPaid).max(BigDecimal.ZERO);
+        boolean hasManual = order.getPayments().stream().anyMatch(payment -> !payment.isAutomaticGas());
+        boolean explicitMethod = order.getItems().stream()
+                .filter(item -> item.getProduct().getType() == ProductType.GAS)
+                .map(item -> financialMap.get(item.getProduct().getId()))
+                .filter(Objects::nonNull).anyMatch(info -> info.gasPaymentMethod() != null);
+        if (automatic == null && hasManual && !explicitMethod) amountToRecord = BigDecimal.ZERO;
         if (amountToRecord.signum() == 0) {
             if (automatic != null) order.getPayments().remove(automatic);
         } else if (automatic != null) {
@@ -539,11 +553,11 @@ public class OrderService {
     /**
      * Substitui todos os itens do pedido existente pelos novos itens, aplicando validações e preços.
      */
-    private void replaceOrderItems(Order existingOrder, List<OrderItem> newItems, Boolean isDelivery) {
-        existingOrder.getItems().stream()
-                .filter(item -> item.getProduct().getType() == ProductType.GAS)
-                .forEach(gasSettlementService::deleteByOrderItem);
-        existingOrder.getItems().clear();
+    private boolean replaceOrderItems(Order existingOrder, List<OrderItem> newItems, Boolean isDelivery,
+                                      Map<UUID, GasFinancialInfoRequest> financialMap) {
+        List<OrderItem> oldItems = new ArrayList<>(existingOrder.getItems());
+        List<OrderItem> updatedItems = new ArrayList<>();
+        boolean gasChanged = false;
 
         int paidWatersInThisUpdate = (int) newItems.stream()
                 .filter(item -> item.getProduct().getType() == ProductType.WATER)
@@ -559,8 +573,69 @@ public class OrderService {
                 resolveGasSupplier(newItem);
             }
 
-            existingOrder.addItem(newItem);
+            if (newItem.getProduct().getType() != ProductType.GAS) {
+                updatedItems.add(newItem);
+                continue;
+            }
+            OrderItem oldItem = oldItems.stream()
+                    .filter(item -> item.getProduct().getType() == ProductType.GAS)
+                    .filter(item -> item.getProduct().getId().equals(newItem.getProduct().getId()))
+                    .filter(item -> !updatedItems.contains(item)).findFirst().orElse(null);
+            GasFinancialInfoRequest info = financialMap.get(newItem.getProduct().getId());
+            if (oldItem == null) {
+                updatedItems.add(newItem);
+                gasChanged = true;
+                continue;
+            }
+            GasSettlement settlement = gasSettlementService.findByOrderItem(oldItem)
+                    .orElseThrow(() -> new BusinessException("Acerto de gás não encontrado para o item do pedido."));
+            boolean currentReceived = settlement.getSettlementType() == SettlementType.YOU_OWE;
+            boolean received = info == null || info.receivedByUs() == null
+                    ? currentReceived : info.receivedByUs();
+            BigDecimal currentCost = currentReceived ? settlement.getAmount()
+                    : oldItem.getUnitPrice().subtract(settlement.getAmount());
+            BigDecimal cost = info != null && info.gasCostPrice() != null ? info.gasCostPrice() : currentCost;
+            BigDecimal newAmount = received ? cost : newItem.getUnitPrice().subtract(cost);
+            boolean valueChanged = newItem.getUnitPrice().compareTo(oldItem.getUnitPrice()) != 0
+                    || !newItem.getQuantity().equals(oldItem.getQuantity());
+            boolean settlementChanged = received != currentReceived
+                    || newAmount.compareTo(settlement.getAmount()) != 0
+                    || !newItem.getGasSupplier().equals(oldItem.getGasSupplier());
+            if ((settlementChanged || valueChanged) && Boolean.TRUE.equals(settlement.getSettled())) {
+                throw new BusinessException("Acerto de gás já liquidado; não é possível alterar quem recebeu ou o valor.");
+            }
+            oldItem.setQuantity(newItem.getQuantity());
+            oldItem.setUnitPrice(newItem.getUnitPrice());
+            oldItem.setBottleExpiration(newItem.getBottleExpiration());
+            oldItem.setGasSupplier(newItem.getGasSupplier());
+            if (settlementChanged) {
+                gasSettlementService.updateAutomatedSettlement(settlement, oldItem, received, cost);
+            }
+            financialMap.put(newItem.getProduct().getId(),
+                    new GasFinancialInfoRequest(cost, received, info == null ? null : info.gasPaymentMethod()));
+            gasChanged |= settlementChanged || valueChanged;
+            updatedItems.add(oldItem);
         }
+        for (OrderItem oldItem : oldItems) {
+            if (oldItem.getProduct().getType() == ProductType.GAS && !updatedItems.contains(oldItem)) {
+                GasSettlement settlement = gasSettlementService.findByOrderItem(oldItem)
+                        .orElseThrow(() -> new BusinessException("Acerto de gás não encontrado para o item do pedido."));
+                if (Boolean.TRUE.equals(settlement.getSettled())) {
+                    throw new BusinessException("Acerto de gás já liquidado; não é possível remover o item.");
+                }
+                gasSettlementService.deleteByOrderItem(oldItem);
+                gasChanged = true;
+            }
+        }
+        existingOrder.getItems().clear();
+        updatedItems.forEach(existingOrder::addItem);
+        for (OrderItem item : updatedItems) {
+            if (item.getProduct().getType() == ProductType.GAS && !oldItems.contains(item)) {
+                GasFinancialInfoRequest info = financialMap.get(item.getProduct().getId());
+                processGasFinancials(item, info == null ? false : info.receivedByUs(), resolveGasCostPrice(item, info));
+            }
+        }
+        return gasChanged;
     }
 
     // Métodos privados — Fidelidade
