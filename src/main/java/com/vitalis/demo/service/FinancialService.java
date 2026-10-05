@@ -25,8 +25,11 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -179,7 +182,13 @@ public class FinancialService {
      * Considera apenas o saldo positivo — ignora pedidos com crédito.
      */
     private BigDecimal sumUnpaidBalances(List<Order> orders) {
-        return orders.stream()
+        Map<UUID, Order> deliveredById = new LinkedHashMap<>();
+        // Pedido misto persiste apenas subpedidos: cada ID entregue entra uma vez, sem protótipo pai.
+        orders.stream()
+                .filter(order -> order.getStatus() == OrderStatus.DELIVERED)
+                .forEach(order -> deliveredById.putIfAbsent(order.getId(), order));
+
+        return deliveredById.values().stream()
                 .map(this::calculateOrderBalance)
                 .filter(balance -> balance.compareTo(BigDecimal.ZERO) > 0)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
