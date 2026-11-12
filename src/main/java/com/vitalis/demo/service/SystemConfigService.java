@@ -21,10 +21,6 @@ public class SystemConfigService {
     @Transactional
     public SystemConfig updateConfig(SystemConfigDTO dto) {
         SystemConfig config = getConfig();
-        if (dto.pointsPerWaterItem() != null && dto.pointsPerWaterItem() > 0)
-            config.setPointsPerWaterItem(dto.pointsPerWaterItem());
-        if (dto.pointsPerFreeWater() != null && dto.pointsPerFreeWater() > 0)
-            config.setPointsPerFreeWater(dto.pointsPerFreeWater());
         if (dto.pickupDiscountCents() != null && dto.pickupDiscountCents() >= 0)
             config.setPickupDiscountCents(dto.pickupDiscountCents());
         return repository.save(config);

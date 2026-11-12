@@ -90,7 +90,6 @@ class CancelledOrderFiltersTest {
         client.setActive(true);
         client.setClientType(ClientType.RETAIL);
         client.setClientStatus(ClientStatus.PAID);
-        client.setFidelity(null);
         audit(client);
         return clients.saveAndFlush(client);
     }

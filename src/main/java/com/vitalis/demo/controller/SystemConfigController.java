@@ -18,8 +18,6 @@ public class SystemConfigController {
     public ResponseEntity<SystemConfigDTO> getConfig() {
         SystemConfig c = service.getConfig();
         return ResponseEntity.ok(new SystemConfigDTO(
-                c.getPointsPerWaterItem(),
-                c.getPointsPerFreeWater(),
                 c.getPickupDiscountCents()
         ));
     }
@@ -28,8 +26,6 @@ public class SystemConfigController {
     public ResponseEntity<SystemConfigDTO> updateConfig(@RequestBody SystemConfigDTO dto) {
         SystemConfig c = service.updateConfig(dto);
         return ResponseEntity.ok(new SystemConfigDTO(
-                c.getPointsPerWaterItem(),
-                c.getPointsPerFreeWater(),
                 c.getPickupDiscountCents()
         ));
     }

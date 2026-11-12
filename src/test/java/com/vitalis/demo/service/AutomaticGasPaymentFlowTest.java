@@ -52,7 +52,6 @@ class AutomaticGasPaymentFlowTest {
                 clients, prices, stock, settlements, products, suppliers, orderMapper, itemMapper);
         client = new Client();
         client.setId(UUID.randomUUID());
-        client.setFidelity(new ClientFidelity());
         client.setClientType(ClientType.RETAIL);
         water = product(ProductType.WATER);
         gas = product(ProductType.GAS);
@@ -61,7 +60,6 @@ class AutomaticGasPaymentFlowTest {
         supplier.setId(UUID.randomUUID());
         gas.setDefaultSupplier(supplier);
         SystemConfig settings = new SystemConfig();
-        settings.setPointsPerWaterItem(1);
         lenient().when(config.getConfig()).thenReturn(settings);
     }
 

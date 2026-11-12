@@ -9,8 +9,6 @@ import org.mapstruct.*;
 @Mapper(componentModel = "spring")
 public interface ClientMapper {
 
-    @Mapping(source = "fidelity.totalPoints", target = "fidelityPoints")
-    @Mapping(source = "fidelity.pendingBonusWater", target = "pendingBonusWater")
     @Mapping(expression = "java(client.getOrders() != null ? (long) client.getOrders().size() : 0L)", target = "orderCount")
     ClientResponseDTO toResponseDTO(Client client);
     Client toEntity(ClientRequestDTO requestDTO);

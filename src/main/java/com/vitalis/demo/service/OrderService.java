@@ -189,7 +189,6 @@ public class OrderService {
 
         order.getItems().forEach(item -> {
             stockService.decreaseStock(item.getProduct(), item.getQuantity());
-            awardFidelityPointsIfEligible(order.getClient(), item);
         });
 
         order.setDeliveryDate(LocalDateTime.now());
@@ -246,8 +245,6 @@ public class OrderService {
     }
 
     private void cancelOneOrder(Order order) {
-        restoreBonusIfOrderUsedFidelityRedemption(order);
-
         if (order.getStatus() == OrderStatus.DELIVERED) {
             revertDeliveredOrder(order);
         } else {
@@ -341,31 +338,9 @@ public class OrderService {
     private Order prepareSubOrder(Order prototype, List<OrderItem> items, boolean isGas, Boolean isDelivery) {
         Order subOrder = createSubOrderTemplate(prototype);
 
-        // Contagem prévia para permitir antecipação de brinde
-        int paidWatersInThisOrder = (int) items.stream()
-                .filter(item -> item.getProduct().getType() == ProductType.WATER)
-                .filter(item -> item.getUnitPrice() == null || item.getUnitPrice().compareTo(BigDecimal.ZERO) > 0)
-                .mapToInt(OrderItem::getQuantity)
-                .sum();
-
-        var config = systemConfigService.getConfig();
-        ClientFidelity fidelity = subOrder.getClient().getFidelity();
-
-        // Previsão: pontos atuais + o que vai ganhar neste pedido (usando config)
-        int availableRawPoints = fidelity.getTotalPoints()
-                + paidWatersInThisOrder * config.getPointsPerWaterItem();
-
         for (OrderItem item : items) {
-            availableRawPoints = processItemBeforeAdding(subOrder, item, isGas, isDelivery, availableRawPoints);
+            processItemBeforeAdding(subOrder, item, isGas, isDelivery);
             subOrder.addItem(item);
-        }
-
-        if (!isGas) {
-            // Salva apenas as deduções de bônus resgatados neste pedido.
-            // Os pontos pelos galões pagos serão concedidos em confirmDelivery
-            // via awardFidelityPointsIfEligible (evita dupla contagem).
-            int pointsEarnedPreview = paidWatersInThisOrder * config.getPointsPerWaterItem();
-            fidelity.updateFromRawPoints(availableRawPoints - pointsEarnedPreview);
         }
 
         return subOrder;
@@ -388,59 +363,17 @@ public class OrderService {
      * Pipeline de processamento de um único item antes de entrar no sub-pedido:
      * validação → preço → fornecedor de gás.
      */
-    private int processItemBeforeAdding(Order subOrder, OrderItem item, boolean isGas, Boolean isDelivery, int currentRawPoints) {
+    private void processItemBeforeAdding(Order subOrder, OrderItem item, boolean isGas, Boolean isDelivery) {
         validateProductAvailability(item.getProduct());
         stockService.checkStockAvailability(item.getProduct(), item.getQuantity());
-
-        // Atualizamos o preço e retornamos o novo saldo bruto
-        int remainingPoints = resolveItemPrice(subOrder.getClient(), item, isDelivery, currentRawPoints);
-
-        if (isGas) {
-            resolveGasSupplier(item);
-        }
-
-        return remainingPoints;
+        resolveItemPrice(subOrder.getClient(), item, isDelivery);
+        if (isGas) resolveGasSupplier(item);
     }
 
-    /**
-     * Decide e aplica o preço final do item seguindo a hierarquia de preços:
-     * <ul>
-     *   <li>{@code unitPrice > 0}  — Preço manual (desconto pontual ou acréscimo). Usado diretamente.</li>
-     *   <li>{@code unitPrice null} — Busca ClientPrice do cliente; se não houver, usa o basePrice do produto.</li>
-     *   <li>{@code unitPrice == 0} — ÁGUA: tenta resgate de brinde via fidelidade.
-     *                                GÁS: tratado como nulo — busca ClientPrice ou basePrice (gás não tem brinde).</li>
-     * </ul>
-     */
-    private int resolveItemPrice(Client client, OrderItem item, Boolean isDelivery, int currentRawPoints) {
-        boolean isExplicitZero = item.getUnitPrice() != null
-                && item.getUnitPrice().compareTo(BigDecimal.ZERO) == 0;
-
-        if (isExplicitZero && item.getProduct().getType() == ProductType.WATER
-                && client.getClientType() != com.vitalis.demo.model.enums.ClientType.RESELLER) {
-            // Retorna o saldo após consumir o brinde (RESELLER não participa do programa de fidelidade)
-            return validateAndConsumeFidelityBonus(item, currentRawPoints);
-        }
-
-        // Lógica normal de preço...
-        if (item.getUnitPrice() == null || item.getUnitPrice().compareTo(BigDecimal.ZERO) <= 0) {
+    private void resolveItemPrice(Client client, OrderItem item, Boolean isDelivery) {
+        if (item.getUnitPrice() == null || item.getUnitPrice().signum() <= 0) {
             item.setUnitPrice(calculateFinalPrice(client, item.getProduct(), isDelivery));
         }
-        return currentRawPoints; // Não consumiu pontos, retorna o que recebeu
-    }
-
-    /**
-     * Valida se o cliente tem brindes disponíveis e desconta do saldo de fidelidade.
-     */
-    private int validateAndConsumeFidelityBonus(OrderItem item, int availableRawPoints) {
-        var config = systemConfigService.getConfig();
-        int neededPoints = item.getQuantity() * config.getPointsPerFreeWater();
-
-        if (availableRawPoints < neededPoints) {
-            throw new BusinessException("Saldo insuficiente! Você tem " + availableRawPoints +
-                    " pontos totais, mas precisa de " + neededPoints + " para resgatar " + item.getQuantity() + " galão(ões).");
-        }
-
-        return availableRawPoints - neededPoints;
     }
 
     /**
@@ -564,15 +497,24 @@ public class OrderService {
         List<OrderItem> updatedItems = new ArrayList<>();
         boolean gasChanged = false;
 
-        int paidWatersInThisUpdate = (int) newItems.stream()
-                .filter(item -> item.getProduct().getType() == ProductType.WATER)
-                .filter(item -> item.getUnitPrice() == null || item.getUnitPrice().compareTo(BigDecimal.ZERO) > 0)
-                .mapToInt(OrderItem::getQuantity)
-                .sum();
+        Set<OrderItem> preservedZeroItems = new HashSet<>();
 
         for (OrderItem newItem : newItems) {
             validateProductAvailability(newItem.getProduct());
-            resolveItemPrice(existingOrder.getClient(), newItem, isDelivery, paidWatersInThisUpdate);
+            // Preserva um item histórico a zero somente quando ele permanece inalterado.
+            OrderItem historicalZero = oldItems.stream()
+                    .filter(item -> !preservedZeroItems.contains(item))
+                    .filter(item -> item.getProduct().getType() != ProductType.GAS)
+                    .filter(item -> item.getProduct().getId().equals(newItem.getProduct().getId()))
+                    .filter(item -> item.getQuantity().equals(newItem.getQuantity()))
+                    .filter(item -> item.getUnitPrice().signum() == 0)
+                    .filter(item -> newItem.getUnitPrice() != null && newItem.getUnitPrice().signum() == 0)
+                    .findFirst().orElse(null);
+            if (historicalZero != null) {
+                preservedZeroItems.add(historicalZero);
+            } else {
+                resolveItemPrice(existingOrder.getClient(), newItem, isDelivery);
+            }
 
             if (newItem.getProduct().getType() == ProductType.GAS) {
                 resolveGasSupplier(newItem);
@@ -643,60 +585,9 @@ public class OrderService {
         return gasChanged;
     }
 
-    // Métodos privados — Fidelidade
-
-    /**
-     * Concede pontos por unidade de água paga conforme configuração do sistema.
-     * Clientes avulsos não acumulam pontos.
-     */
-    private void awardFidelityPointsIfEligible(Client client, OrderItem item) {
-        if (client.getClientType() == com.vitalis.demo.model.enums.ClientType.AVULSO) return;
-        if (client.getClientType() == com.vitalis.demo.model.enums.ClientType.RESELLER) return;
-        if (item.getProduct().getType() != ProductType.WATER) return;
-
-        boolean isPaidPurchase = item.getUnitPrice() != null
-                && item.getUnitPrice().compareTo(BigDecimal.ZERO) > 0;
-
-        if (!isPaidPurchase) return;
-
-        var config = systemConfigService.getConfig();
-        int pointsToAward = item.getQuantity() * config.getPointsPerWaterItem();
-        client.getFidelity().addPoints(pointsToAward, config.getPointsPerFreeWater());
-    }
-
-    /**
-     * Converte automaticamente cada grupo de 10 pontos em 1 água de brinde.
-     */
-    private void convertPointsToBonusIfReached(ClientFidelity fidelity) {
-        while (fidelity.getPoints() >= 10) {
-            fidelity.setPoints(fidelity.getPoints() - 10);
-            fidelity.setPendingBonusWater(fidelity.getPendingBonusWater() + 1);
-        }
-    }
-
-    /**
-     * Ao cancelar, devolve o brinde ao cliente se algum item foi resgatado com preço zero.
-     */
-    private void restoreBonusIfOrderUsedFidelityRedemption(Order order) {
-        ClientFidelity fidelity = order.getClient().getFidelity();
-
-        order.getItems().forEach(item -> {
-            boolean isBonusRedemption = item.getUnitPrice() != null
-                    && item.getUnitPrice().compareTo(BigDecimal.ZERO) == 0;
-
-            if (isBonusRedemption && item.getProduct().getType() == ProductType.WATER && fidelity != null) {
-                fidelity.setPendingBonusWater(fidelity.getPendingBonusWater() + item.getQuantity());
-            }
-        });
-    }
-
-    /**
-     * Ao cancelar um pedido já entregue: reverte estoque, exclui acerto de gás e estorna pontos de fidelidade.
-     */
     private void revertDeliveredOrder(Order order) {
         order.getItems().forEach(item -> {
             stockService.increaseStock(item.getProduct(), item.getQuantity());
-            reverseFidelityPointsIfEligible(order.getClient(), item);
         });
 
         removeGasSettlements(order);
@@ -708,23 +599,6 @@ public class OrderService {
         order.getItems().stream()
                 .filter(item -> item.getProduct().getType() == ProductType.GAS)
                 .forEach(gasSettlementService::deleteByOrderItem);
-    }
-
-    /**
-     * Estorna os pontos de fidelidade concedidos na entrega de um item ao cancelar o pedido.
-     * Lida com o caso em que o cliente já usou o brinde gerado pelos pontos sendo estornados
-     * (saldo de pontos pode ficar negativo temporariamente).
-     */
-    private void reverseFidelityPointsIfEligible(Client client, OrderItem item) {
-        if (item.getProduct().getType() != ProductType.WATER) return;
-        if (item.getUnitPrice() == null || item.getUnitPrice().compareTo(BigDecimal.ZERO) <= 0) return;
-
-        ClientFidelity fidelity = client.getFidelity();
-        if (fidelity == null) return;
-
-        var config = systemConfigService.getConfig();
-        int pointsToReverse = item.getQuantity() * config.getPointsPerWaterItem();
-        fidelity.updateFromRawPoints(fidelity.getTotalPoints() - pointsToReverse);
     }
 
     // Métodos privados — Guards e Resolvers simples

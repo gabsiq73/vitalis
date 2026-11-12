@@ -33,8 +33,6 @@ class CancelledOrderBehaviorTest {
     void deliveredMixedOrdersCancelTogetherOnceAndRemoveCashCreditAndSettlements() {
         Client client = new Client();
         client.setId(UUID.randomUUID());
-        client.setFidelity(new ClientFidelity());
-        client.getFidelity().setPoints(3);
         UUID group = UUID.randomUUID();
         Order water = order(client, group, OrderStatus.DELIVERED, ProductType.WATER, "100.00");
         Order gasOrder = order(client, group, OrderStatus.DELIVERED, ProductType.GAS, "80.00");
@@ -48,9 +46,6 @@ class CancelledOrderBehaviorTest {
         when(orders.findByCancellationGroup(group)).thenReturn(List.of(water, gasOrder));
         when(credits.findBySourcePaymentIn(water.getPayments())).thenReturn(List.of(credit));
         when(bottles.findByOrder_Id(any())).thenReturn(List.of());
-        var settings = new com.vitalis.demo.model.SystemConfig();
-        settings.setPointsPerWaterItem(1);
-        when(config.getConfig()).thenReturn(settings);
 
         service.cancelOrder(water.getId());
         service.cancelOrder(water.getId());
@@ -69,7 +64,6 @@ class CancelledOrderBehaviorTest {
     void pendingGasSettlementIsRemovedOnCancellation() {
         Client client = new Client();
         client.setId(UUID.randomUUID());
-        client.setFidelity(new ClientFidelity());
         Order order = order(client, null, OrderStatus.PENDING, ProductType.GAS, "50.00");
         when(orders.findById(order.getId())).thenReturn(Optional.of(order));
         when(bottles.findByOrder_Id(order.getId())).thenReturn(List.of());
@@ -84,7 +78,6 @@ class CancelledOrderBehaviorTest {
     void partialPaymentIsRemovedWhenDeliveredWaterIsCancelled() {
         Client client = new Client();
         client.setId(UUID.randomUUID());
-        client.setFidelity(new ClientFidelity());
         Order order = order(client, null, OrderStatus.DELIVERED, ProductType.WATER, "100.00");
         Payment partial = new Payment();
         partial.setMethod(Method.PIX);
@@ -93,9 +86,6 @@ class CancelledOrderBehaviorTest {
         when(orders.findById(order.getId())).thenReturn(Optional.of(order));
         when(credits.findBySourcePaymentIn(order.getPayments())).thenReturn(List.of());
         when(bottles.findByOrder_Id(order.getId())).thenReturn(List.of());
-        var settings = new SystemConfig();
-        settings.setPointsPerWaterItem(1);
-        when(config.getConfig()).thenReturn(settings);
 
         service.cancelOrder(order.getId());
 
@@ -105,10 +95,9 @@ class CancelledOrderBehaviorTest {
     }
 
     @Test
-    void zeroPriceRedemptionIsRestoredOnce() {
+    void historicalZeroPriceOrderCancelsOnceWithoutChangingItsPrice() {
         Client client = new Client();
         client.setId(UUID.randomUUID());
-        client.setFidelity(new ClientFidelity());
         Order order = order(client, null, OrderStatus.PENDING, ProductType.WATER, "0.00");
         when(orders.findById(order.getId())).thenReturn(Optional.of(order));
         when(bottles.findByOrder_Id(order.getId())).thenReturn(List.of());
@@ -116,7 +105,8 @@ class CancelledOrderBehaviorTest {
         service.cancelOrder(order.getId());
         service.cancelOrder(order.getId());
 
-        assertThat(client.getFidelity().getPendingBonusWater()).isEqualTo(1);
+        assertThat(order.getItems().getFirst().getUnitPrice()).isEqualByComparingTo("0.00");
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELLED);
         verify(stock, never()).increaseStock(any(), anyInt());
     }
 

@@ -53,26 +53,20 @@ class OrderServiceTest {
 
     private Client retailClient;
     private Client resellerClient;
-    private ClientFidelity fidelity;
     private Product waterProduct;
     private Product gasProduct;
     private GasSupplier supplier;
 
     @BeforeEach
     void setUp() {
-        fidelity = new ClientFidelity();
-        fidelity.setPoints(0);
-        fidelity.setPendingBonusWater(2);
 
         retailClient = new Client();
         retailClient.setId(UUID.randomUUID());
         retailClient.setClientType(ClientType.RETAIL);
-        retailClient.setFidelity(fidelity);
 
         resellerClient = new Client();
         resellerClient.setId(UUID.randomUUID());
         resellerClient.setClientType(ClientType.RESELLER);
-        resellerClient.setFidelity(new ClientFidelity());
 
         waterProduct = new Product();
         waterProduct.setId(UUID.randomUUID());
@@ -187,57 +181,9 @@ class OrderServiceTest {
             assertSavedItemPrice(basePrice);
         }
 
-        @Test
-        @DisplayName("Deve tratar unitPrice zero como BRINDE para água e consumir saldo de fidelidade")
-        void shouldTreatZeroPriceAsWaterBonusRedemptionAndConsumeFidelity() {
-            // Given: mapper entrega item com unitPrice = ZERO (brinde explícito)
-            fidelity.setPendingBonusWater(2);
 
-            OrderItemRequestDTO itemDto = buildWaterItemDto(1);
-            OrderRequestDTOv2 dto = buildDto(retailClient.getId(), itemDto);
-            Order prototype = buildPrototypeWithItem(retailClient, waterProduct, null, 1);
 
-            when(clientService.findById(retailClient.getId())).thenReturn(retailClient);
-            when(orderMapper.toEntity(dto)).thenReturn(prototype);
-            when(orderMapper.extractFinancialInfo(dto)).thenReturn(new HashMap<>());
-            when(productService.findById(waterProduct.getId())).thenReturn(waterProduct);
-            when(orderItemMapper.toEntity(itemDto)).thenReturn(buildItem(waterProduct, BigDecimal.ZERO, 1));
-            when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-            when(orderMapper.toResponseDTOList(any())).thenReturn(List.of(stubDTO()));
 
-            // When
-            orderService.createOrders(dto);
-
-            // Then: preço permanece zero, clientPriceService não é chamado, brinde descontado
-            verify(clientPriceService, never()).findEffectivePrice(any(), any());
-            assertThat(fidelity.getPendingBonusWater()).isEqualTo(1);
-            assertSavedItemPrice(BigDecimal.ZERO);
-        }
-
-        @Test
-        @DisplayName("Deve lançar BusinessException ao resgatar brinde sem saldo de fidelidade")
-        void shouldThrowWhenRedeemingWaterBonusWithNoBalance() {
-            // Given: zero explícito mas sem saldo disponível
-            fidelity.setPendingBonusWater(0);
-            fidelity.setPoints(0);
-
-            OrderItemRequestDTO itemDto = buildWaterItemDto(1);
-            OrderRequestDTOv2 dto = buildDto(retailClient.getId(), itemDto);
-            Order prototype = buildPrototypeWithItem(retailClient, waterProduct, null, 1);
-
-            when(clientService.findById(retailClient.getId())).thenReturn(retailClient);
-            when(orderMapper.toEntity(dto)).thenReturn(prototype);
-            when(orderMapper.extractFinancialInfo(dto)).thenReturn(new HashMap<>());
-            when(productService.findById(waterProduct.getId())).thenReturn(waterProduct);
-            when(orderItemMapper.toEntity(itemDto)).thenReturn(buildItem(waterProduct, BigDecimal.ZERO, 1));
-
-            // When / Then
-            assertThatThrownBy(() -> orderService.createOrders(dto))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("Saldo insuficiente");
-
-            verify(repository, never()).save(any());
-        }
 
         @Test
         @DisplayName("Deve aplicar desconto de R$ 0,50 para cliente RETAIL com retirada no balcão (sem ClientPrice)")
@@ -382,7 +328,6 @@ class OrderServiceTest {
             // Then: preço calculado normalmente, fidelidade intocada
             verify(clientPriceService, times(1)).findEffectivePrice(retailClient, gasProduct);
             assertSavedItemPrice(basePrice);
-            assertThat(fidelity.getPendingBonusWater()).isEqualTo(2); // intocado
         }
 
         @Test
@@ -487,32 +432,7 @@ class OrderServiceTest {
     @DisplayName("Contraste: preço zero em Água vs Gás")
     class ZeroPriceContrastTests {
 
-        @Test
-        @DisplayName("Zero para ÁGUA com saldo → brinde (fidelidade consumida, preço permanece zero)")
-        void zeroPriceForWaterWithBalance_shouldBeBonus() {
-            // Given
-            fidelity.setPendingBonusWater(1);
 
-            OrderItemRequestDTO itemDto = buildWaterItemDto(1);
-            OrderRequestDTOv2 dto = buildDto(retailClient.getId(), itemDto);
-            Order prototype = buildPrototypeWithItem(retailClient, waterProduct, null, 1);
-
-            when(clientService.findById(retailClient.getId())).thenReturn(retailClient);
-            when(orderMapper.toEntity(dto)).thenReturn(prototype);
-            when(orderMapper.extractFinancialInfo(dto)).thenReturn(new HashMap<>());
-            when(productService.findById(waterProduct.getId())).thenReturn(waterProduct);
-            when(orderItemMapper.toEntity(itemDto)).thenReturn(buildItem(waterProduct, BigDecimal.ZERO, 1));
-            when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-            when(orderMapper.toResponseDTOList(any())).thenReturn(List.of(stubDTO()));
-
-            // When
-            orderService.createOrders(dto);
-
-            // Then: é um brinde — preço zero mantido, saldo consumido
-            assertSavedItemPrice(BigDecimal.ZERO);
-            assertThat(fidelity.getPendingBonusWater()).isEqualTo(0);
-            verify(clientPriceService, never()).findEffectivePrice(any(), any());
-        }
 
         @Test
         @DisplayName("Zero para GÁS → preço base aplicado (gás não tem brinde)")
@@ -537,35 +457,10 @@ class OrderServiceTest {
 
             // Then: preço base calculado, fidelidade intocada
             assertSavedItemPrice(gasProduct.getBasePrice());
-            assertThat(fidelity.getPendingBonusWater()).isEqualTo(2);
             verify(clientPriceService, times(1)).findEffectivePrice(any(), any());
         }
 
-        @Test
-        @DisplayName("Zero para ÁGUA sem saldo → BusinessException (não tenta buscar basePrice)")
-        void zeroPriceForWaterWithoutBalance_shouldThrowNotFallBack() {
-            // Given
-            fidelity.setPendingBonusWater(0);
-            fidelity.setPoints(0);
 
-            OrderItemRequestDTO itemDto = buildWaterItemDto(1);
-            OrderRequestDTOv2 dto = buildDto(retailClient.getId(), itemDto);
-            Order prototype = buildPrototypeWithItem(retailClient, waterProduct, null, 1);
-
-            when(clientService.findById(retailClient.getId())).thenReturn(retailClient);
-            when(orderMapper.toEntity(dto)).thenReturn(prototype);
-            when(orderMapper.extractFinancialInfo(dto)).thenReturn(new HashMap<>());
-            when(productService.findById(waterProduct.getId())).thenReturn(waterProduct);
-            when(orderItemMapper.toEntity(itemDto)).thenReturn(buildItem(waterProduct, BigDecimal.ZERO, 1));
-
-            // When / Then: deve lançar, não calcular preço automaticamente
-            assertThatThrownBy(() -> orderService.createOrders(dto))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("Saldo insuficiente");
-
-            verify(clientPriceService, never()).findEffectivePrice(any(), any());
-            verify(repository, never()).save(any());
-        }
     }
 
     // =========================================================================
@@ -658,33 +553,7 @@ class OrderServiceTest {
             assertThat(resolvedItem.getUnitPrice()).isEqualByComparingTo(gasProduct.getBasePrice());
         }
 
-        @Test
-        @DisplayName("Deve aplicar brinde ao atualizar item de água com unitPrice zero e saldo disponível")
-        void shouldApplyBonusOnUpdateWhenWaterUnitPriceIsZeroWithBalance() {
-            // Given
-            fidelity.setPendingBonusWater(1);
-            UUID orderId = UUID.randomUUID();
 
-            OrderItemRequestDTO itemDto = buildWaterItemDto(1);
-            OrderRequestDTOv2 dto = buildDto(retailClient.getId(), itemDto);
-            Order existing = buildExistingOrder(OrderStatus.PENDING);
-            OrderItem resolvedItem = buildItem(waterProduct, BigDecimal.ZERO, 1);
-
-            when(repository.findById(orderId)).thenReturn(Optional.of(existing));
-            when(orderMapper.extractFinancialInfo(dto)).thenReturn(new HashMap<>());
-            when(productService.findById(waterProduct.getId())).thenReturn(waterProduct);
-            when(orderItemMapper.toEntity(itemDto)).thenReturn(resolvedItem);
-            when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-            when(orderMapper.toResponseDTO(any())).thenReturn(stubDTO());
-
-            // When
-            orderService.updateOrders(orderId, dto);
-
-            // Then: brinde aplicado, preço permanece zero
-            assertThat(resolvedItem.getUnitPrice()).isEqualByComparingTo(BigDecimal.ZERO);
-            assertThat(fidelity.getPendingBonusWater()).isEqualTo(0);
-            verify(clientPriceService, never()).findEffectivePrice(any(), any());
-        }
     }
 
     // =========================================================================

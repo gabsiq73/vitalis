@@ -166,12 +166,6 @@ public class ClientService {
         repository.save(client);
     }
 
-    @Transactional
-    public void addPointsFidelity(UUID id, Integer points){
-        Client client = findById(id);
-        client.getFidelity().addPoints(points);
-    }
-
     public void updateBottleBalance(UUID clientId, Integer quantity){
         Client client = findById(clientId);
 

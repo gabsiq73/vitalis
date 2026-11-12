@@ -66,7 +66,7 @@ public class ClientPriceService {
         }
 
         if (newPrice.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BusinessException("O preço especial deve ser maior que zero. Para brinde, use o fluxo de fidelidade.");
+            throw new BusinessException("O preço especial deve ser maior que zero.");
         }
 
         if (newPrice.compareTo(cp.getProduct().getBasePrice()) > 0) {

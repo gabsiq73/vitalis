@@ -14,8 +14,6 @@ public record ClientResponseDTO(
         String address,
         String notes,
         BigDecimal balance,
-        Integer fidelityPoints,
-        Integer pendingBonusWater,
         ClientType clientType,
         ClientStatus clientStatus,
         Long orderCount
