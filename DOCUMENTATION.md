@@ -340,7 +340,8 @@ Preços personalizados por combinação cliente-produto.
 | `UserRequestDTO` | firstName, lastName, username, email, password, role |
 | `ClientRequestDTO` | name, phone, address, notes, clientType, clientStatus |
 | `ProductRequestDTO` | name, basePrice, costPrice, type, defaultSupplierId |
-| `OrderRequestDTOv2` | clientId, items[], deliveryDate, isDelivery |
+| `OrderRequestDTOv2` | clientId, items[], deliveryDate, isDelivery, notes, initialPayments[] (opcional) |
+| `InitialPaymentRequestDTO` | amount, paymentMethod (PIX, DINHEIRO ou SALDO) |
 | `OrderItemRequestDTO` | productId, quantity, bottleExpiration, supplierId, gasCostPrice, receivedByUs |
 | `PaymentRequestDTO` | amount, orderId, method, notes |
 | `GasSupplierRequestDTO` | name, notes |
@@ -803,6 +804,57 @@ O `GlobalExceptionHandler` intercepta exceções e retorna respostas padronizada
 4. Para itens GAS → cria GasSettlement para cada item (controle de liquidação com fornecedor)
 5. Retorna lista de OrderResponseDTO
 ```
+
+#### Pagamentos iniciais na criação (`POST /orders`)
+
+O campo opcional `initialPayments` registra as parcelas junto com todos os subpedidos
+em uma única transação. O retorno continua sendo uma lista de `OrderResponseDTO`,
+com os status financeiros finais, sem campos novos. Omitir o campo, enviar `null`
+ou uma lista vazia preserva o comportamento anterior. O campo pertence à criação;
+`PUT /orders/{id}` não registra pagamentos iniciais. Pagamentos de pedidos existentes
+continuam em `POST /payments` e `POST /payments/bulk/{clientId}`.
+
+```json
+{
+  "clientId": "00000000-0000-0000-0000-000000000001",
+  "items": [{ "productId": "00000000-0000-0000-0000-000000000002", "quantity": 1 }],
+  "isDelivery": true,
+  "initialPayments": [
+    { "amount": 10.00, "paymentMethod": "PIX" },
+    { "amount": 20.00, "paymentMethod": "SALDO" }
+  ]
+}
+```
+
+- Cada parcela exige valor positivo em `BigDecimal`, normalizado para duas casas
+  com `HALF_UP`, e um dos métodos do enum `Method`. Valores abaixo de R$ 0,01,
+  métodos ausentes e entradas nulas são inválidos. O servidor verifica o saldo
+  disponível ao consumir `SALDO`; esse consumo não representa entrada de caixa.
+- As parcelas incluem o gás recebido pelo depósito. Antes de distribuir uma parcela,
+  o servidor desconta os pagamentos automáticos de gás **do mesmo método**. Exemplo:
+  água de R$ 30 e gás de R$ 70 recebido em DINHEIRO podem enviar DINHEIRO de R$ 80
+  e PIX de R$ 20: o gás mantém seu pagamento automático de R$ 70 e a água recebe
+  R$ 10 em DINHEIRO mais R$ 20 em PIX. Não se registra novamente o pagamento do gás.
+  Quando a lista é informada, ela deve cobrir todo o gás automático no método correto;
+  inconsistências revertem a criação. Gás recebido pelo entregador não integra as
+  parcelas recebidas no depósito e continua quitado conforme `OrderBalanceService`.
+- Primeiro são abatidas as dívidas dos novos subpedidos, calculadas pelo
+  `OrderBalanceService`, sem assumir qual posição da resposta representa água ou gás.
+  Apenas o excedente segue para os demais pedidos abertos do cliente por FIFO;
+  o restante vira crédito, mantendo o registro de caixa para PIX/DINHEIRO.
+- `OrderCreationService` coordena os serviços existentes na transação externa,
+  sem dependência circular entre `OrderService` e `PaymentService`. A retirada
+  preserva o cálculo de preço original e confirma a entrega depois dos pagamentos,
+  para consumir o crédito antes do recálculo da dívida. Qualquer falha reverte pedidos,
+  pagamentos, crédito consumido/gerado, acertos, fidelidade legada e estoque.
+- Empréstimos de vasilhames continuam separados da transação. Se o empréstimo falhar
+  após a criação, o desktop informa que pedido e pagamentos foram registrados e
+  orienta registrar o empréstimo pela tela de vasilhames, sem tentar anular o pedido.
+
+Observações da documentação legada: a configuração atual usa `ddl-auto: update`
+e exige `DB_PORT`; gás não cria estoque local. As descrições anteriores de
+`create-drop`, porta fixa e criação de estoque de gás não refletem o código atual;
+esses comportamentos foram preservados nesta issue.
 
 ### Confirmação de Entrega
 
