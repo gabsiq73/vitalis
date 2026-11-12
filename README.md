@@ -16,7 +16,7 @@ O projeto é voltado ao uso local do negócio; não há objetivo de hospedá-lo 
 - Relatórios financeiros, operacionais, de estoque, pagamentos diários e fiados.
 - Usuários com autenticação HTTP Basic e papéis `ADMIN` e `SELLER`.
 
-> A lógica de fidelidade ainda existe no código atual, mas está planejada para remoção. Não expanda esse fluxo.
+> O programa de fidelidade foi descontinuado. Crédito financeiro e pagamentos com SALDO continuam disponíveis. Consulte o procedimento para bancos legados no DOCUMENTATION.md antes de atualizar.
 
 ## Stack
 

@@ -41,7 +41,6 @@ class ClientCreditEntryRepositoryTest {
         client.setActive(true);
         client.setClientType(ClientType.RETAIL);
         client.setClientStatus(ClientStatus.PAID);
-        client.setFidelity(null);
         audit(client);
         client = clientRepository.saveAndFlush(client);
 

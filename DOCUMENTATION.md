@@ -21,7 +21,7 @@
 
 ## 1. Visão Geral do Projeto
 
-O **Vitalis** é um sistema de gestão para distribuidoras de **água e gás**. Ele cobre todo o ciclo operacional do negócio: cadastro de clientes, controle de estoque, criação e entrega de pedidos, registros de pagamento, programa de fidelidade, controle de vasilhames emprestados e relatórios financeiros.
+O **Vitalis** é um sistema de gestão para distribuidoras de **água e gás**. Ele cobre todo o ciclo operacional do negócio: cadastro de clientes, controle de estoque, criação e entrega de pedidos, registros de pagamento, controle de vasilhames emprestados e relatórios financeiros.
 
 O sistema também inclui uma camada de gestão de liquidações com fornecedores de gás, permitindo rastrear débitos e créditos entre a distribuidora e seus fornecedores.
 
@@ -145,7 +145,6 @@ Representa os clientes da distribuidora. Suporta **soft delete** via `CLI_is_act
 | `CLI_notes` | VARCHAR | — |
 | `balance` | DECIMAL(10,2) | Saldo de crédito do cliente |
 | `CLI_is_active` | BOOLEAN | Flag de exclusão lógica |
-| `CLI_fidelity_id` | UUID | FK → ClientFidelity (1:1) |
 | `CLI_type` | ENUM | RETAIL ou RESELLER |
 | `CLI_status` | ENUM | PAID ou OVERDUE |
 | `CLI_bottles_debt` | INTEGER | Default 0 |
@@ -153,23 +152,8 @@ Representa os clientes da distribuidora. Suporta **soft delete** via `CLI_is_act
 **Relacionamentos:**
 - `OneToMany` → LoanedBottle
 - `OneToMany` → Order
-- `OneToOne` → ClientFidelity
 
 **Soft Delete:** O Hibernate intercepta operações de DELETE e executa `UPDATE tb_client SET CLI_is_active = false`. Todas as queries filtram automaticamente `CLI_is_active = true`.
-
----
-
-### ClientFidelity — `tb_client_fidelity`
-
-Controla o programa de pontos de fidelidade de cada cliente.
-
-| Coluna | Tipo | Descrição |
-|---|---|---|
-| `CLI_fidelity_id` | UUID | PK |
-| `points` | INTEGER | Pontos acumulados (default 0) |
-| `pendingBonusWater` | INTEGER | Bônus de água pendentes (default 0) |
-
-**Regra:** 10 pontos = 1 garrafa de água bônus.
 
 ---
 
@@ -379,7 +363,7 @@ Preços personalizados por combinação cliente-produto.
 | `OrderItemResponseDTO` | id, quantity, unitPrice, bottleExpiration, productId, gasSupplierId |
 | `PaymentResponseDTO` | id, date, amount, orderId, method, notes |
 | `OrderBalanceDTO` | orderId, totalAmount, paidAmount, debt |
-| `ClientResponseDTO` | id, name, phone, address, notes, balance, type, status, fidelity, bottlesDebt, isActive |
+| `ClientResponseDTO` | id, name, phone, address, notes, balance, clientType, clientStatus, orderCount |
 | `ClientPriceResponseDTO` | id, clientId, productId, price |
 | `GasSettlementResponseDTO` | id, supplierId, amount, settled, settledDate, settlementType |
 | `GasSettlementReportDTO` | supplier details, settled/unsettled amounts, date range |
@@ -490,7 +474,7 @@ Gerencia o ciclo de vida dos usuários do sistema.
 
 Gerencia o ciclo de vida dos clientes com regras de negócio específicas.
 
-- `save(dto)` — cria cliente com saldo zero, fidelidade inicial e status ativo
+- `save(dto)` — cria cliente com saldo financeiro e status ativo, sem programa de pontos
 - `findAll(pageable, name, type)` — lista com filtros e paginação
 - `findById(id)` — busca por ID
 - `update(id, dto)` — atualização parcial
@@ -498,7 +482,6 @@ Gerencia o ciclo de vida dos clientes com regras de negócio específicas.
 - `addCreditBalance(client, amount)` — credita valor no saldo do cliente
 - `consumeCreditBalance(client, amount)` — debita saldo (valida se há saldo suficiente)
 - `calculateDebtBalance(client)` — calcula dívida total com base nos pedidos abertos
-- `addPointsFidelity(client, points)` — adiciona pontos ao programa de fidelidade
 
 ---
 
@@ -540,7 +523,7 @@ Gerencia o ciclo de vida dos pedidos — a service mais complexa do sistema.
 - `updateOrders(id, dto)` — atualiza pedido existente gerenciando substituição de itens
 - `confirmDelivery(id)` — confirma entrega:
   1. Valida que pedido não está já entregue
-  2. Para cada item: diminui estoque e adiciona pontos de fidelidade (apenas WATER)
+  2. Para cada item: diminui estoque de água (gás não tem estoque local)
   3. Seta data de entrega e muda status para DELIVERED
 - `updateStatus(id, status)` — muda status do pedido
 - `cancelOrder(id)` — cancela pedido (somente ADMIN)
@@ -670,7 +653,6 @@ Base URL: `http://localhost:8080`
 | `GET` | `/clients/{id}` | Autenticado | Buscar por ID |
 | `POST` | `/clients` | Autenticado | Criar cliente |
 | `PUT` | `/clients/{id}` | Autenticado | Atualizar cliente |
-| `PATCH` | `/clients/{id}/add-fidelity-points` | Autenticado | Adicionar pontos de fidelidade |
 | `DELETE` | `/clients/{id}` | Autenticado | Soft delete |
 
 ---
@@ -940,6 +922,82 @@ O `GlobalExceptionHandler` intercepta exceções e retorna respostas padronizada
 
 ## 14. Fluxos de Negócio
 
+### Descontinuação do programa de fidelidade — issue #3
+
+O programa foi retirado das operações. O inventário e o tratamento são:
+
+| Referência anterior | Tratamento |
+|---|---|
+| `ClientFidelity`, `ClientFidelityRepository`, relação `Client.fidelity` | Entidade, repositório e associação JPA removidos |
+| `ClientMapper`, `ClientResponseDTO` | Removidos `fidelityPoints` e `pendingBonusWater` |
+| `SystemConfig`, `SystemConfigDTO`, `SystemConfigService`, `/config` | Removidos `pointsPerWaterItem` e `pointsPerFreeWater`; permanece `pickupDiscountCents` |
+| `PATCH /clients/{id}/add-fidelity-points`, `ClientService.addPointsFidelity` | Operação removida; a rota não existe mais |
+| Criação/edição de pedidos | Sem previsão de pontos ou consumo de bônus; zero em novo item usa o preço normal |
+| Confirmação de entrega | Sem concessão de pontos; mantém baixa de estoque de água |
+| Cancelamento | Sem restauração/estorno de pontos ou bônus; mantém estoque, pagamentos, crédito e acertos |
+| Desktop coordenado, issue `vitalis-desktop#8` | Remove telas, modais, exportações e tipos de pontos; rascunho antigo exige revisão |
+
+Contratos atuais:
+
+- `ClientResponseDTO`: `id`, `name`, `phone`, `address`, `notes`, `balance`,
+  `clientType`, `clientStatus`, `orderCount`. `balance` continua financeiro.
+- `GET /config` e `PATCH /config`: `{ "pickupDiscountCents": 125 }`.
+  O desconto é informado em centavos. As configurações de pontos deixam de ser retornadas.
+- Não há campo novo em responses. A remoção dos quatro campos acima e da rota
+  de adição de pontos é incompatível com o desktop antigo; atualize os dois
+  repositórios juntos, com a aplicação fechada durante a troca.
+- `POST /orders` continua retornando lista e preserva parcelas iniciais/FIFO/SALDO.
+  Preço manual positivo prevalece; `unitPrice` nulo ou não positivo resolve preço
+  por cliente, revenda ou base e o desconto de retirada conforme as regras existentes.
+- Pedidos históricos preservam seus valores gravados, inclusive itens a zero,
+  nas consultas, entrega e cancelamento. Na edição de um pedido pendente,
+  reenviar um item histórico a zero com o mesmo produto e quantidade mantém seu
+  preço. Cada item histórico só pode justificar um item a zero; duplicar o item
+  ou alterar a quantidade aplica o preço normal à parte nova. Não existe novo resgate.
+
+#### Bancos existentes: procedimento sem exclusão de dados
+
+Mantenha `ddl-auto: update`. Não há migrations nem remoção automática de tabelas,
+colunas, clientes, pedidos ou pagamentos. Em bancos novos, o Hibernate não cria
+`tb_client_fidelity`, `tb_client.cli_fidelity_id` nem os dois campos de pontos
+de `tb_system_config`. Em bancos existentes, eles permanecem fisicamente e não
+são mais lidos/escritos pela aplicação; a FK antiga pode permanecer.
+
+Antes de atualizar um banco existente, com API e desktop parados:
+
+1. Faça backup do PostgreSQL e confira se as colunas antigas de configuração existem:
+
+   ```sql
+   SELECT column_name, is_nullable, column_default
+   FROM information_schema.columns
+   WHERE table_schema = 'public' AND table_name = 'tb_system_config'
+     AND column_name IN ('points_per_water_item', 'points_per_free_water');
+   ```
+
+2. Se as duas colunas existirem, execute a preparação abaixo. Elas eram `NOT NULL`
+   sem default; os defaults permitem inserir a configuração operacional caso a
+   tabela esteja vazia, sem voltar a mapear os campos obsoletos. Nenhum valor de
+   linha existente é modificado. Em banco novo, não execute este trecho.
+
+   ```sql
+   BEGIN;
+   ALTER TABLE tb_system_config ALTER COLUMN points_per_water_item SET DEFAULT 1;
+   ALTER TABLE tb_system_config ALTER COLUMN points_per_free_water SET DEFAULT 10;
+   COMMIT;
+   ```
+
+3. Atualize backend e desktop coordenados e inicie com `DB_PORT` conforme README.
+   Confira `/config`, cadastro/consulta de clientes, leitura de pedido histórico
+   a zero e criação/entrega/cancelamento de pedido com preço especial e SALDO.
+4. Preserve tabela, associação física e valores antigos para auditoria/retorno à
+   versão anterior. Não é necessário executar `DROP`, apagar pontos nem recalcular
+   valores históricos. Qualquer limpeza física futura é uma tarefa separada,
+   precedida de backup e revisão das dependências do banco.
+
+O teste `LoyaltyRemovalTest` inicializa um schema legado representativo com
+`ddl-auto: update`, mantém os registros antigos de pontos e verifica inserções
+sem a associação, bootstrap de configuração, preços, histórico, estoque e SALDO.
+
 ### Criação de Pedido
 
 ```
@@ -991,7 +1049,7 @@ continuam em `POST /payments` e `POST /payments/bulk/{clientId}`.
   sem dependência circular entre `OrderService` e `PaymentService`. A retirada
   preserva o cálculo de preço original e confirma a entrega depois dos pagamentos,
   para consumir o crédito antes do recálculo da dívida. Qualquer falha reverte pedidos,
-  pagamentos, crédito consumido/gerado, acertos, fidelidade legada e estoque.
+  pagamentos, crédito consumido/gerado, acertos e estoque.
 - Empréstimos de vasilhames continuam separados da transação. Se o empréstimo falhar
   após a criação, o desktop informa que pedido e pagamentos foram registrados e
   orienta registrar o empréstimo pela tela de vasilhames, sem tentar anular o pedido.
@@ -1008,7 +1066,6 @@ esses comportamentos foram preservados nesta issue.
 2. Valida que o pedido não está com status DELIVERED
 3. Para cada OrderItem:
    a. StockService.decreaseStock(productId, quantity)
-   b. Se produto for WATER → ClientFidelity += quantity (pontos de fidelidade)
 4. Order.deliveryDate = LocalDateTime.now()
 5. Order.status = DELIVERED
 ```
@@ -1050,12 +1107,4 @@ esses comportamentos foram preservados nesta issue.
 2. PATCH /gas-settlements/bulk-settle?supplierId=X&start=Y&end=Z
    → Marca todas as liquidações pendentes do fornecedor no período como settled
 3. GET /gas-settlements/report → relatório consolidado (valores devidos / a receber)
-```
-
-### Programa de Fidelidade
-
-```
-1. A cada confirmação de entrega de WATER: client.fidelity.points += quantidade entregue
-2. A cada 10 pontos acumulados → pendingBonusWater += 1
-3. Pontos são adicionados manualmente também via PATCH /clients/{id}/add-fidelity-points
 ```

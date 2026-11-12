@@ -14,11 +14,5 @@ public class SystemConfig {
     private Long id = 1L;
 
     @Column(nullable = false)
-    private Integer pointsPerWaterItem = 1;
-
-    @Column(nullable = false)
-    private Integer pointsPerFreeWater = 10;
-
-    @Column(nullable = false)
     private Integer pickupDiscountCents = 50;
 }

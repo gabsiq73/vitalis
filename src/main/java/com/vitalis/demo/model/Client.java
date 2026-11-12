@@ -55,10 +55,6 @@ public class Client extends BaseEntity {
     @Column(name = "CLI_is_active")
     private boolean isActive;
 
-    @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JoinColumn(name = "CLI_fidelity_id")
-    private ClientFidelity fidelity = new ClientFidelity();
-
     @Enumerated(EnumType.STRING)
     @Column(name = "CLI_type",nullable = false)
     private ClientType clientType;

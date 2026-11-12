@@ -19,7 +19,7 @@ public record OrderItemRequestDTO(
         UUID supplierId,            // Se for gás
         BigDecimal gasCostPrice,    // Se for gás
         Boolean receivedByUs,       // Lógica do seu acerto
-        BigDecimal unitPrice,       // null = preço padrão; 0 = item bônus fidelidade
+        BigDecimal unitPrice,       // null ou <= 0 = preço padrão na criação; > 0 = preço manual
         Method gasPaymentMethod
 ) {
     public OrderItemRequestDTO(UUID productId, Integer quantity, LocalDate bottleExpiration,
