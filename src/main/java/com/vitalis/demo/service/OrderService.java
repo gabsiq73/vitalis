@@ -106,6 +106,11 @@ public class OrderService {
 
     @Transactional
     public List<OrderResponseDTO> createOrders(OrderRequestDTOv2 dto) {
+        return createOrders(dto, false);
+    }
+
+    @Transactional
+    public List<OrderResponseDTO> createOrders(OrderRequestDTOv2 dto, boolean deferPickupDelivery) {
         Client client = clientService.findById(dto.clientId());
         Map<UUID, GasFinancialInfoRequest> financialMap = orderMapper.extractFinancialInfo(dto);
 
@@ -130,7 +135,7 @@ public class OrderService {
                     processGasSettlementsForOrder(saved, financialMap);
                     syncAutomaticGasPayment(saved, financialMap);
                 }
-                if (!Boolean.TRUE.equals(dto.isDelivery())) confirmDelivery(saved.getId());
+                if (!deferPickupDelivery && !Boolean.TRUE.equals(dto.isDelivery())) confirmDelivery(saved.getId());
                 savedOrders.add(saved);
             }
         });

@@ -8,6 +8,7 @@ import com.vitalis.demo.model.Order;
 import com.vitalis.demo.model.enums.OrderStatus;
 import com.vitalis.demo.model.enums.PaymentStatus;
 import com.vitalis.demo.service.OrderService;
+import com.vitalis.demo.service.OrderCreationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -31,6 +32,7 @@ import java.util.UUID;
 public class OrderController {
 
     private final OrderService orderService;
+    private final OrderCreationService orderCreationService;
     private final OrderMapper orderMapper;
     private final OrderItemMapper orderItemMapper;
 
@@ -84,7 +86,7 @@ public class OrderController {
 
     @PostMapping
     public ResponseEntity<List<OrderResponseDTO>> create(@RequestBody @Valid OrderRequestDTOv2 dto) {
-        List<OrderResponseDTO> response = orderService.createOrders(dto);
+        List<OrderResponseDTO> response = orderCreationService.createOrders(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

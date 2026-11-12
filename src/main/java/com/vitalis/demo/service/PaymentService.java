@@ -1,5 +1,6 @@
 package com.vitalis.demo.service;
 
+import com.vitalis.demo.dto.request.InitialPaymentRequestDTO;
 import com.vitalis.demo.dto.response.DailyCashPaymentDTO;
 import com.vitalis.demo.dto.response.OrderBalanceDTO;
 import com.vitalis.demo.dto.response.PaymentResponseDTO;
@@ -26,6 +27,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -90,6 +92,59 @@ public class PaymentService {
     }
 
     // Pagamento Individual (registerPayment)
+
+    @Transactional
+    public void registerInitialPayments(UUID clientId, List<Order> orders,
+                                         List<InitialPaymentRequestDTO> installments) {
+        EnumMap<Method, BigDecimal> automaticAmounts = new EnumMap<>(Method.class);
+        for (Order order : orders) {
+            for (Payment payment : order.getPayments()) {
+                if (payment.isAutomaticGas()) {
+                    automaticAmounts.merge(payment.getMethod(), payment.getAmount(), BigDecimal::add);
+                }
+            }
+        }
+        for (InitialPaymentRequestDTO installment : installments) {
+            if (installment == null || installment.paymentMethod() == null || installment.amount() == null
+                    || installment.amount().signum() <= 0) {
+                throw new BusinessException("Pagamento inicial exige valor positivo e meio de pagamento válido.");
+            }
+            BigDecimal amount = installment.amount().setScale(2, RoundingMode.HALF_UP);
+            if (amount.signum() <= 0) {
+                throw new BusinessException("Pagamento inicial deve ser de pelo menos R$ 0,01.");
+            }
+            Method method = installment.paymentMethod();
+            BigDecimal automatic = automaticAmounts.getOrDefault(method, BigDecimal.ZERO);
+            BigDecimal deducted = amount.min(automatic);
+            automaticAmounts.put(method, automatic.subtract(deducted));
+            BigDecimal remaining = amount.subtract(deducted);
+            if (remaining.signum() == 0) continue;
+            LocalDateTime receivedAt = LocalDateTime.now();
+            consumeSaldoIfApplicable(buildPayment(remaining, method, receivedAt), clientId);
+            Payment source = null;
+            for (Order order : orders) {
+                if (remaining.signum() <= 0) break;
+                if (orderBalanceService.calculateRemainingBalance(order).signum() <= 0) continue;
+                int previousPayments = order.getPayments().size();
+                remaining = applyFundsToOrder(order, remaining, method, receivedAt);
+                if (order.getPayments().size() > previousPayments) {
+                    source = order.getPayments().getLast();
+                }
+            }
+            // Vincula o crédito excedente ao grupo novo inclusive se já estiver quitado.
+            if (source == null && remaining.signum() > 0) {
+                Payment anchor = buildPayment(BigDecimal.ZERO.setScale(2), method, receivedAt);
+                source = applyPaymentToOrder(anchor, orders.getFirst());
+            }
+            if (remaining.signum() > 0) {
+                processBulkPaymentExcluding(clientId, remaining, method, null, receivedAt, source);
+            }
+        }
+        if (automaticAmounts.values().stream().anyMatch(amount -> amount.signum() > 0)) {
+            throw new BusinessException("Os pagamentos iniciais devem incluir o gás recebido no depósito no mesmo meio de pagamento.");
+        }
+        clientService.calculateDebtBalance(clientId);
+    }
 
     /**
      * Registra um pagamento para um pedido específico.
