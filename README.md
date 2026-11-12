@@ -11,6 +11,7 @@ O projeto é voltado ao uso local do negócio; não há objetivo de hospedá-lo 
 - Pedidos com entrega ou retirada. Pedidos mistos são separados em subpedidos de água e gás.
 - Pagamentos por PIX, dinheiro e saldo de crédito; pagamentos excedentes podem quitar pedidos abertos em FIFO e gerar crédito para o cliente.
 - Empréstimo e devolução de vasilhames.
+- Controle separado de garrafões devidos pelo depósito aos clientes, com baixa integral e histórico.
 - Acertos financeiros com fornecedores de gás: custo devido ao fornecedor (`YOU_OWE`) ou margem a receber (`SUPPLIER_OWE`).
 - Relatórios financeiros, operacionais, de estoque, pagamentos diários e fiados.
 - Usuários com autenticação HTTP Basic e papéis `ADMIN` e `SELLER`.
@@ -88,6 +89,7 @@ Os testes de maior cobertura estão nos serviços de pedidos, pagamentos e acert
 | Pagamentos | `/payments` | Pagamento individual, FIFO e caixa diário |
 | Produtos / Estoque | `/products`, `/stocks` | Catálogo, ativação e quantidade em estoque |
 | Vasilhames | `/bottles` | Empréstimos, devoluções e pendências |
+| Garrafões devidos pelo depósito | `/depot-bottle-debts` | Registro, pendências por cliente e baixa integral |
 | Gás | `/suppliers`, `/gas-settlements` | Fornecedores e acertos financeiros |
 | Relatórios | `/reports` | Financeiro, operacional e fluxo de estoque |
 | Administração | `/users`, `/config` | Usuários e configurações operacionais |
