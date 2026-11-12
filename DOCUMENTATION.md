@@ -301,6 +301,27 @@ Controle de vasilhames emprestados a clientes.
 
 ---
 
+### DepotBottleDebt — `tb_depot_bottle_debt`
+
+Garrafões que **o depósito deve ao cliente**, separados dos empréstimos em
+`LoanedBottle`. Herda a auditoria de `BaseEntity` e usa UUID gerado pelo JPA.
+
+| Campo | Tipo | Regra |
+|---|---|---|
+| `id` | UUID | Identificador do registro |
+| `client` | FK → Client | Cliente existente, obrigatório |
+| `quantity` | INTEGER | Inteiro positivo, obrigatório |
+| `debtDate` | LocalDateTime | Data informada pelo operador, obrigatória |
+| `notes` | VARCHAR(255) | Observação opcional |
+| `status` | BottleDebtStatus | `PENDING` na criação; `COMPLETED` na baixa |
+| `completionDate` | LocalDateTime | Nula até a baixa; preenchida pelo servidor |
+
+O registro permanece após a conclusão. Não altera `Client.bottlesDebt`,
+`Client.balance`, empréstimos, pagamentos ou estoque. O schema é criado/atualizado
+por `ddl-auto: update`, sem migrations.
+
+---
+
 ### ClientPrice — `tb_clientPrice`
 
 Preços personalizados por combinação cliente-produto.
@@ -326,6 +347,7 @@ Preços personalizados por combinação cliente-produto.
 | `PaymentStatus` | PENDING, PARTIAL, PAID | Status do pagamento do pedido |
 | `Method` | PIX, DINHEIRO, SALDO | Forma de pagamento |
 | `LoanStatus` | LOANED, RETURNED | Status do empréstimo de vasilhame |
+| `BottleDebtStatus` | PENDING, COMPLETED | Pendência de garrafões devida pelo depósito ao cliente |
 | `SettlementType` | YOU_OWE, SUPPLIER_OWE | Direção da liquidação com fornecedor |
 | `StockStatus` | NORMAL, LOW_STOCK, OUT_OF_STOCK | Status do estoque (suporte a relatórios) |
 
@@ -346,6 +368,7 @@ Preços personalizados por combinação cliente-produto.
 | `PaymentRequestDTO` | amount, orderId, method, notes |
 | `GasSupplierRequestDTO` | name, notes |
 | `LoanedBottleRequestDTO` | clientId, productId, quantity, loanDate |
+| `DepotBottleDebtRequestDTO` | clientId, quantity, debtDate, notes (opcional) |
 | `ClientPriceRequestDTO` | productId, customPrice |
 
 ### Response DTOs (Saída)
@@ -361,6 +384,7 @@ Preços personalizados por combinação cliente-produto.
 | `GasSettlementResponseDTO` | id, supplierId, amount, settled, settledDate, settlementType |
 | `GasSettlementReportDTO` | supplier details, settled/unsettled amounts, date range |
 | `LoanedBottleResponseDTO` | id, productId, clientId, quantity, loanDate, returnDate, status |
+| `DepotBottleDebtResponseDTO` | id, clientId, clientName, quantity, debtDate, notes, status, completionDate |
 | `StockResponseDTO` | id, productId, quantityInStock, minimumStock |
 | `FinancialReportDTO` | totalInvoiced, totalReceived, gasGrossProfit, balance |
 | `DailyReportDTO` | métricas operacionais diárias |
@@ -393,6 +417,7 @@ Todos os mappers utilizam **MapStruct** e estão em `com.vitalis.demo.mapper/`. 
 | `GasSupplierMapper` | GasSupplier ↔ GasSupplierRequestDTO / GasSupplierResponseDTO |
 | `GasSettlementMapper` | GasSettlement ↔ GasSettlementResponseDTO |
 | `LoanedBottleMapper` | LoanedBottle ↔ LoanedBottleRequestDTO / LoanedBottleResponseDTO |
+| `DepotBottleDebtMapper` | DepotBottleDebt ↔ DepotBottleDebtRequestDTO / DepotBottleDebtResponseDTO |
 | `ClientPriceMapper` | ClientPrice ↔ ClientPriceRequestDTO / ClientPriceResponseDTO |
 
 ---
@@ -575,6 +600,26 @@ Controla empréstimos de vasilhames.
 
 ---
 
+### DepotBottleDebtService
+
+- `save(dto)` — valida quantidade e data, resolve o cliente e registra a pendência como `PENDING`.
+- `findPending(clientId, pageable)` — retorna somente pendências, com filtro opcional por cliente.
+- `findById(id)` — consulta o registro, inclusive após a conclusão.
+- `complete(id)` — baixa integralmente, salva `COMPLETED` e a data do servidor.
+  Bloqueia a linha durante a transação para impedir que duas baixas concorrentes
+  sobrescrevam a data. A segunda baixa retorna erro de negócio sem alterar o registro.
+
+As gravações são transacionais e as consultas usam `@Transactional(readOnly = true)`.
+Não há baixa parcial, exclusão, acerto financeiro ou movimentação automática de estoque.
+
+Observação sobre o legado: a descrição acima de `LoanedBottleService.registerReturn`
+menciona decremento de `CLI_bottles_debt`, mas o código atual chama
+`ClientService.updateBottleBalance` com quantidade positiva, que soma ao campo.
+Esse comportamento foi preservado fora do escopo da issue #2. O novo recurso não
+utiliza esse campo nem modifica o fluxo de devolução existente.
+
+---
+
 ### ClientPriceService
 
 Gerencia preços customizados por cliente.
@@ -714,6 +759,106 @@ Base URL: `http://localhost:8080`
 | `GET` | `/bottles/client/{clientId}` | Autenticado | Pendências do cliente |
 | `PATCH` | `/bottles/{id}/return` | Autenticado | Registrar devolução |
 | `DELETE` | `/bottles/{id}` | Autenticado | Remover registro |
+
+---
+
+### DepotBottleDebtController — `/depot-bottle-debts`
+
+Todos os endpoints exigem a autenticação HTTP Basic existente, para ADMIN ou SELLER.
+O recurso representa exclusivamente garrafões devidos **pelo depósito ao cliente**.
+As rotas e os DTOs de `/bottles` permanecem inalterados.
+
+| Método | Endpoint | Sucesso | Descrição |
+|---|---|---|---|
+| `POST` | `/depot-bottle-debts` | 201 + DepotBottleDebtResponseDTO | Registrar pendência |
+| `GET` | `/depot-bottle-debts` | 200 + Page&lt;DepotBottleDebtResponseDTO&gt; | Listar somente `PENDING` |
+| `GET` | `/depot-bottle-debts/{id}` | 200 + DepotBottleDebtResponseDTO | Consultar pendente ou concluído |
+| `PATCH` | `/depot-bottle-debts/{id}/complete` | 204, sem corpo | Baixa integral, sem corpo de request |
+
+Payload de criação:
+
+```json
+{
+  "clientId": "00000000-0000-0000-0000-000000000001",
+  "quantity": 2,
+  "debtDate": "2026-11-12T09:30:00",
+  "notes": "Cliente deixou os garrafões no depósito"
+}
+```
+
+`clientId`, `quantity` e `debtDate` são obrigatórios. `quantity` deve ser inteiro
+entre 1 e 2147483647; valores fracionários não são truncados. `notes` pode ser
+omitida, nula ou vazia e aceita até 255 caracteres. As datas usam ISO 8601 local,
+sem offset, como nos demais DTOs com `LocalDateTime`. `status` e `completionDate`
+são controlados pelo servidor, não fazem parte do request.
+
+Resposta de criação (a mesma estrutura é usada na consulta por ID e em `content`):
+
+```json
+{
+  "id": "00000000-0000-0000-0000-000000000002",
+  "clientId": "00000000-0000-0000-0000-000000000001",
+  "clientName": "Maria",
+  "quantity": 2,
+  "debtDate": "2026-11-12T09:30:00",
+  "notes": "Cliente deixou os garrafões no depósito",
+  "status": "PENDING",
+  "completionDate": null
+}
+```
+
+Após a baixa, o registro continua disponível por ID com `status: "COMPLETED"`
+e `completionDate` preenchida; os demais campos são preservados. Ele deixa a
+listagem de pendências. Repetir a baixa retorna 400 e mantém a primeira data.
+
+Listagem: `GET /depot-bottle-debts?clientId={uuid}&page=0&size=10&sort=debtDate,asc`.
+`clientId` é opcional; quando presente, deve identificar cliente existente.
+Paginação `Page<T>` do Spring, com `content`, `totalElements`, `totalPages`,
+`number` e `size`; `page` começa em zero. Padrões: página 0, tamanho 10 e
+ordenação por `debtDate` crescente. Para a segunda página, use `page=1`;
+é possível usar `sort=debtDate,desc`. Sem resultados, retorna 200 com `content: []`.
+
+Erros para integração:
+
+| HTTP | Situação |
+|---|---|
+| 422 | Campos obrigatórios ausentes/nulos, quantidade zero/negativa ou observação com mais de 255 caracteres |
+| 400 | Quantidade fracionária/fora do intervalo de Integer, JSON/UUID/data inválidos ou baixa repetida |
+| 404 | Cliente inexistente no cadastro/filtro; pendência inexistente na consulta/baixa |
+| 401 | Ausência ou falha da autenticação HTTP Basic existente |
+
+Validações 422 usam o handler global com `timestamp`, `status`, `error` e
+`errors` (lista de campos e mensagens). Erros de negócio e de recurso não
+encontrado usam o handler global com `timestamp`, `status`, `error`, `message`
+e `path`, conforme os exemplos a seguir. Erros de desserialização 400 são
+tratados pelo Spring; seu corpo não deve ser usado como contrato de validação.
+
+Exemplo de validação (422):
+
+```json
+{
+  "timestamp": "2026-11-12T09:30:00",
+  "status": 422,
+  "error": "Erro de validação",
+  "errors": [{ "field": "quantity", "message": "A quantidade deve ser maior que zero!" }]
+}
+```
+
+Exemplo de baixa repetida (400):
+
+```json
+{
+  "timestamp": "2026-11-12T09:30:00",
+  "status": 400,
+  "error": "Erro de negócio",
+  "message": "A pendência de garrafões já foi baixada!",
+  "path": "/depot-bottle-debts/00000000-0000-0000-0000-000000000002/complete"
+}
+```
+
+Não há campos novos em responses existentes. O desktop da issue
+`gabsiq73/vitalis-desktop#7` deve usar `DepotBottleDebtResponseDTO` e as novas
+rotas; não deve somar essas quantidades ao saldo de empréstimos ou ao financeiro.
 
 ---
 
