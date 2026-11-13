@@ -701,6 +701,13 @@ Base URL: `http://localhost:8080`
 
 ### StockController — `/stocks`
 
+`GET /stocks` lista somente estoque físico de produtos `WATER`. Registros legados
+de `GAS` são excluídos na consulta antes da paginação, inclusive dos totais da
+página, sem excluir dados existentes. Gás não possui estoque físico local e não
+deve gerar alertas no Dashboard nem em Relatórios. O DTO e o formato `Page<T>`
+permanecem iguais. A classificação é `OUT_OF_STOCK` quando quantidade <= 0,
+`LOW_STOCK` quando quantidade <= mínimo, e `NORMAL` acima do mínimo.
+
 | Método | Endpoint | Auth | Descrição |
 |---|---|---|---|
 | `GET` | `/stocks` | Autenticado | Listar estoque (paginado) |
