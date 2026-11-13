@@ -26,6 +26,7 @@ public interface GasSettlementMapper {
 
     @Mapping(source = "gasSupplier.name", target = "supplierName")
     @Mapping(source = "settlementType", target = "type")
+    @Mapping(target = "amount", expression = "java(entity.getTotalAmount())")
     @Mapping(target = "direction", expression = "java(entity.getSettlementType() == SettlementType.SUPPLIER_OWE ? CashMovementDirection.IN : CashMovementDirection.OUT)")
     GasSettlementMovementDTO toMovementDTO(GasSettlement entity);
 }

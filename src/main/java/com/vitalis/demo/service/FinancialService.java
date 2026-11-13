@@ -78,9 +78,9 @@ public class FinancialService {
         BigDecimal gasOut = BigDecimal.ZERO;
         for (GasSettlement settlement : settlements) {
             if (settlement.getSettlementType() == SettlementType.SUPPLIER_OWE) {
-                gasIn = gasIn.add(settlement.getAmount());
+                gasIn = gasIn.add(settlement.getTotalAmount());
             } else if (settlement.getSettlementType() == SettlementType.YOU_OWE) {
-                gasOut = gasOut.add(settlement.getAmount());
+                gasOut = gasOut.add(settlement.getTotalAmount());
             }
         }
         List<GasSettlementMovementDTO> gasDetails = settlements.stream()
@@ -99,7 +99,7 @@ public class FinancialService {
      * <ul>
      *   <li><b>Faturado:</b> soma dos pedidos com status DELIVERED no período.</li>
      *   <li><b>Recebido:</b> soma de todos os pagamentos registrados no período.</li>
-     *   <li><b>Lucro do gás:</b> soma dos acertos de gás liquidados no período.</li>
+     *   <li><b>Margem do gás:</b> margem das unidades entregues, independentemente do repasse.</li>
      * </ul>
      */
     @Transactional(readOnly = true)

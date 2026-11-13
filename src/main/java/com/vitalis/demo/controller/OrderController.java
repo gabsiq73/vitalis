@@ -1,6 +1,7 @@
 package com.vitalis.demo.controller;
 
 import com.vitalis.demo.dto.request.OrderRequestDTOv2;
+import com.vitalis.demo.dto.request.ConfirmDeliveryRequestDTO;
 import com.vitalis.demo.dto.response.OrderResponseDTO;
 import com.vitalis.demo.mapper.OrderItemMapper;
 import com.vitalis.demo.mapper.OrderMapper;
@@ -123,8 +124,9 @@ public class OrderController {
     }
 
     @PatchMapping("/{id}/confirm-delivery")
-    public ResponseEntity<Void> confirmDelivery(@PathVariable("id") UUID id){
-        orderService.confirmDelivery(id);
+    public ResponseEntity<Void> confirmDelivery(@PathVariable("id") UUID id,
+            @RequestBody(required = false) @Valid ConfirmDeliveryRequestDTO dto){
+        orderService.confirmDelivery(id, dto);
         return ResponseEntity.noContent().build();
     }
 }

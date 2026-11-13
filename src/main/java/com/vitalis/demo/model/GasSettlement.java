@@ -9,6 +9,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -50,5 +51,11 @@ public class GasSettlement extends BaseEntity{
     @OneToOne
     @JoinColumn(name = "ORD_ITEM_id")
     private OrderItem orderItem;
+
+    /** amount permanece unitário por compatibilidade com os registros existentes. */
+    public BigDecimal getTotalAmount() {
+        int quantity = orderItem == null ? 1 : orderItem.getQuantity();
+        return amount.multiply(BigDecimal.valueOf(quantity)).setScale(2, RoundingMode.HALF_UP);
+    }
 
 }

@@ -1112,6 +1112,65 @@ esses comportamentos foram preservados nesta issue.
 
 ### Liquidação de Gás (Gas Settlement)
 
+`GasSettlement.amount` e `GasSettlementResponseDTO.amount` são **unitários**,
+inclusive nos registros existentes. O total do acerto é `amount × quantity`.
+O relatório por fornecedor, as entradas/saídas do financeiro diário e
+`GasSettlementMovementDTO.amount` usam esse **total**, sem nova multiplicação
+no consumidor do movimento de caixa. A margem do gás também considera todas
+as unidades entregues, excluindo cancelados. Não há mudança de schema.
+
+#### Revisão do recebimento na entrega
+
+`PATCH /orders/{id}/confirm-delivery` aceita um corpo opcional:
+
+```json
+{
+  "gasPayments": [
+    {
+      "orderItemId": "00000000-0000-0000-0000-000000000001",
+      "receivedByUs": false,
+      "gasPaymentMethod": null
+    }
+  ]
+}
+```
+
+Quando enviado, informe exatamente todos os itens de gás do pedido, identificados
+pelo ID do item (não pelo produto), sem repetições. `receivedByUs: true` exige
+`PIX` ou `DINHEIRO`; `false` exige método nulo/omitido. Campos obrigatórios
+ausentes, lista vazia ou elemento nulo retornam 422; IDs inválidos retornam 400.
+Item de outro pedido, lista incompleta, repetição, método incompatível ou tentativa
+de alterar acerto já liquidado retornam 400 com a mensagem de negócio.
+
+A revisão preserva o custo unitário gravado. Recebimento no depósito cria/atualiza
+o pagamento automático do valor total e deixa o custo a pagar (`YOU_OWE`).
+Recebimento pelo entregador remove o pagamento automático e deixa somente a
+margem a receber (`SUPPLIER_OWE`). Os itens recebidos no depósito devem usar o
+mesmo método, como na criação. Pagamentos avulsos legados, inclusive parciais e
+SALDO, são preservados quando o recebimento/método não muda; alterações nesses
+casos são recusadas para não converter nem duplicar dinheiro/crédito existente.
+SALDO só pode ser mantido se já estiver registrado como pagamento avulso.
+
+Pagamento, acerto, entrega e baixa de água são confirmados na mesma transação;
+qualquer falha reverte a revisão. Sucesso retorna 204 sem corpo. Pedido entregue
+ou cancelado não pode ser confirmado novamente (400); ID inexistente retorna
+404. A autenticação HTTP Basic existente continua exigida.
+Sem corpo, preserva-se o contrato anterior e o recebedor já registrado: a entrega
+não presume recebimento pelo depósito. O desktop revisa os dados pelo GET do pedido.
+
+O campo já existente `OrderItemResponseDTO.gasCostPrice` agora informa o custo
+unitário histórico derivado do acerto. Nenhum campo de response foi removido.
+
+#### Leitura do financeiro
+
+`FinancialReportDTO.totalInvoiced` continua sendo o valor bruto das vendas
+entregues, inclusive a parcela da fornecedora do gás. Não significa dinheiro
+recebido nem lucro do depósito. `totalReceived` soma pagamentos PIX/Dinheiro e
+novos créditos de cliente na data do recebimento; SALDO não gera entrada nova.
+`gasGrossProfit` é a margem de todas as unidades de gás pela data da entrega,
+mesmo quando o repasse ainda está pendente, e não deve ser somado novamente
+ao saldo do caixa. O repasse só movimenta o caixa na liquidação do acerto.
+
 ```
 1. Ao criar OrderItem de GAS → GasSettlementService cria GasSettlement
    - YOU_OWE: distribuidora deve ao fornecedor (custo do gás)
