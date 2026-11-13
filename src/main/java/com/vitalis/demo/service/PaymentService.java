@@ -79,12 +79,19 @@ public class PaymentService {
 
     @Transactional(readOnly = true)
     public List<DailyCashPaymentDTO> findDailyPayments(LocalDate date) {
+        return findDailyPayments(date, false);
+    }
+
+    @Transactional(readOnly = true)
+    public List<DailyCashPaymentDTO> findDailyPayments(LocalDate date, boolean includeBalance) {
         LocalDateTime start = date.atStartOfDay();
         LocalDateTime end   = date.atTime(LocalTime.MAX);
+        List<Payment> payments = includeBalance
+                ? repository.findDailyPaymentsIncludingBalance(start, end)
+                : repository.findByDateBetweenAndMethodNotOrderByDateDesc(start, end, Method.SALDO);
 
         return Stream.concat(
-                    repository.findByDateBetweenAndMethodNotOrderByDateDesc(start, end, Method.SALDO)
-                            .stream().map(mapper::toDailyCashPaymentDTO),
+                    payments.stream().map(mapper::toDailyCashPaymentDTO),
                     clientCreditEntryRepository.findByDateBetweenOrderByDateDesc(start, end)
                             .stream().map(mapper::toDailyCashPaymentDTO))
                 .sorted(Comparator.comparing(DailyCashPaymentDTO::paymentDate).reversed())

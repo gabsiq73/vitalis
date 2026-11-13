@@ -922,6 +922,18 @@ O `GlobalExceptionHandler` intercepta exceções e retorna respostas padronizada
 
 ## 14. Fluxos de Negócio
 
+### Caixa do Dia — consulta de pagamentos e consumo de crédito
+
+`GET /payments/daily?date=YYYY-MM-DD` preserva o retorno de entradas PIX e
+DINHEIRO, incluindo excedentes `CLIENT_CREDIT`. O parâmetro opcional
+`includeBalance=true` inclui também pagamentos `SALDO`, usando a mesma data
+do pagamento e excluindo pedidos cancelados. O padrão é `false`.
+O formato `DailyCashPaymentDTO` permanece inalterado; SALDO usa
+`entryType=PAYMENT`. O desktop soma PIX e DINHEIRO como novas entradas e
+mostra SALDO separadamente como consumo de crédito existente. `totalReceived`
+e os demais cálculos financeiros não mudam. Atualize o backend antes do desktop
+que usa o parâmetro (gabsiq73/vitalis-desktop#4).
+
 ### Descontinuação do programa de fidelidade — issue #3
 
 O programa foi retirado das operações. O inventário e o tratamento são:
