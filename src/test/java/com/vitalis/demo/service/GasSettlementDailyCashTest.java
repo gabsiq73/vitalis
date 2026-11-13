@@ -72,6 +72,7 @@ class GasSettlementDailyCashTest {
         Order order = new Order();
         order.setDeliveryDate(day.minusDays(1).atTime(16, 0));
         OrderItem item = new OrderItem();
+        item.setQuantity(1);
         order.addItem(item);
         incoming.setOrderItem(item);
         when(gasSettlementRepository.findBySettledTrueAndSettledDateBetweenOrderBySettledDateDesc(

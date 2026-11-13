@@ -30,7 +30,16 @@ public abstract class OrderItemMapper {
     @Mapping(target = "subTotal", expression = "java(item.getUnitPrice().multiply(java.math.BigDecimal.valueOf(item.getQuantity())))")
     @Mapping(target = "receivedByUs", expression = "java(receivedByUs(item))")
     @Mapping(target = "gasPaymentMethod", expression = "java(gasPaymentMethod(item))")
+    @Mapping(target = "gasCostPrice", expression = "java(gasCostPrice(item))")
     public abstract OrderItemResponseDTO toResponseDTO(OrderItem item);
+
+    protected java.math.BigDecimal gasCostPrice(OrderItem item) {
+        if (item.getProduct().getType() != ProductType.GAS) return null;
+        return gasSettlementRepository.findByOrderItem(item)
+                .map(settlement -> settlement.getSettlementType() == SettlementType.YOU_OWE
+                        ? settlement.getAmount() : item.getUnitPrice().subtract(settlement.getAmount()))
+                .orElse(null);
+    }
 
     protected Boolean receivedByUs(OrderItem item) {
         if (item.getProduct().getType() != ProductType.GAS) return null;

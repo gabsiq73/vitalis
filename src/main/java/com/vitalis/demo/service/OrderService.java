@@ -1,6 +1,7 @@
 package com.vitalis.demo.service;
 
 import com.vitalis.demo.dto.request.GasFinancialInfoRequest;
+import com.vitalis.demo.dto.request.ConfirmDeliveryRequestDTO;
 import com.vitalis.demo.dto.request.OrderItemRequestDTO;
 import com.vitalis.demo.dto.request.OrderRequestDTOv2;
 import com.vitalis.demo.dto.response.OrderResponseDTO;
@@ -179,6 +180,11 @@ public class OrderService {
     // Confirmação de Entrega
     @Transactional
     public void confirmDelivery(UUID orderId) {
+        confirmDelivery(orderId, null);
+    }
+
+    @Transactional
+    public void confirmDelivery(UUID orderId, ConfirmDeliveryRequestDTO dto) {
         Order order = findById(orderId);
 
         if (order.getStatus() == OrderStatus.CANCELLED) {
@@ -186,6 +192,8 @@ public class OrderService {
         }
         checkOrderIsNotAlreadyDelivered(order);
         checkOrderHasItems(order);
+
+        if (dto != null) reviewGasDeliveryPayments(order, dto);
 
         order.getItems().forEach(item -> {
             stockService.decreaseStock(item.getProduct(), item.getQuantity());
@@ -196,6 +204,56 @@ public class OrderService {
         repository.save(order);
 
         clientService.calculateDebtBalance(order.getClient().getId());
+    }
+
+    private void reviewGasDeliveryPayments(Order order, ConfirmDeliveryRequestDTO dto) {
+        List<OrderItem> gasItems = order.getItems().stream()
+                .filter(item -> item.getProduct().getType() == ProductType.GAS).toList();
+        Map<UUID, ConfirmDeliveryRequestDTO.GasPayment> selections = new HashMap<>();
+        for (var selection : dto.gasPayments()) {
+            if (selections.put(selection.orderItemId(), selection) != null) {
+                throw new BusinessException("Informe cada item de gás apenas uma vez.");
+            }
+        }
+        if (selections.size() != gasItems.size()
+                || gasItems.stream().anyMatch(item -> !selections.containsKey(item.getId()))) {
+            throw new BusinessException("Revise o recebimento de todos os itens de gás deste pedido.");
+        }
+        Map<UUID, GasFinancialInfoRequest> financialByItem = new HashMap<>();
+        boolean hasManualPayments = order.getPayments().stream().anyMatch(payment -> !payment.isAutomaticGas());
+        for (OrderItem item : gasItems) {
+            var selection = selections.get(item.getId());
+            GasSettlement settlement = gasSettlementService.findByOrderItem(item)
+                    .orElseThrow(() -> new BusinessException("Acerto de gás não encontrado para o item."));
+            boolean currentReceived = settlement.getSettlementType() == SettlementType.YOU_OWE;
+            boolean received = Boolean.TRUE.equals(selection.receivedByUs());
+            Method method = selection.gasPaymentMethod();
+            Method currentMethod = order.getPayments().stream().filter(Payment::isAutomaticGas)
+                    .findFirst().or(() -> order.getPayments().stream().filter(payment -> !payment.isAutomaticGas()).findFirst())
+                    .map(Payment::getMethod).orElse(null);
+            boolean preservesLegacyMethod = hasManualPayments && currentReceived && received && method == currentMethod;
+            if (received && method != Method.PIX && method != Method.DINHEIRO && !preservesLegacyMethod) {
+                throw new BusinessException("Informe PIX ou Dinheiro para o gás recebido pelo depósito.");
+            }
+            if (!received && method != null) {
+                throw new BusinessException("Gás recebido pelo entregador não deve informar pagamento no depósito.");
+            }
+            boolean changed = received != currentReceived || (received && method != currentMethod);
+            if (changed && Boolean.TRUE.equals(settlement.getSettled())) {
+                throw new BusinessException("Acerto de gás já liquidado; não é possível alterar o recebimento.");
+            }
+            if (changed && hasManualPayments) {
+                throw new BusinessException("Pedido com pagamentos avulsos: revise os pagamentos antes de alterar o recebimento do gás.");
+            }
+            BigDecimal cost = currentReceived ? settlement.getAmount()
+                    : item.getUnitPrice().subtract(settlement.getAmount());
+            if (received != currentReceived) {
+                gasSettlementService.updateAutomatedSettlement(settlement, item, received, cost);
+            }
+            financialByItem.put(item.getId(), new GasFinancialInfoRequest(cost, received, method));
+        }
+        // Pagamentos avulsos legados, inclusive parciais/SALDO, não viram recebimento integral.
+        if (!hasManualPayments) syncAutomaticGasPayment(order, item -> financialByItem.get(item.getId()));
     }
 
     // Atualização de Status
@@ -418,11 +476,16 @@ public class OrderService {
 
     /** Registra apenas o valor de gás recebido no depósito e reconcilia edições. */
     private void syncAutomaticGasPayment(Order order, Map<UUID, GasFinancialInfoRequest> financialMap) {
+        syncAutomaticGasPayment(order, item -> financialMap.get(item.getProduct().getId()));
+    }
+
+    private void syncAutomaticGasPayment(Order order,
+            java.util.function.Function<OrderItem, GasFinancialInfoRequest> financialInfo) {
         BigDecimal gasReceived = BigDecimal.ZERO;
         Method method = null;
         for (OrderItem item : order.getItems()) {
             if (item.getProduct().getType() != ProductType.GAS) continue;
-            GasFinancialInfoRequest info = financialMap.get(item.getProduct().getId());
+            GasFinancialInfoRequest info = financialInfo.apply(item);
             if (info == null || !Boolean.TRUE.equals(info.receivedByUs())) continue;
             Method itemMethod = info.gasPaymentMethod();
             if (itemMethod == null) {
@@ -453,7 +516,7 @@ public class OrderService {
         boolean hasManual = order.getPayments().stream().anyMatch(payment -> !payment.isAutomaticGas());
         boolean explicitMethod = order.getItems().stream()
                 .filter(item -> item.getProduct().getType() == ProductType.GAS)
-                .map(item -> financialMap.get(item.getProduct().getId()))
+                .map(financialInfo)
                 .filter(Objects::nonNull).anyMatch(info -> info.gasPaymentMethod() != null);
         if (automatic == null && hasManual && !explicitMethod) amountToRecord = BigDecimal.ZERO;
         if (amountToRecord.signum() == 0) {

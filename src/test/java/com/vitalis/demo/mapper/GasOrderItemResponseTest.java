@@ -29,6 +29,7 @@ class GasOrderItemResponseTest {
         item.setUnitPrice(new BigDecimal("70.00"));
         order.addItem(item);
         GasSettlement settlement = new GasSettlement();
+        settlement.setAmount(new BigDecimal("50.00"));
         settlement.setSettlementType(SettlementType.YOU_OWE);
         when(settlements.findByOrderItem(item)).thenReturn(Optional.of(settlement));
         Payment payment = new Payment();
@@ -39,11 +40,14 @@ class GasOrderItemResponseTest {
         var depot = mapper.toResponseDTO(item);
         assertThat(depot.receivedByUs()).isTrue();
         assertThat(depot.gasPaymentMethod()).isEqualTo(Method.PIX);
+        assertThat(depot.gasCostPrice()).isEqualByComparingTo("50.00");
 
         settlement.setSettlementType(SettlementType.SUPPLIER_OWE);
+        settlement.setAmount(new BigDecimal("20.00"));
         var supplier = mapper.toResponseDTO(item);
         assertThat(supplier.receivedByUs()).isFalse();
         assertThat(supplier.gasPaymentMethod()).isNull();
+        assertThat(supplier.gasCostPrice()).isEqualByComparingTo("50.00");
 
         settlement.setSettlementType(SettlementType.YOU_OWE);
         order.getPayments().clear();

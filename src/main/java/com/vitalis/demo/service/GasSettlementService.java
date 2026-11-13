@@ -142,10 +142,10 @@ public class GasSettlementService {
 
         for(GasSettlement gs: settlements){
             if(gs.getSettlementType() == SettlementType.YOU_OWE){
-                toPay = toPay.add(gs.getAmount());
+                toPay = toPay.add(gs.getTotalAmount());
             }
             else{
-                toReceive = toReceive.add(gs.getAmount());
+                toReceive = toReceive.add(gs.getTotalAmount());
             }
         }
 
