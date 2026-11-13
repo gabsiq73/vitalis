@@ -6,7 +6,6 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.SQLRestriction;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -28,7 +27,7 @@ import java.util.UUID;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 @DynamicUpdate
 @SQLDelete(sql = "UPDATE tb_client SET CLI_is_active = false WHERE CLI_id = ?") // Faz o delete virar update automático
-@SQLRestriction("CLI_is_active = true") // Sempre filtra os ativos nas buscas comuns
+// O filtro de ativos fica no repositório; associações históricas devem carregar o cliente inativo.
 public class Client extends BaseEntity {
 
     @EqualsAndHashCode.Include

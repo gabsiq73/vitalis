@@ -32,7 +32,7 @@ class SupplierCollectedGasOpenOrdersTest {
         Order supplierCollected = order(OrderStatus.DELIVERED);
         Order waterDebt = order(OrderStatus.DELIVERED);
         Order cancelled = order(OrderStatus.CANCELLED);
-        when(clientService.findById(clientId)).thenReturn(client);
+        when(clientService.findByIdIncludingInactive(clientId)).thenReturn(client);
         when(repository.findByClientAndPaymentStatusNotOrderByCreateDateAsc(client, PaymentStatus.PAID))
                 .thenReturn(List.of(supplierCollected, waterDebt, cancelled));
         when(orderBalanceService.calculateRemainingBalance(supplierCollected)).thenReturn(BigDecimal.ZERO);

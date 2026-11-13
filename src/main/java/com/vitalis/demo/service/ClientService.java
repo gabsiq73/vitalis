@@ -44,6 +44,12 @@ public class ClientService {
     }
 
     @Transactional(readOnly = true)
+    public Client findByIdIncludingInactive(UUID id) {
+        return repository.findByIdIncludingInactive(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Cliente com ID " + id + " não encontrado"));
+    }
+
+    @Transactional(readOnly = true)
     public Page<Client> listClient(String name, ClientType type, Pageable pageable){
         if(name != null && type != null) return repository.findByNameContainingIgnoreCaseAndClientType(pageable, name, type);
         if(name != null) return repository.findByNameContainingIgnoreCaseAndClientTypeNot(pageable, name, ClientType.AVULSO);
@@ -87,7 +93,7 @@ public class ClientService {
 
     @Transactional
     public void addCreditBalance(UUID clientId, BigDecimal amount) {
-        Client client = findById(clientId);
+        Client client = findByIdIncludingInactive(clientId);
 
         BigDecimal currentBalance = (client.getBalance() != null) ? client.getBalance() : BigDecimal.ZERO;
         client.setBalance(currentBalance.add(amount));
@@ -96,7 +102,7 @@ public class ClientService {
 
     @Transactional
     public void consumeCreditBalance(UUID clientId, BigDecimal amount){
-        Client client = findById(clientId);
+        Client client = findByIdIncludingInactive(clientId);
         BigDecimal currentBalance = (client.getBalance() != null) ? client.getBalance() : BigDecimal.ZERO;
 
         if(amount.compareTo(currentBalance) > 0){
@@ -109,8 +115,7 @@ public class ClientService {
 
     @Transactional
     public BigDecimal calculateDebtBalance(UUID clientId){
-        Client client = repository.findById(clientId)
-                .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado!"));
+        Client client = findByIdIncludingInactive(clientId);
 
         // Busca todos os pedidos que ja foram entregues
         List<Order> orders = orderRepository.findByClientAndStatus(client, OrderStatus.DELIVERED);
