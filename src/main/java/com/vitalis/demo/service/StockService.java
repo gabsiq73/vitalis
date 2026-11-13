@@ -35,7 +35,7 @@ public class StockService {
 
     @Transactional(readOnly = true)
     public Page<Stock> findAll(Pageable pageable){
-        return repository.findAll(pageable);
+        return repository.findByProduct_Type(ProductType.WATER, pageable);
     }
 
     @Transactional
