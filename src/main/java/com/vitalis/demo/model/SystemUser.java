@@ -14,7 +14,10 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "tb_user")
+@Table(name = "tb_user", uniqueConstraints = {
+        @UniqueConstraint(name = SystemUser.USERNAME_UNIQUE_CONSTRAINT, columnNames = "user_username"),
+        @UniqueConstraint(name = SystemUser.EMAIL_UNIQUE_CONSTRAINT, columnNames = "user_email")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -24,6 +27,10 @@ import java.util.UUID;
 @EntityListeners(AuditingEntityListener.class)
 @DynamicUpdate
 public class SystemUser  {
+
+    // Preserva os nomes já gerados pelo Hibernate nos bancos PostgreSQL existentes.
+    public static final String USERNAME_UNIQUE_CONSTRAINT = "ukig8f9fkp6x3vcbjski1u91wds";
+    public static final String EMAIL_UNIQUE_CONSTRAINT = "ukky6rbh0axwmbamyg6wl4a7imb";
 
     @EqualsAndHashCode.Include
     @Id
@@ -37,14 +44,15 @@ public class SystemUser  {
     @Column(name = "user_last_name", length = 50)
     private String lastName;
 
-    @Column(name = "user_username", nullable = false, unique = true, length = 30)
+    @Column(name = "user_username", nullable = false, length = 30)
     private String username;
 
     @Email
-    @Column(name = "user_email", nullable = false, unique = true, length = 100)
+    @Column(name = "user_email", nullable = false, length = 100)
     private String email;
 
     @Column(name = "user_password", nullable = false, length = 255)
+    @ToString.Exclude
     private String password;
 
     @Enumerated(EnumType.STRING)

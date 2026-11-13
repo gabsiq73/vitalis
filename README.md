@@ -72,6 +72,44 @@ src/main/java/com/vitalis/demo/
 
    A API inicia em `http://localhost:8080` e o Swagger em `http://localhost:8080/swagger-ui/index.html`.
 
+## Primeira conta de usuário
+
+`POST /users` já é público e permite cadastrar **Administrador (`ADMIN`)** ou
+**Vendedor (`SELLER`)**, inclusive a primeira conta e outros administradores,
+sem login prévio. Não existe conta padrão. O cadastro antes do login no desktop
+é acompanhado na [issue desktop #22](https://github.com/gabsiq73/vitalis-desktop/issues/22).
+Enquanto essa interface não estiver disponível, com a API local em execução,
+o cadastro pode ser feito pelo Swagger ou pelo PowerShell:
+
+```powershell
+$credentials = Get-Credential -UserName 'maria' -Message 'Escolha o usuário e a senha da nova conta'
+$registration = @{
+    firstName = 'Maria'
+    username = $credentials.UserName
+    email = 'maria@example.com'
+    password = $credentials.GetNetworkCredential().Password
+    userRole = 'ADMIN' # ou SELLER
+}
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8080/users' `
+    -ContentType 'application/json' -Body ($registration | ConvertTo-Json)
+
+# Verifica as credenciais criadas usando o HTTP Basic já existente.
+$basic = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes(
+    $credentials.UserName + ':' + $credentials.GetNetworkCredential().Password))
+Invoke-RestMethod -Uri 'http://localhost:8080/users' -Headers @{ Authorization = "Basic $basic" }
+Remove-Variable registration, basic, credentials
+```
+
+Nome e username são obrigatórios (2–20 e 2–30 caracteres, respectivamente),
+assim como email válido (até 100), senha (mínimo 6) e perfil. Sobrenome é
+opcional; quando informado, deve ter 2–20 caracteres. O sucesso retorna 201
+com os dados do usuário, sem senha ou hash. Validação retorna 422;
+username/email duplicado retorna 400 com mensagem específica, inclusive em
+cadastros simultâneos. JSON ou perfil inválido retorna 400. O cadastro anônimo
+deve omitir `Authorization`: credenciais Basic inválidas são recusadas mesmo
+em uma rota pública. Depois do cadastro, faça login normalmente no desktop.
+Consulte os exemplos de responses e erros em [DOCUMENTATION.md](DOCUMENTATION.md#cadastro-público-de-usuários--issue-12).
+
 ## Testes
 
 ```powershell

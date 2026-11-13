@@ -13,10 +13,11 @@ public record UserRequestDTO(
         @Size(min = 2, max = 20, message = "Limite máximo de 20 caracteres!")
         String lastName,
         @NotBlank(message = "Preencha o campo de usuário")
-        @Size(min = 2, max = 30, message = "Limite máximo de 20 caracteres!")
+        @Size(min = 2, max = 30, message = "O usuário deve ter entre 2 e 30 caracteres!")
         String username,
         @NotBlank(message = "Email obrigatório!")
         @Email
+        @Size(max = 100, message = "O email deve ter no máximo 100 caracteres!")
         String email,
         @NotBlank(message = "Senha é obrigatória")
         @Size(min = 6, message = "A senha deve ter no mínimo 6 caracteres")
