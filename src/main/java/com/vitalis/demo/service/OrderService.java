@@ -92,13 +92,13 @@ public class OrderService {
 
     @Transactional(readOnly = true)
     public Page<Order> findOrderByClient(UUID id, Pageable pageable) {
-        Client client = clientService.findById(id);
+        Client client = clientService.findByIdIncludingInactive(id);
         return repository.findByClient(client, pageable);
     }
 
     @Transactional(readOnly = true)
     public List<Order> findOpenOrdersByClient(UUID id) {
-        Client client = clientService.findById(id);
+        Client client = clientService.findByIdIncludingInactive(id);
         return repository.findByClientAndPaymentStatusNotOrderByCreateDateAsc(client, PaymentStatus.PAID).stream()
                 .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
                 .filter(order -> orderBalanceService.calculateRemainingBalance(order).signum() > 0)

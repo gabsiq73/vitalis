@@ -153,7 +153,7 @@ Representa os clientes da distribuidora. Suporta **soft delete** via `CLI_is_act
 - `OneToMany` → LoanedBottle
 - `OneToMany` → Order
 
-**Soft Delete:** O Hibernate intercepta operações de DELETE e executa `UPDATE tb_client SET CLI_is_active = false`. Todas as queries filtram automaticamente `CLI_is_active = true`.
+**Soft Delete:** O Hibernate intercepta operações de DELETE e executa `UPDATE tb_client SET CLI_is_active = false`. O fluxo de exclusão de `ClientService` também desativa o cliente sem removê-lo. As consultas de cadastro e seleção em `ClientRepository` filtram explicitamente `isActive = true`; as associações JPA podem carregar clientes inativos para preservar o histórico. A consulta interna `findByIdIncludingInactive` permite ler esse histórico e executar os efeitos financeiros do cancelamento.
 
 ---
 
@@ -478,7 +478,7 @@ Gerencia o ciclo de vida dos clientes com regras de negócio específicas.
 - `findAll(pageable, name, type)` — lista com filtros e paginação
 - `findById(id)` — busca por ID
 - `update(id, dto)` — atualização parcial
-- `delete(id)` — soft delete (valida se cliente tem pedidos antes de excluir)
+- `delete(id)` — desativa o cliente, inclusive quando possui pedidos, sem excluir o histórico
 - `addCreditBalance(client, amount)` — credita valor no saldo do cliente
 - `consumeCreditBalance(client, amount)` — debita saldo (valida se há saldo suficiente)
 - `calculateDebtBalance(client)` — calcula dívida total com base nos pedidos abertos
@@ -928,6 +928,53 @@ O `GlobalExceptionHandler` intercepta exceções e retorna respostas padronizada
 ---
 
 ## 14. Fluxos de Negócio
+
+### Pedidos de clientes inativos — issue #10
+
+A reprodução em banco de teste confirmou a causa: após `DELETE /clients/{id}`,
+o cliente continua em `tb_client` com `cli_is_active = false`, mas o antigo
+`@SQLRestriction` o ocultava ao carregar `Order.client`. A listagem lançava
+`JpaObjectRetrievalFailureException` / `EntityNotFoundException`; a consulta do
+pedido por ID também podia retornar 404. Nenhum dado do banco operacional foi
+usado ou alterado para reproduzir o problema. A hipótese de cliente fisicamente
+ausente no incidente original não foi confirmada; a correção não recria clientes
+nem remove pedidos para compensar dados ausentes.
+
+- `GET /orders`, `GET /orders/{id}`, `GET /orders/active`,
+  `GET /orders/client/{id}` e `GET /orders/client/{id}/open` podem carregar o
+  cliente inativo, preservando `clientId`, `clientName`, itens e valores históricos,
+  inclusive pedidos cancelados. Os filtros, a paginação e os critérios de cada
+  listagem permanecem os mesmos.
+- `GET /clients` continua listando apenas ativos em todas as combinações de
+  filtros. `GET /clients/{id}` e a seleção em `POST /orders` continuam retornando
+  404 para clientes inativos. A validação de duplicidade também considera apenas
+  cadastros ativos. Desativar não apaga nem reativa o cliente.
+- Pagamentos, caixa diário, relatórios e acertos que carregam o pedido ou seu
+  cliente preservam o histórico. O cancelamento pode carregar o cliente inativo
+  para estornar crédito excedente, devolver SALDO e recalcular dívida, mantendo
+  as regras existentes de estoque, pagamentos e acertos de gás. Repetir um
+  cancelamento não repete os estornos.
+- Não há alteração de schema, campos de DTO, formato de response, rotas ou
+  autenticação. O desktop pode continuar usando os contratos existentes.
+
+Validação: `InactiveClientOrderHistoryTest` cobre clientes ativos e inativos,
+seleção, duplicidade, pedidos pendentes/em rota/entregues/cancelados, valor
+histórico zero, pagamento parcial, pedido misto, excedente, SALDO, leituras
+financeiras e cancelamento. `InitialOrderPaymentsTest` verifica as regras
+existentes de pagamento inicial; `SupplierCollectedGasOpenOrdersTest` preserva
+o filtro de dívida efetiva na consulta de pedidos abertos. Os 19 testes dirigidos
+passaram. Execute com Java 21:
+
+```powershell
+.\mvnw.cmd '-Dtest=InactiveClientOrderHistoryTest,InitialOrderPaymentsTest,SupplierCollectedGasOpenOrdersTest' test -q
+```
+
+Também foi executada a API com `spring-boot:run`, `ddl-auto: update`,
+`DB_PORT=5435` e PostgreSQL 16.3 descartável, sem volume de dados local.
+`SERVER_PORT=8081` foi usado somente na verificação porque 8080 já estava
+ocupada. As chamadas HTTP verificaram histórico, paginação, seleção de ativos,
+rejeição de novo pedido para inativo, pagamentos, caixa, relatórios, estoque,
+acertos e cancelamento. O Postman CLI verificou `GET /orders` com sete asserções.
 
 ### Caixa do Dia — consulta de pagamentos e consumo de crédito
 
