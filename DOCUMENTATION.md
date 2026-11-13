@@ -343,7 +343,7 @@ Preços personalizados por combinação cliente-produto.
 
 | DTO | Campos principais |
 |---|---|
-| `UserRequestDTO` | firstName, lastName, username, email, password, role |
+| `UserRequestDTO` | firstName, lastName (opcional), username, email, password, userRole |
 | `ClientRequestDTO` | name, phone, address, notes, clientType, clientStatus |
 | `ProductRequestDTO` | name, basePrice, costPrice, type, defaultSupplierId |
 | `OrderRequestDTOv2` | clientId, items[], deliveryDate, isDelivery, notes, initialPayments[] (opcional) |
@@ -462,7 +462,7 @@ sumTotalProfit(start, end) // lucro líquido calculado com base no tipo de liqui
 
 Gerencia o ciclo de vida dos usuários do sistema.
 
-- `save(dto)` — cria usuário com senha encodada via BCrypt
+- `save(entity)` — valida duplicidade de username/email e cria usuário com senha BCrypt; o flush permite tratar também colisões concorrentes das constraints de cadastro
 - `findAll()` — lista todos os usuários
 - `findById(id)` — busca por ID, lança `ResourceNotFoundException` se não encontrado
 - `update(id, dto)` — atualização parcial via `UserUpdateDTO`
@@ -642,6 +642,126 @@ Base URL: `http://localhost:8080`
 | `GET` | `/users/{id}` | Autenticado | Buscar por ID |
 | `PATCH` | `/users/{id}` | Autenticado | Atualizar parcialmente |
 | `DELETE` | `/users/{id}` | Autenticado | Remover usuário |
+
+#### Cadastro público de usuários — issue #12
+
+`POST /users` permite criar a primeira conta e contas posteriores sem sessão,
+selecionando `ADMIN` ou `SELLER`. Não há limitação de administrador ao primeiro
+cadastro, convite, aprovação nem conta/senha padrão. A rota já existia; esta
+issue completa o tratamento de validação e duplicidades e verifica a autenticação.
+O desktop deve enviar o cadastro anônimo sem `Authorization`: Basic inválido
+continua sendo recusado pelo filtro existente. Não há endpoint separado de login
+ou emissão de token; use as credenciais cadastradas com HTTP Basic.
+
+Request:
+
+```json
+{
+  "firstName": "Maria",
+  "lastName": "Silva",
+  "username": "maria",
+  "email": "maria@example.com",
+  "password": "<senha escolhida pelo operador>",
+  "userRole": "ADMIN"
+}
+```
+
+| Campo | Validação |
+|---|---|
+| `firstName` | Obrigatório, não vazio, 2–20 caracteres |
+| `lastName` | Opcional (omitido ou null); 2–20 quando informado |
+| `username` | Obrigatório, não vazio, 2–30 caracteres, único |
+| `email` | Obrigatório, não vazio, formato válido, até 100 caracteres, único |
+| `password` | Obrigatória, não vazia, mínimo 6 caracteres; persistida com BCrypt |
+| `userRole` | Obrigatório; `ADMIN` ou `SELLER` |
+
+O limite de email agora é validado no DTO antes de atingir a coluna de 100
+caracteres. A mensagem de tamanho de username corresponde ao limite existente
+de 30. Mantém-se a comparação por igualdade do banco, sem converter caixa ou
+aplicar trim: em PostgreSQL padrão, `Maria` e `maria` são identificadores distintos.
+
+Response 201 (`UserResponseDTO`, preservado):
+
+```json
+{
+  "id": "00000000-0000-0000-0000-000000000001",
+  "firstName": "Maria",
+  "lastName": "Silva",
+  "username": "maria",
+  "email": "maria@example.com",
+  "userRole": "ADMIN"
+}
+```
+
+Não retorna `password` nem hash. As rotas de consulta continuam autenticadas
+e usam o mesmo DTO. A senha também é excluída do `toString` da entidade.
+
+| HTTP | Situação |
+|---|---|
+| 400 | Username duplicado: `Nome de usuário já cadastrado!` |
+| 400 | Email duplicado: `Email já cadastrado!` |
+| 400 | JSON/tipo/perfil inválido: `JSON ou perfil de usuário inválido!` |
+| 422 | Campos ausentes/nulos, vazios, fora dos limites ou email inválido |
+| 401 | Credenciais Basic inválidas enviadas na requisição; demais rotas sem autenticação |
+
+Duplicidade usa o handler global de `BusinessException`, por exemplo:
+
+```json
+{
+  "timestamp": "2026-11-13T20:00:00",
+  "status": 400,
+  "error": "Erro de negócio",
+  "message": "Email já cadastrado!",
+  "path": "/users"
+}
+```
+
+Validação 422 mantém `timestamp`, `status`, `error` e `errors` (lista com
+`field` e `message`). JSON inválido usa `timestamp`, `status`, `error`,
+`message` e `path`, sem repetir valores recebidos. Um advice limitado ao
+controller de usuários responde diretamente a erros de desserialização:
+no servidor real, o tratamento anterior encaminhava para `/error` e podia
+mascarar o 400 como 401. Security e Basic Auth permanecem inalterados.
+
+Além da consulta prévia, a gravação faz flush dentro da transação e traduz
+somente violações de unicidade (SQLState 23505) das constraints de username
+e email. A transação perdedora é revertida, sem nova consulta no PostgreSQL
+após a falha. Outras falhas de integridade não são rotuladas como duplicidade.
+As constraints foram explicitadas com os nomes já gerados pelo Hibernate
+(`ukig8f9fkp6x3vcbjski1u91wds` para username e `ukky6rbh0axwmbamyg6wl4a7imb`
+para email); mantém-se `ddl-auto: update`, sem migrations ou índices adicionais.
+
+Integração desktop: [vitalis-desktop#22](https://github.com/gabsiq73/vitalis-desktop/issues/22).
+Não há novos campos nem remoção/renomeação de campos em requests/responses.
+O desktop deve apresentar os novos erros controlados de duplicidade e validar
+email até 100 caracteres. Edição/exclusão de usuários e regras do ERP não foram
+reformuladas nesta issue.
+
+Testes dirigidos, com Java 21:
+
+```powershell
+.\mvnw.cmd '-Dtest=UserRegistrationServiceTest,UserRegistrationContractTest' test -q
+```
+
+Os testes verificam cadastro anônimo de ambos os perfis, primeira conta,
+outro ADMIN, autenticação/permissões, limites, senha BCrypt, ausência de
+credenciais em responses/logs, comparação de identificadores, duplicidade
+e duas requisições sincronizadas após as pré-validações para forçar a colisão.
+Resultado: 37 testes passaram (27 de contrato/integração e 10 de service).
+
+Também foi executada a API via `spring-boot:run` com PostgreSQL 16.3
+descartável, `DB_PORT=5435` e `SERVER_PORT=8081` somente para a verificação,
+pois 8080 já estava ocupada. Cadastro em banco vazio, Basic Auth, permissões,
+erros 400/422 e ausência de senha/hash nos logs foram verificados por HTTP.
+As duas colisões concorrentes foram forçadas com bloqueio temporário da
+tabela de teste: em cada caso, ambas as requisições passaram pelas consultas
+prévias e aguardaram na inserção; após liberar o bloqueio, retornaram um 201
+e um 400 específico, persistindo apenas uma conta. A atualização manteve as
+constraints e os três índices existentes (PK, username e email).
+O Postman CLI executou 14 asserções de cadastro, duplicidade e autenticação,
+todas aprovadas; no cenário de erro esperado 400, a versão 1.75 retorna exit
+code 1 mesmo com as quatro asserções aprovadas. Cadastro e autenticação
+retornaram exit code 0. Não houve uso nem alteração de dados operacionais.
 
 ---
 
