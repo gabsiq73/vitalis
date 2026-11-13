@@ -23,6 +23,11 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
 
     List<Payment> findByCreateDateBetween(LocalDate start, LocalDate end);
 
+    @Query("SELECT p FROM Payment p WHERE p.date BETWEEN :start AND :end " +
+           "AND p.order.status <> com.vitalis.demo.model.enums.OrderStatus.CANCELLED ORDER BY p.date DESC")
+    List<Payment> findDailyPaymentsIncludingBalance(@Param("start") LocalDateTime start,
+                                                   @Param("end") LocalDateTime end);
+
     @Query("SELECT p FROM Payment p WHERE p.date BETWEEN :start AND :end AND p.method <> :method " +
            "AND p.order.status <> com.vitalis.demo.model.enums.OrderStatus.CANCELLED ORDER BY p.date DESC")
     List<Payment> findByDateBetweenAndMethodNotOrderByDateDesc(LocalDateTime start, LocalDateTime end,

@@ -58,8 +58,9 @@ public class PaymentController {
 
     @GetMapping("/daily")
     public ResponseEntity<List<DailyCashPaymentDTO>> getDailyPayments(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return ResponseEntity.ok(paymentService.findDailyPayments(date));
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(defaultValue = "false") boolean includeBalance) {
+        return ResponseEntity.ok(paymentService.findDailyPayments(date, includeBalance));
     }
 
     @GetMapping("/{id}")
