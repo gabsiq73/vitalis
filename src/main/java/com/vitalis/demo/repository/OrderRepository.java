@@ -47,6 +47,15 @@ public interface OrderRepository extends JpaRepository<Order, UUID>, JpaSpecific
                               @Param("start") LocalDateTime start,
                               @Param("end") LocalDateTime end);
 
+    @Query("SELECT SUM(i.unitPrice * i.quantity) FROM Order o JOIN o.items i " +
+            "WHERE o.status = :status AND o.deliveryDate BETWEEN :start AND :end " +
+            "AND (i.product.type <> com.vitalis.demo.model.enums.ProductType.GAS OR EXISTS " +
+            "(SELECT gs.id FROM GasSettlement gs WHERE gs.orderItem = i " +
+            "AND gs.settlementType = com.vitalis.demo.model.enums.SettlementType.YOU_OWE))")
+    BigDecimal sumDepotDeliveredSales(@Param("status") OrderStatus status,
+                                     @Param("start") LocalDateTime start,
+                                     @Param("end") LocalDateTime end);
+
     List<Order> findByStatusAndDeliveryDateBetween(OrderStatus status, LocalDateTime start, LocalDateTime end);
 
     Long countByClientId(UUID clientId);

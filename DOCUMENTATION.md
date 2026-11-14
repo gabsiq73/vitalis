@@ -64,6 +64,7 @@ e venda de vencido. Banco operacional não foi utilizado.
 
 | Campo | Regra |
 | --- | --- |
+| `depotDeliveredSales` | No relatório diário, soma das vendas entregues na data, excluindo itens de gás recebidos pelo entregador (`SUPPLIER_OWE`); gás recebido pelo depósito (`YOU_OWE`) mantém o valor bruto. Não inclui margem pendente nem acerto recebido. `totalInvoiced` mantém o faturamento bruto geral. |
 | `cashBalance` | Pagamentos e créditos recebidos em DINHEIRO + entradas e ajustes líquidos manuais − retiradas + comissões em dinheiro − repasses em dinheiro |
 | `pixBalance` | Pagamentos e créditos recebidos em PIX + comissões PIX − repasses PIX |
 | `unclassifiedGasNet` | Entrada menos saída de acertos antigos liquidados sem meio informado |

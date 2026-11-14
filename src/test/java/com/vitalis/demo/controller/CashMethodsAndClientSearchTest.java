@@ -89,6 +89,33 @@ class CashMethodsAndClientSearchTest {
         assertThat(report(LocalDate.now()).get("totalReceived").decimalValue()).isEqualByComparingTo("20");
     }
 
+    @Test void dailySalesExcludeCourierGasWithoutChangingGrossRevenueOrSettlementCash() throws Exception {
+        Client c = client("Vendas do depósito", ClientType.RETAIL, true);
+        GasSupplier supplier = supplier();
+        gas(c, supplier, SettlementType.YOU_OWE, "50", 2, OrderStatus.DELIVERED);
+        GasSettlement courier = gas(c, supplier, SettlementType.SUPPLIER_OWE, "20", 3, OrderStatus.DELIVERED);
+        gas(c, supplier, SettlementType.YOU_OWE, "50", 4, OrderStatus.CANCELLED);
+        gas(c, supplier, SettlementType.YOU_OWE, "50", 5, OrderStatus.PENDING);
+        GasSettlement yesterday = gas(c, supplier, SettlementType.YOU_OWE, "50", 6, OrderStatus.DELIVERED);
+        yesterday.getOrderItem().getOrder().setDeliveryDate(LocalDate.now().minusDays(1).atTime(10, 0));
+        Order waterOrder = order(c, OrderStatus.DELIVERED);
+        OrderItem item = new OrderItem(); item.setOrder(waterOrder); item.setProduct(water());
+        item.setQuantity(2); item.setUnitPrice(new BigDecimal("9")); items.saveAndFlush(item);
+
+        JsonNode before = report(LocalDate.now());
+        assertThat(before.get("depotDeliveredSales").decimalValue()).isEqualByComparingTo("218");
+        assertThat(before.get("totalInvoiced").decimalValue()).isEqualByComparingTo("518");
+        assertThat(before.get("gasGrossProfit").decimalValue()).isEqualByComparingTo("160");
+        balance(before, "0", "0");
+        http.perform(patch("/gas-settlements/" + courier.getId() + "/settle").param("paymentMethod", "PIX"))
+                .andExpect(status().isNoContent());
+        JsonNode after = report(LocalDate.now());
+        assertThat(after.get("depotDeliveredSales")).isEqualTo(before.get("depotDeliveredSales"));
+        assertThat(after.get("totalReceived").decimalValue()).isZero();
+        balance(after, "0", "60");
+        assertThat(report(LocalDate.now().plusDays(1)).get("depotDeliveredSales").decimalValue()).isZero();
+    }
+
     @Test void promotionCountsFullReceiptWaterStockAndOnlyNetGasMargin() throws Exception {
         Client c=client("Promoção",ClientType.RETAIL,true); Product w=water(); GasSupplier supplier=supplier();
         Product p=new Product(); p.setName("Gás promoção"); p.setType(ProductType.GAS); p.setBasePrice(new BigDecimal("125")); p.setCostPrice(new BigDecimal("110")); p.setDefaultSupplier(supplier); p.setActive(true); products.saveAndFlush(p);
@@ -96,12 +123,20 @@ class CashMethodsAndClientSearchTest {
         JsonNode o=created.get(0); assertThat(created.size()).isEqualTo(1); assertThat(o.get("totalValue").decimalValue()).isEqualByComparingTo("127"); assertThat(o.get("items").size()).isEqualTo(2);
         http.perform(patch("/orders/"+o.get("id").asText()+"/confirm-delivery")).andExpect(status().isNoContent());
         JsonNode r=report(LocalDate.now()); assertThat(r.get("gasGrossProfit").decimalValue()).isEqualByComparingTo("8");
+        assertThat(r.get("depotDeliveredSales").decimalValue()).isZero();
+        assertThat(r.get("totalInvoiced").decimalValue()).isEqualByComparingTo("127");
         assertThat(stocks.findByProduct(w).orElseThrow().getQuantityInStock()).isEqualTo(4);
         GasSettlement gs=settlements.findAll().getFirst(); assertThat(gs.getAmount()).isEqualByComparingTo("17");
         assertThat(getJson("/payments/orders/"+o.get("id").asText()+"/balance").get("remainingBalance").decimalValue()).isZero();
         JsonNode second=postJson("/orders",java.util.Map.of("clientId",c.getId(),"isDelivery",true,"items",java.util.List.of(java.util.Map.of("productId",p.getId(),"quantity",1,"gasCostPrice",110,"receivedByUs",false)),"promotion",java.util.Map.of("waterProductId",w.getId(),"bundleUnitPrice",127,"waterUnitValue",8)));
         http.perform(patch("/orders/"+second.get(0).get("id").asText()+"/confirm-delivery")).andExpect(status().isNoContent());
         assertThat(report(LocalDate.now()).get("gasGrossProfit").decimalValue()).isEqualByComparingTo("17");
+        JsonNode depot=postJson("/orders",java.util.Map.of("clientId",c.getId(),"isDelivery",true,"items",java.util.List.of(java.util.Map.of("productId",p.getId(),"quantity",1,"gasCostPrice",110,"receivedByUs",true,"gasPaymentMethod","PIX")),"promotion",java.util.Map.of("waterProductId",w.getId(),"bundleUnitPrice",127,"waterUnitValue",9)));
+        http.perform(patch("/orders/"+depot.get(0).get("id").asText()+"/confirm-delivery")).andExpect(status().isNoContent());
+        JsonNode daily=report(LocalDate.now());
+        assertThat(daily.get("depotDeliveredSales").decimalValue()).isEqualByComparingTo("127");
+        assertThat(daily.get("totalInvoiced").decimalValue()).isEqualByComparingTo("381");
+        balance(daily,"0","127");
     }
 
     @Test void correctsGasAfterSettlementAndPreservesSettlementIdentityDateAndMethod() throws Exception {

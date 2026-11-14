@@ -52,8 +52,7 @@ public class FinancialService {
     // Relatório Financeiro
 
     /**
-     * Atalho para o relatório financeiro de um único dia.
-     * Equivale a chamar {@link #generateFinancialReport} com start == end.
+     * Relatório financeiro de um dia com movimentos e vendas atribuídas ao depósito.
      */
     @Transactional(readOnly = true)
     public FinancialReportDTO findDailyFinancialPerformance(LocalDate date) {
@@ -101,7 +100,9 @@ public class FinancialService {
                         .add(gasIn).subtract(gasOut),
                 details, gasIn, gasOut, gasDetails,
                 receivedByMethod(date, Method.DINHEIRO).add(entries).add(adjustments).subtract(withdrawals).add(cashGasNet),
-                receivedByMethod(date, Method.PIX).add(pixGasNet), unclassified, unclassifiedCount);
+                receivedByMethod(date, Method.PIX).add(pixGasNet), unclassified, unclassifiedCount,
+                safeQuery(orderRepository.sumDepotDeliveredSales(OrderStatus.DELIVERED,
+                        date.atStartOfDay(), date.atTime(LocalTime.MAX))));
     }
 
     private BigDecimal receivedByMethod(LocalDate date, Method method) {
