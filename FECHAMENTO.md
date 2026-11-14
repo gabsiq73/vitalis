@@ -81,3 +81,9 @@ Não usa containers/banco operacionais. Hibernate validate é executado também 
 Postgres descartável. Suíte H2 usa Flyway desligado.
 Referência anterior: 234 testes, 5 falhas, 24 erros, 1 ignorado; relatórios em
 `target/baseline-reports`, para comparar as identidades das falhas após mudanças.
+
+Validação realizada: 15 testes novos de fechamento passaram; migration V1 → V2 →
+V3 com sete registros antigos e comparação das 15 tabelas passou; Hibernate
+validate no Postgres 16.3 passou. Suíte posterior: 250 testes, 5 falhas, 24 erros,
+2 ignorados (testes Postgres são opt-in). As identidades dos 29 testes com falha
+são exatamente iguais às da referência; nenhuma regressão nova.
