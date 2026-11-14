@@ -2,6 +2,7 @@ package com.vitalis.demo.service;
 
 import com.vitalis.demo.dto.response.FinancialReportDTO;
 import com.vitalis.demo.mapper.CashMovementMapper;
+import com.vitalis.demo.mapper.GasSettlementMapper;
 import com.vitalis.demo.model.CashMovement;
 import com.vitalis.demo.model.enums.CashMovementDirection;
 import com.vitalis.demo.model.enums.CashMovementType;
@@ -33,6 +34,7 @@ class FinancialServiceCashTest {
     @Mock private GasSettlementRepository gasSettlementRepository;
     @Mock private CashMovementService cashMovementService;
     @Mock private CashMovementMapper cashMovementMapper;
+    @Mock private GasSettlementMapper gasSettlementMapper;
     @InjectMocks private FinancialService service;
 
     @Test

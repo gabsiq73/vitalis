@@ -8,6 +8,7 @@ import com.vitalis.demo.model.GasSettlement;
 import com.vitalis.demo.model.GasSupplier;
 import com.vitalis.demo.model.OrderItem;
 import com.vitalis.demo.model.Product;
+import com.vitalis.demo.model.enums.Method;
 import com.vitalis.demo.model.enums.ProductType;
 import com.vitalis.demo.model.enums.SettlementType;
 import com.vitalis.demo.repository.GasSettlementRepository;
@@ -223,11 +224,11 @@ class GasSettlementServiceTest {
             LocalDateTime startDt = startDate.atStartOfDay();
             LocalDateTime endDt = endDate.atTime(LocalTime.MAX);
 
-            when(repository.findByGasSupplier_IdAndSettledFalseAndCreateDateBetween(
+            when(repository.findPendingForUpdate(
                     supplier.getId(), startDt, endDt)).thenReturn(pending);
 
             // When
-            gasSettlementService.settleAllBySupplier(supplier.getId(), startDate, endDate);
+            gasSettlementService.settleAllBySupplier(supplier.getId(), startDate, endDate, Method.DINHEIRO);
 
             // Then
             assertThat(s1.getSettled()).isTrue();
@@ -244,12 +245,12 @@ class GasSettlementServiceTest {
             LocalDateTime startDt = startDate.atStartOfDay();
             LocalDateTime endDt = endDate.atTime(LocalTime.MAX);
 
-            when(repository.findByGasSupplier_IdAndSettledFalseAndCreateDateBetween(
+            when(repository.findPendingForUpdate(
                     supplier.getId(), startDt, endDt)).thenReturn(Collections.emptyList());
 
             // When / Then
             assertThatThrownBy(() -> gasSettlementService.settleAllBySupplier(
-                    supplier.getId(), startDate, endDate))
+                    supplier.getId(), startDate, endDate, Method.DINHEIRO))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("pendentes");
 
@@ -266,11 +267,11 @@ class GasSettlementServiceTest {
             LocalDateTime startDt = startDate.atStartOfDay();
             LocalDateTime endDt = endDate.atTime(LocalTime.MAX);
 
-            when(repository.findByGasSupplier_IdAndSettledFalseAndCreateDateBetween(
+            when(repository.findPendingForUpdate(
                     supplier.getId(), startDt, endDt)).thenReturn(List.of(settlement));
 
             // When
-            gasSettlementService.settleAllBySupplier(supplier.getId(), startDate, endDate);
+            gasSettlementService.settleAllBySupplier(supplier.getId(), startDate, endDate, Method.DINHEIRO);
 
             // Then
             assertThat(settlement.getSettledDate()).isAfterOrEqualTo(beforeCall);
@@ -292,10 +293,10 @@ class GasSettlementServiceTest {
             UUID id = UUID.randomUUID();
             GasSettlement settlement = buildPendingSettlement();
             settlement.setId(id);
-            when(repository.findById(id)).thenReturn(Optional.of(settlement));
+            when(repository.findByIdForUpdate(id)).thenReturn(Optional.of(settlement));
 
             // When
-            gasSettlementService.settleIndividual(id);
+            gasSettlementService.settleIndividual(id, Method.DINHEIRO);
 
             // Then
             assertThat(settlement.getSettled()).isTrue();
@@ -308,10 +309,10 @@ class GasSettlementServiceTest {
         void shouldThrowWhenSettlementNotFound() {
             // Given
             UUID id = UUID.randomUUID();
-            when(repository.findById(id)).thenReturn(Optional.empty());
+            when(repository.findByIdForUpdate(id)).thenReturn(Optional.empty());
 
             // When / Then
-            assertThatThrownBy(() -> gasSettlementService.settleIndividual(id))
+            assertThatThrownBy(() -> gasSettlementService.settleIndividual(id, Method.DINHEIRO))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("não encontrado");
 
@@ -326,10 +327,10 @@ class GasSettlementServiceTest {
             GasSettlement settlement = buildPendingSettlement();
             settlement.setSettled(true);
             settlement.setSettledDate(LocalDateTime.now().minusDays(1));
-            when(repository.findById(id)).thenReturn(Optional.of(settlement));
+            when(repository.findByIdForUpdate(id)).thenReturn(Optional.of(settlement));
 
             // When / Then
-            assertThatThrownBy(() -> gasSettlementService.settleIndividual(id))
+            assertThatThrownBy(() -> gasSettlementService.settleIndividual(id, Method.DINHEIRO))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("liquidado");
 
@@ -558,7 +559,7 @@ class GasSettlementServiceTest {
      */
     private GasSettlementResponseDTO stubGasSettlementResponseDTO() {
         return new GasSettlementResponseDTO(null, null, null, null, null, null, null,
-                null, null, null, null, null, null);
+                null, null, null, null, null, null, null);
     }
 
     private GasSettlement buildPendingSettlement() {

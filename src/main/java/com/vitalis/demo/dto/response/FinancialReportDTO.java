@@ -15,7 +15,11 @@ public record FinancialReportDTO(
         List<CashMovementResponseDTO> cashMovements,
         BigDecimal gasSettlementsIn,
         BigDecimal gasSettlementsOut,
-        List<GasSettlementMovementDTO> gasSettlementMovements
+        List<GasSettlementMovementDTO> gasSettlementMovements,
+        BigDecimal cashBalance,
+        BigDecimal pixBalance,
+        BigDecimal unclassifiedGasNet,
+        long unclassifiedGasCount
 ) {
 
     public FinancialReportDTO(BigDecimal totalInvoiced, BigDecimal totalReceived, BigDecimal gasGrossProfit){
@@ -26,7 +30,8 @@ public record FinancialReportDTO(
                 totalReceived.subtract(totalInvoiced),
                 BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
                 totalReceived, List.of(),
-                BigDecimal.ZERO, BigDecimal.ZERO, List.of()
+                BigDecimal.ZERO, BigDecimal.ZERO, List.of(),
+                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 0
         );
     }
 }

@@ -9,6 +9,7 @@ import com.vitalis.demo.model.GasSettlement;
 import com.vitalis.demo.model.OrderItem;
 import com.vitalis.demo.model.enums.SettlementType;
 import com.vitalis.demo.model.enums.OrderStatus;
+import com.vitalis.demo.model.enums.Method;
 import com.vitalis.demo.repository.GasSettlementRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -85,11 +86,13 @@ public class GasSettlementService {
 
     // Método para dar baixa em todos os acertos de uma vez só
     @Transactional
-    public void settleAllBySupplier(UUID supplierId, LocalDate start, LocalDate end){
+    public void settleAllBySupplier(UUID supplierId, LocalDate start, LocalDate end, Method paymentMethod){
+        validatePaymentMethod(paymentMethod);
+        if (start == null || end == null || start.isAfter(end)) throw new BusinessException("Intervalo de datas inválido.");
         LocalDateTime startDt = start.atStartOfDay();
         LocalDateTime endDt = end.atTime(LocalTime.MAX);
 
-        List<GasSettlement> settlements = repository.findByGasSupplier_IdAndSettledFalseAndCreateDateBetween(supplierId, startDt, endDt);
+        List<GasSettlement> settlements = repository.findPendingForUpdate(supplierId, startDt, endDt);
 
         if(settlements.isEmpty()){
             throw new BusinessException("Não há acertos pendentes para liquidar neste período!");
@@ -99,6 +102,7 @@ public class GasSettlementService {
         settlements.forEach(s -> {
             s.setSettled(true);
             s.setSettledDate(now); // Registro da data do acerto
+            s.setPaymentMethod(paymentMethod);
         });
 
         repository.saveAll(settlements);
@@ -106,8 +110,9 @@ public class GasSettlementService {
 
     // Método para dar baixa individual no acerto do gás
     @Transactional
-    public void settleIndividual(UUID settlementId){
-        GasSettlement settlement = repository.findById(settlementId)
+    public void settleIndividual(UUID settlementId, Method paymentMethod){
+        validatePaymentMethod(paymentMethod);
+        GasSettlement settlement = repository.findByIdForUpdate(settlementId)
                 .orElseThrow(() -> new ResourceNotFoundException("Acerto não encontrado!"));
 
         if (settlement.getOrderItem() != null
@@ -121,7 +126,29 @@ public class GasSettlementService {
 
         settlement.setSettled(true);
         settlement.setSettledDate(LocalDateTime.now());
+        settlement.setPaymentMethod(paymentMethod);
         repository.save(settlement);
+    }
+
+    @Transactional
+    public void classifyLegacyPayment(UUID id, Method paymentMethod) {
+        validatePaymentMethod(paymentMethod);
+        GasSettlement settlement = repository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Acerto não encontrado!"));
+        if (!Boolean.TRUE.equals(settlement.getSettled()) || settlement.getPaymentMethod() != null) {
+            throw new BusinessException("Informe o meio apenas para acertos antigos já liquidados e sem meio registrado.");
+        }
+        if (settlement.getOrderItem() != null && settlement.getOrderItem().getOrder().getStatus() == OrderStatus.CANCELLED) {
+            throw new BusinessException("Acerto de pedido cancelado não pode ser alterado.");
+        }
+        settlement.setPaymentMethod(paymentMethod);
+        repository.save(settlement);
+    }
+
+    private void validatePaymentMethod(Method paymentMethod) {
+        if (paymentMethod != Method.PIX && paymentMethod != Method.DINHEIRO) {
+            throw new BusinessException("Selecione PIX ou Dinheiro para o acerto.");
+        }
     }
 
     @Transactional(readOnly = true)

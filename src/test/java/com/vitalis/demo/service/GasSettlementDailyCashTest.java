@@ -137,7 +137,7 @@ class GasSettlementDailyCashTest {
 
     private GasSettlementMovementDTO movement(GasSettlement settlement, CashMovementDirection direction) {
         return new GasSettlementMovementDTO(settlement.getId(), settlement.getGasSupplier().getName(),
-                settlement.getSettlementType(), direction, settlement.getAmount(), settlement.getSettledDate());
+                settlement.getSettlementType(), direction, settlement.getAmount(), settlement.getSettledDate(), settlement.getPaymentMethod());
     }
 
     private CashMovement cash(CashMovementType type, CashMovementDirection direction, String amount) {

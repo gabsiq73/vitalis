@@ -5,6 +5,8 @@ import com.vitalis.demo.model.GasSupplier;
 import com.vitalis.demo.model.OrderItem;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -13,6 +15,15 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface GasSettlementRepository extends JpaRepository<GasSettlement, UUID> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select gs from GasSettlement gs where gs.id = :id")
+    Optional<GasSettlement> findByIdForUpdate(UUID id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT gs FROM GasSettlement gs WHERE gs.gasSupplier.id = :supplierId AND gs.settled = false " +
+           "AND gs.createDate BETWEEN :start AND :end AND gs.orderItem.order.status <> com.vitalis.demo.model.enums.OrderStatus.CANCELLED ORDER BY gs.id")
+    List<GasSettlement> findPendingForUpdate(UUID supplierId, LocalDateTime start, LocalDateTime end);
 
     List<GasSettlement> findByGasSupplier(GasSupplier supplier);
 

@@ -2,6 +2,7 @@ package com.vitalis.demo.service;
 
 import com.vitalis.demo.mapper.GasSettlementMapper;
 import com.vitalis.demo.model.GasSettlement;
+import com.vitalis.demo.model.enums.Method;
 import com.vitalis.demo.repository.GasSettlementRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,10 +31,11 @@ class GasSettlementLiquidationCashTest {
         GasSettlement individual = new GasSettlement();
         individual.setSettled(false);
         UUID id = UUID.randomUUID();
-        when(repository.findById(id)).thenReturn(Optional.of(individual));
+        when(repository.findByIdForUpdate(id)).thenReturn(Optional.of(individual));
 
         LocalDateTime before = LocalDateTime.now();
-        service.settleIndividual(id);
+        service.settleIndividual(id, Method.PIX);
+        assertThat(individual.getPaymentMethod()).isEqualTo(Method.PIX);
         assertThat(individual.getSettled()).isTrue();
         assertThat(individual.getSettledDate()).isBetween(before, LocalDateTime.now());
         verify(repository).save(individual);
@@ -42,11 +44,12 @@ class GasSettlementLiquidationCashTest {
         bulk.setSettled(false);
         UUID supplierId = UUID.randomUUID();
         LocalDate day = LocalDate.of(2026, 10, 5);
-        when(repository.findByGasSupplier_IdAndSettledFalseAndCreateDateBetween(
+        when(repository.findPendingForUpdate(
                 supplierId, day.atStartOfDay(), day.atTime(LocalTime.MAX))).thenReturn(List.of(bulk));
 
         before = LocalDateTime.now();
-        service.settleAllBySupplier(supplierId, day, day);
+        service.settleAllBySupplier(supplierId, day, day, Method.DINHEIRO);
+        assertThat(bulk.getPaymentMethod()).isEqualTo(Method.DINHEIRO);
         assertThat(bulk.getSettled()).isTrue();
         assertThat(bulk.getSettledDate()).isBetween(before, LocalDateTime.now());
         verify(repository).saveAll(List.of(bulk));

@@ -2,6 +2,7 @@ package com.vitalis.demo.repository;
 
 import com.vitalis.demo.model.ClientCreditEntry;
 import com.vitalis.demo.model.Payment;
+import com.vitalis.demo.model.enums.Method;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,6 +13,10 @@ import java.util.List;
 import java.util.UUID;
 
 public interface ClientCreditEntryRepository extends JpaRepository<ClientCreditEntry, UUID> {
+    @Query("SELECT SUM(e.amount) FROM ClientCreditEntry e LEFT JOIN e.sourcePayment p LEFT JOIN p.order o " +
+           "WHERE e.date BETWEEN :start AND :end AND e.method = :method " +
+           "AND (p IS NULL OR o.status <> com.vitalis.demo.model.enums.OrderStatus.CANCELLED)")
+    BigDecimal sumReceivedByMethod(LocalDateTime start, LocalDateTime end, Method method);
     @Query("SELECT SUM(e.amount) FROM ClientCreditEntry e LEFT JOIN e.sourcePayment p LEFT JOIN p.order o " +
            "WHERE e.date BETWEEN :start AND :end " +
            "AND (p IS NULL OR o.status <> com.vitalis.demo.model.enums.OrderStatus.CANCELLED)")

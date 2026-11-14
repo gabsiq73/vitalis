@@ -76,7 +76,16 @@ public class FinancialService {
                         date.atStartOfDay(), date.atTime(LocalTime.MAX));
         BigDecimal gasIn = BigDecimal.ZERO;
         BigDecimal gasOut = BigDecimal.ZERO;
+        BigDecimal cashGasNet = BigDecimal.ZERO;
+        BigDecimal pixGasNet = BigDecimal.ZERO;
+        BigDecimal unclassified = BigDecimal.ZERO;
+        long unclassifiedCount = 0;
         for (GasSettlement settlement : settlements) {
+            BigDecimal signed = settlement.getSettlementType() == SettlementType.SUPPLIER_OWE
+                    ? settlement.getTotalAmount() : settlement.getTotalAmount().negate();
+            if (settlement.getPaymentMethod() == Method.DINHEIRO) cashGasNet = cashGasNet.add(signed);
+            else if (settlement.getPaymentMethod() == Method.PIX) pixGasNet = pixGasNet.add(signed);
+            else { unclassified = unclassified.add(signed); unclassifiedCount++; }
             if (settlement.getSettlementType() == SettlementType.SUPPLIER_OWE) {
                 gasIn = gasIn.add(settlement.getTotalAmount());
             } else if (settlement.getSettlementType() == SettlementType.YOU_OWE) {
@@ -90,7 +99,16 @@ public class FinancialService {
                 base.getBalance(), entries, adjustments, withdrawals,
                 base.totalReceived().add(entries).add(adjustments).subtract(withdrawals)
                         .add(gasIn).subtract(gasOut),
-                details, gasIn, gasOut, gasDetails);
+                details, gasIn, gasOut, gasDetails,
+                receivedByMethod(date, Method.DINHEIRO).add(entries).add(adjustments).subtract(withdrawals).add(cashGasNet),
+                receivedByMethod(date, Method.PIX).add(pixGasNet), unclassified, unclassifiedCount);
+    }
+
+    private BigDecimal receivedByMethod(LocalDate date, Method method) {
+        LocalDateTime start = date.atStartOfDay();
+        LocalDateTime end = date.atTime(LocalTime.MAX);
+        return safeQuery(paymentRepository.sumReceivedByMethod(start, end, method))
+                .add(safeQuery(clientCreditEntryRepository.sumReceivedByMethod(start, end, method)));
     }
 
     /**

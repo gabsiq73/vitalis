@@ -16,6 +16,10 @@ import java.util.UUID;
 
 public interface PaymentRepository extends JpaRepository<Payment, UUID> {
 
+    @Query("SELECT SUM(p.amount) FROM Payment p WHERE p.date BETWEEN :start AND :end AND p.method = :method " +
+           "AND p.order.status <> com.vitalis.demo.model.enums.OrderStatus.CANCELLED")
+    BigDecimal sumReceivedByMethod(LocalDateTime start, LocalDateTime end, Method method);
+
     List<Payment> findByOrder_Id(UUID orderId);
 
     @Transactional

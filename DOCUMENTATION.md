@@ -1,5 +1,48 @@
 # Vitalis — Documentação Técnica Completa
 
+### Caixa separado por meio e busca de clientes sem acentos
+
+`GET /reports/performance/daily?date=YYYY-MM-DD` acrescenta:
+
+| Campo | Regra |
+| --- | --- |
+| `cashBalance` | Pagamentos e créditos recebidos em DINHEIRO + entradas e ajustes líquidos manuais − retiradas + comissões em dinheiro − repasses em dinheiro |
+| `pixBalance` | Pagamentos e créditos recebidos em PIX + comissões PIX − repasses PIX |
+| `unclassifiedGasNet` | Entrada menos saída de acertos antigos liquidados sem meio informado |
+| `unclassifiedGasCount` | Quantidade desses acertos, inclusive quando o líquido é zero |
+
+SALDO usado não é nova entrada. Todos os totais são da data selecionada, sem
+saldo acumulado de outros dias. Acertos usam `settledDate`, não a data do pedido.
+`amount` dos movimentos de gás já inclui quantidade. Os campos anteriores continuam
+presentes: `finalBalance` é o combinado dos dois meios e do líquido não classificado;
+ele não representa dinheiro físico. A conferência desktop usa `cashBalance`.
+
+`PATCH /gas-settlements/{id}/settle` e `/bulk-settle?supplierId=...&start=...&end=...`
+exigem `paymentMethod=PIX|DINHEIRO`. SALDO, meio ausente, pedido cancelado ou
+liquidação repetida são recusados. O lote usa um único meio para todos os pendentes
+da distribuidora no período. Escritas usam bloqueio pessimista e transação.
+`GasSettlementResponseDTO` e `GasSettlementMovementDTO` acrescentam `paymentMethod`.
+O valor é independente do meio recebido na venda do gás.
+
+Hibernate acrescenta `GAS_SUP_payment_method` nullable (enum Method) em
+`tb_gas_settlement` pelo `ddl-auto: update`. Não atribua um meio automaticamente
+aos registros antigos. `PATCH /gas-settlements/{id}/payment-method?paymentMethod=...`
+permite classificar somente acertos já liquidados sem meio informado, preservando
+a data original. O caixa mostra um aviso até a classificação. O novo meio não
+cria outro pagamento, acerto ou movimento manual.
+
+`GET /clients?name=...` ignora acentos e caixa antes da paginação. A consulta
+normaliza a busca e usa `translate(lower(name), ...)` para os acentos latinos
+usuais, sem extensões PostgreSQL nem alterações nos nomes armazenados. Mantém
+filtros de ativos/tipo, exclusão de avulsos por padrão e `%`/`_` literais. Clientes
+e seleção de cliente no Novo Pedido usam o mesmo contrato.
+
+Atualize o backend antes do desktop. Validação em 14/11/2026: 16 testes dirigidos
+do backend e 11 do desktop, lint, TypeScript e build Windows passaram. Electron
+com API local real em H2 descartável verificou busca nos dois fluxos, acerto
+individual e em lote, saldos, retirada e conferência; o teste Electron do lote
+anterior também passou. Não foi utilizado o banco operacional nem PostgreSQL.
+
 ### Busca de pedidos e fiados antigos
 
 `GET /orders` aceita `search` opcional: trecho do nome do cliente, UUID/número
@@ -880,7 +923,7 @@ permanecem iguais. A classificação é `OUT_OF_STOCK` quando quantidade <= 0,
 |---|---|---|---|
 | `GET` | `/gas-settlements/report` | **ADMIN** | Relatório (`?supplierId=&start=&end=`) |
 | `GET` | `/gas-settlements/{id}` | Autenticado | Buscar por ID |
-| `PATCH` | `/gas-settlements/bulk-settle` | Autenticado | Liquidar em lote (`?supplierId=&start=&end=`) |
+| `PATCH` | `/gas-settlements/bulk-settle` | Autenticado | Liquidar em lote (`?supplierId=&start=&end=&paymentMethod=PIX` ou DINHEIRO) |
 | `PATCH` | `/gas-settlements/{id}/settle` | Autenticado | Liquidar individual |
 
 ---
@@ -1376,7 +1419,7 @@ ao saldo do caixa. O repasse só movimenta o caixa na liquidação do acerto.
 1. Ao criar OrderItem de GAS → GasSettlementService cria GasSettlement
    - YOU_OWE: distribuidora deve ao fornecedor (custo do gás)
    - SUPPLIER_OWE: fornecedor deve à distribuidora (comissão/margem)
-2. PATCH /gas-settlements/bulk-settle?supplierId=X&start=Y&end=Z
+2. PATCH /gas-settlements/bulk-settle?supplierId=X&start=Y&end=Z&paymentMethod=PIX
    → Marca todas as liquidações pendentes do fornecedor no período como settled
 3. GET /gas-settlements/report → relatório consolidado (valores devidos / a receber)
 ```

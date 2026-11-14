@@ -1,6 +1,7 @@
 package com.vitalis.demo.dto.response;
 
 import com.vitalis.demo.model.enums.SettlementType;
+import com.vitalis.demo.model.enums.Method;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -19,6 +20,7 @@ public record GasSettlementResponseDTO(
         String productName,
         Integer quantity,
         BigDecimal salePrice,
-        BigDecimal costPrice
+        BigDecimal costPrice,
+        Method paymentMethod
 ) {
 }
