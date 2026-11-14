@@ -1,9 +1,11 @@
 package com.vitalis.demo.config;
 
+import jakarta.servlet.DispatcherType;
 import com.vitalis.demo.security.CustomAcessDeniedHandler;
 import com.vitalis.demo.security.CustomAuthenticationEntryPoint;
 import com.vitalis.demo.security.CustomUserDetailsService;
 import com.vitalis.demo.service.UserService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -36,6 +38,8 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .httpBasic(Customizer.withDefaults())
             .authorizeHttpRequests(authorize -> {
+                authorize.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll();
+                authorize.requestMatchers(HttpMethod.GET, "/health").permitAll();
                 authorize.requestMatchers(HttpMethod.POST, "/users/**").permitAll();
                 authorize.requestMatchers(
                         "/v3/api-docs/**",
@@ -53,10 +57,10 @@ public class SecurityConfig {
     }
 
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
+    public CorsConfigurationSource corsConfigurationSource(@Value("${vitalis.desktop:false}") boolean desktop) {
         CorsConfiguration configuration = new CorsConfiguration();
         // Permite a origem do Vite/Electron
-        configuration.setAllowedOriginPatterns(List.of("http://localhost:5173"));
+        configuration.setAllowedOrigins(List.of(desktop ? "vitalis://app" : "http://localhost:5173"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "Accept"));
         configuration.setAllowCredentials(true); // Crucial para Basic Auth

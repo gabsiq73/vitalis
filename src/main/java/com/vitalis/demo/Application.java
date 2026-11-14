@@ -15,6 +15,18 @@ public class Application {
     }
 
     public static void main(String[] args) {
-        SpringApplication.run(Application.class, args);
+        var context = SpringApplication.run(Application.class, args);
+        if (context.getEnvironment().getProperty("vitalis.desktop", Boolean.class, false)) {
+            // Electron owns the write end. EOF also arrives if Electron crashes.
+            Thread.ofPlatform().daemon().name("desktop-lifecycle").start(() -> {
+                try {
+                    System.in.read();
+                } catch (java.io.IOException ignored) {
+                    // A broken pipe means the desktop process is gone.
+                }
+                context.close();
+                System.exit(0);
+            });
+        }
     }
 }
