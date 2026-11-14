@@ -20,6 +20,7 @@ import java.util.UUID;
 public class StockService {
 
     private final StockRepository repository;
+    private final BottleInventoryService bottleInventory;
     
     @Transactional(readOnly = true)
     public Stock findById(UUID id){
@@ -68,6 +69,7 @@ public class StockService {
             return;
         }
 
+        bottleInventory.lockForMovement();
         Stock stock = findByProduct(product);
 
         if(stock.getQuantityInStock() < quantity){
@@ -84,10 +86,37 @@ public class StockService {
             return;
         }
 
+        bottleInventory.reserveFilled(quantity);
         Stock stock = findByProduct(product);
         stock.setQuantityInStock(stock.getQuantityInStock() + quantity);
         repository.save(stock);
     }
+
+    @Transactional
+    public void deliverItem(com.vitalis.demo.model.OrderItem item) {
+        if (item.getProduct().getType() == ProductType.GAS) return;
+        if (item.getBottleMode() != com.vitalis.demo.model.enums.BottleMode.EXPIRED) decreaseStock(item.getProduct(), item.getQuantity());
+        bottleInventory.applySale(item, false);
+    }
+    @Transactional
+    public void reverseItem(com.vitalis.demo.model.OrderItem item) {
+        if (item.getProduct().getType() == ProductType.GAS) return;
+        bottleInventory.applySale(item, true);
+        if (item.getBottleMode() != com.vitalis.demo.model.enums.BottleMode.EXPIRED) increaseStock(item.getProduct(), item.getQuantity());
+    }
+
+    @Transactional
+    public void reverseForCorrection(com.vitalis.demo.model.OrderItem item) {
+        if (item.getProduct().getType() == ProductType.GAS) return;
+        bottleInventory.applySale(item, true);
+        if (item.getBottleMode() != com.vitalis.demo.model.enums.BottleMode.EXPIRED) {
+            Stock stock = findByProduct(item.getProduct());
+            stock.setQuantityInStock(Math.addExact(stock.getQuantityInStock(), item.getQuantity()));
+            repository.save(stock);
+        }
+    }
+
+    public void validateAllocation() { bottleInventory.reserveFilled(0); }
 
     public void checkStockAvailability(Product product, Integer requestedQuantity){
         if (product.getType() == ProductType.GAS) return;

@@ -47,6 +47,28 @@ public class PaymentService {
 
     // Consultas
 
+    @Transactional
+    public void reconcileAfterCorrection(Order order) {
+        BigDecimal excess = orderBalanceService.calculateRemainingBalance(order).negate().max(BigDecimal.ZERO);
+        BigDecimal credit = BigDecimal.ZERO;
+        for (Payment payment : order.getPayments().stream().sorted(Comparator.comparing(Payment::getDate).reversed()).toList()) {
+            if (excess.signum() == 0) break;
+            BigDecimal adjustment = payment.getAmount().min(excess);
+            if (adjustment.signum() == 0) continue;
+            payment.setAmount(payment.getAmount().subtract(adjustment)); repository.save(payment);
+            if (payment.getMethod() != Method.SALDO) {
+                ClientCreditEntry entry = clientCreditEntryRepository.findBySourcePaymentIn(List.of(payment)).stream().findFirst().orElseGet(ClientCreditEntry::new);
+                entry.setClient(order.getClient()); entry.setMethod(payment.getMethod()); entry.setDate(payment.getDate()); entry.setSourcePayment(payment);
+                entry.setAmount((entry.getAmount() == null ? BigDecimal.ZERO : entry.getAmount()).add(adjustment));
+                clientCreditEntryRepository.save(entry);
+            }
+            credit = credit.add(adjustment); excess = excess.subtract(adjustment);
+        }
+        updateOrderPaymentStatus(order);
+        clientService.calculateDebtBalance(order.getClient().getId());
+        if (credit.signum() > 0) clientService.addCreditBalance(order.getClient().getId(), credit);
+    }
+
     @Transactional(readOnly = true)
     public Payment findById(UUID id) {
         return findByIdOptional(id)
@@ -283,6 +305,8 @@ public class PaymentService {
             remainingAmount = applyFundsToOrder(order, remainingAmount, paymentMethod, receivedAt);
         }
 
+        // Limpa o saldo devedor já quitado antes de somar o crédito excedente.
+        if (remainingAmount.signum() > 0) clientService.calculateDebtBalance(clientId);
         creditRemainingFundsIfAny(client, remainingAmount, paymentMethod, receivedAt, sourcePayment);
         clientService.calculateDebtBalance(clientId);
     }
@@ -299,6 +323,7 @@ public class PaymentService {
                 .filter(o -> excludedOrderId == null || !o.getId().equals(excludedOrderId))
                 .filter(o -> !orderBalanceService.hasSupplierCollectedGas(o))
                 .filter(o -> calculateOrderDebt(o).signum() > 0)
+                .sorted(Comparator.comparing(o -> o.isManualDebt() ? o.getDeliveryDate() : o.getCreateDate()))
                 .toList();
     }
 

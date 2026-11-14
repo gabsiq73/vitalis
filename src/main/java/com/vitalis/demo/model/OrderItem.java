@@ -21,6 +21,17 @@ import java.util.UUID;
 @ToString
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 public class OrderItem extends BaseEntity{
+    @Enumerated(EnumType.STRING)
+    private com.vitalis.demo.model.enums.BottleMode bottleMode;
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean bottleStockApplied;
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean bottleInventoryTracked;
+    @Column(precision = 10, scale = 2)
+    private BigDecimal promotionWaterValue;
+    public com.vitalis.demo.model.enums.BottleMode getBottleMode() {
+        return bottleMode == null ? com.vitalis.demo.model.enums.BottleMode.REFILL : bottleMode;
+    }
 
     @EqualsAndHashCode.Include
     @Id

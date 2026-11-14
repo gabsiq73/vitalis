@@ -24,6 +24,10 @@ import java.util.UUID;
 @RequestMapping("/bottles")
 @RequiredArgsConstructor
 public class LoanedBottleController {
+    @PutMapping("/{id}")
+    public LoanedBottleResponseDTO edit(@PathVariable UUID id, @Valid @RequestBody LoanedBottleRequestDTO dto) {
+        return loanedBottleMapper.toResponseDTO(loanedBottleService.edit(id, dto));
+    }
 
     private final LoanedBottleService loanedBottleService;
     private final LoanedBottleMapper loanedBottleMapper;

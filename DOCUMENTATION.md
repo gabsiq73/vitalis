@@ -1,5 +1,134 @@
 # Vitalis — Documentação Técnica Completa
 
+### Correções de operação, garrafões e promoção Gás + água
+
+- `GET /bottle-inventory` retorna `configured`, `validQuantity`, `expiredQuantity`,
+  `filledQuantity` (soma das águas físicas), `emptyValidQuantity` e `totalQuantity`.
+  `PUT /bottle-inventory` recebe `{validQuantity, expiredQuantity}`, inteiros não
+  negativos. Válidos precisam cobrir as águas cheias. O registro singleton usa
+  `BottleInventory` e bloqueio pessimista nas movimentações. Até a contagem inicial,
+  águas legadas continuam funcionando; vendas completas/vencidas exigem configuração.
+- Itens de pedido acrescentam `bottleMode`: `REFILL` (padrão legado), `FULL` ou
+  `EXPIRED`. A entrega de REFILL baixa água, mantendo total por troca de vazio;
+  FULL baixa água e válidos; EXPIRED baixa vencidos sem baixar água. O modo é
+  explícito no item, sem novo ProductType. `bottleInventoryTracked` identifica
+  entregas feitas após ativar o controle; `bottleStockApplied` registra se houve
+  baixa do total, permitindo desfazer/corrigir sem alterar retroativamente vendas
+  anteriores à contagem. Entradas de água ficam limitadas pelos válidos vazios.
+  Vencidos são excluídos das contagens de água. Empréstimos permanecem registros
+  separados; cadastrá-los não altera automaticamente os totais físicos.
+- `OrderRequestDTOv2.promotion` opcional recebe `{waterProductId, bundleUnitPrice,
+  waterUnitValue}` com um item GAS no request. O backend inclui uma água por gás
+  a preço zero, guarda `promotionWaterValue` nos itens e preserva o total do
+  conjunto no gás. Promoção retorna lista com um pedido conjunto. A baixa inclui
+  a água. Acerto SUPPLIER_OWE é conjunto − custo do gás (repasse real); margem no
+  financeiro desconta também a água de referência. Ex.: 127 − 110 = 17 a receber,
+  sendo 9 da água e 8 de margem; água de 8 produz margem 9. PIX/Dinheiro recebido
+  pelo depósito e liquidação do fornecedor mantêm os contratos do caixa separado.
+- `PUT /orders/{id}/correction` recebe OrderRequestDTOv2 com `itemId` em cada item
+  original. Mantém cliente, IDs e número de linhas; permite mudar produto dentro
+  do mesmo tipo, preço, quantidade, custo, recebedor, data e observação, inclusive
+  após entrega e liquidação do gás. Também atende promoção ainda pendente. Usa
+  bloqueio do pedido e transação para restaurar os efeitos anteriores e aplicar
+  os novos. Falha de estoque desfaz toda a operação. Liquidações preservam ID,
+  meio e data; seus valores mudam com a correção. Pagamentos automáticos de gás
+  são reconciliados. Excedentes avulsos são convertidos em crédito do cliente,
+  preservando a data e o total recebido, sem duplicar caixa. A correção não aceita
+  pedido cancelado ou fiado manual. Na promoção, mantenha água inclusa a zero e
+  uma água por gás; `promotion.waterUnitValue` pode ser corrigido.
+- `PUT /gas-settlements/{id}` recebe `{amount, settled, settledDate, paymentMethod}`.
+  `amount` é unitário, >= 0, até duas casas. Permite editar liquidados e reabrir
+  pendentes, atualizando os saldos nas datas correspondentes sem criar outro
+  registro. Acertado exige data não futura e PIX/DINHEIRO. Direção/fornecedor
+  continuam vinculados à venda; corrigir esses dados passa pelo pedido.
+- `PUT /bottles/{id}` recebe LoanedBottleRequestDTO para editar cliente, produto,
+  quantidade positiva e data não futura. Mantém ID e situação da devolução; data
+  não pode ultrapassar devolução existente. Se trocar o cliente, desfaz somente
+  o vínculo incompatível com o pedido original. Desktop oferece edição dos pendentes.
+
+Schema via `ddl-auto: update`: entidade `BottleInventory`, campos `bottleMode`,
+`bottleStockApplied` e `bottleInventoryTracked` (boolean default false), e `promotionWaterValue` nullable em
+OrderItem. DTO de item acrescenta `bottleMode` e `promotionWaterValue` na resposta;
+request acrescenta `bottleMode` e `itemId`. Construtores Java anteriores de request
+foram preservados. Não há migração inferindo totais físicos a partir de vendas.
+
+Validação: testes novos de venda completa/vencida, cancelamento, correção paga,
+rollback, acerto liquidado, promoção com água 9/8 e empréstimo; regressão de
+pagamentos iniciais, confirmação de gás, edição pendente e fiados. Electron com
+API real em H2 descartável cobriu cadastro e edição nas telas, estoque, promoção
+e venda de vencido. Banco operacional não foi utilizado.
+
+### Caixa separado por meio e busca de clientes sem acentos
+
+`GET /reports/performance/daily?date=YYYY-MM-DD` acrescenta:
+
+| Campo | Regra |
+| --- | --- |
+| `depotDeliveredSales` | No relatório diário, soma das vendas entregues na data, excluindo itens de gás recebidos pelo entregador (`SUPPLIER_OWE`); gás recebido pelo depósito (`YOU_OWE`) mantém o valor bruto. Não inclui margem pendente nem acerto recebido. `totalInvoiced` mantém o faturamento bruto geral. |
+| `cashBalance` | Pagamentos e créditos recebidos em DINHEIRO + entradas e ajustes líquidos manuais − retiradas + comissões em dinheiro − repasses em dinheiro |
+| `pixBalance` | Pagamentos e créditos recebidos em PIX + comissões PIX − repasses PIX |
+| `unclassifiedGasNet` | Entrada menos saída de acertos antigos liquidados sem meio informado |
+| `unclassifiedGasCount` | Quantidade desses acertos, inclusive quando o líquido é zero |
+
+SALDO usado não é nova entrada. Todos os totais são da data selecionada, sem
+saldo acumulado de outros dias. Acertos usam `settledDate`, não a data do pedido.
+`amount` dos movimentos de gás já inclui quantidade. Os campos anteriores continuam
+presentes: `finalBalance` é o combinado dos dois meios e do líquido não classificado;
+ele não representa dinheiro físico. A conferência desktop usa `cashBalance`.
+
+`PATCH /gas-settlements/{id}/settle` e `/bulk-settle?supplierId=...&start=...&end=...`
+exigem `paymentMethod=PIX|DINHEIRO`. SALDO, meio ausente, pedido cancelado ou
+liquidação repetida são recusados. O lote usa um único meio para todos os pendentes
+da distribuidora no período. Escritas usam bloqueio pessimista e transação.
+`GasSettlementResponseDTO` e `GasSettlementMovementDTO` acrescentam `paymentMethod`.
+O valor é independente do meio recebido na venda do gás.
+
+Hibernate acrescenta `GAS_SUP_payment_method` nullable (enum Method) em
+`tb_gas_settlement` pelo `ddl-auto: update`. Não atribua um meio automaticamente
+aos registros antigos. `PATCH /gas-settlements/{id}/payment-method?paymentMethod=...`
+permite classificar somente acertos já liquidados sem meio informado, preservando
+a data original. O caixa mostra um aviso até a classificação. O novo meio não
+cria outro pagamento, acerto ou movimento manual.
+
+`GET /clients?name=...` ignora acentos e caixa antes da paginação. A consulta
+normaliza a busca e usa `translate(lower(name), ...)` para os acentos latinos
+usuais, sem extensões PostgreSQL nem alterações nos nomes armazenados. Mantém
+filtros de ativos/tipo, exclusão de avulsos por padrão e `%`/`_` literais. Clientes
+e seleção de cliente no Novo Pedido usam o mesmo contrato.
+
+Atualize o backend antes do desktop. Validação em 14/11/2026: 16 testes dirigidos
+do backend e 11 do desktop, lint, TypeScript e build Windows passaram. Electron
+com API local real em H2 descartável verificou busca nos dois fluxos, acerto
+individual e em lote, saldos, retirada e conferência; o teste Electron do lote
+anterior também passou. Não foi utilizado o banco operacional nem PostgreSQL.
+
+### Busca de pedidos e fiados antigos
+
+`GET /orders` aceita `search` opcional: trecho do nome do cliente, UUID/número
+exibido (seis últimos caracteres, com ou sem `#`) ou observação. Busca sem distinção
+de maiúsculas, combinada aos filtros atuais e aplicada antes da paginação.
+`%` e `_` são caracteres literais. A listagem comercial exclui fiados manuais.
+
+`POST /orders/manual-debts` recebe `{clientId, amount, debtDate, notes?}` e retorna
+201 com `OrderResponseDTO`. Exige cliente ativo cadastrado, valor de 0,01 até
+99.999.999,99 com duas casas, data/hora local não futura e observação até 2000
+caracteres. Validação HTTP segue o handler existente (422); regra de negócio, 400.
+
+O registro reaproveita a cobrança de pedidos, com `ORD_manual_debt_amount` nullable
+(numeric 10,2), sem itens ou pagamentos iniciais, status interno `DELIVERED` e
+`PENDING` financeiro. `deliveryDate` guarda a data original; `createDate` mantém
+a auditoria do cadastro. `OrderResponseDTO` acrescenta `manualDebt` booleano.
+Histórico e pedidos abertos do cliente incluem esses registros. FIFO considera a
+data original do fiado manual. Pagamentos parciais, quitação, excedente em crédito
+e cancelamento usam os fluxos existentes. Não é permitido mudar para status de
+entrega, editar itens ou confirmar entrega novamente.
+
+O cadastro não gera estoque, acertos, caixa ou faturamento e não compõe métricas
+comerciais de pedidos. Recebimentos posteriores entram no caixa na data do
+pagamento. Hibernate adiciona a coluna nullable pelo `ddl-auto: update`; atualize
+o backend antes do desktop. Testes dirigidos: `OrderSearchAndManualDebtTest`,
+`ClientCreditEntryPaymentTest` e `InitialOrderPaymentsTest`.
+
 ## Sumário
 
 1. [Visão Geral do Projeto](#1-visão-geral-do-projeto)
@@ -853,7 +982,7 @@ permanecem iguais. A classificação é `OUT_OF_STOCK` quando quantidade <= 0,
 |---|---|---|---|
 | `GET` | `/gas-settlements/report` | **ADMIN** | Relatório (`?supplierId=&start=&end=`) |
 | `GET` | `/gas-settlements/{id}` | Autenticado | Buscar por ID |
-| `PATCH` | `/gas-settlements/bulk-settle` | Autenticado | Liquidar em lote (`?supplierId=&start=&end=`) |
+| `PATCH` | `/gas-settlements/bulk-settle` | Autenticado | Liquidar em lote (`?supplierId=&start=&end=&paymentMethod=PIX` ou DINHEIRO) |
 | `PATCH` | `/gas-settlements/{id}/settle` | Autenticado | Liquidar individual |
 
 ---
@@ -1349,7 +1478,7 @@ ao saldo do caixa. O repasse só movimenta o caixa na liquidação do acerto.
 1. Ao criar OrderItem de GAS → GasSettlementService cria GasSettlement
    - YOU_OWE: distribuidora deve ao fornecedor (custo do gás)
    - SUPPLIER_OWE: fornecedor deve à distribuidora (comissão/margem)
-2. PATCH /gas-settlements/bulk-settle?supplierId=X&start=Y&end=Z
+2. PATCH /gas-settlements/bulk-settle?supplierId=X&start=Y&end=Z&paymentMethod=PIX
    → Marca todas as liquidações pendentes do fornecedor no período como settled
 3. GET /gas-settlements/report → relatório consolidado (valores devidos / a receber)
 ```

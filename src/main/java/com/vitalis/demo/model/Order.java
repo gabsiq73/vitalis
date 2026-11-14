@@ -53,6 +53,14 @@ public class Order extends BaseEntity{
     @Column(name = "ORD_notes", length = 2000)
     private String notes;
 
+    // Saldo antigo trazido do caderno, sem itens ou efeitos de venda/estoque.
+    @Column(name = "ORD_manual_debt_amount", precision = 10, scale = 2)
+    private BigDecimal manualDebtAmount;
+
+    public boolean isManualDebt() {
+        return manualDebtAmount != null;
+    }
+
     @OneToMany(mappedBy = "order", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Payment> payments = new ArrayList<>();
 
@@ -84,6 +92,7 @@ public class Order extends BaseEntity{
     }
 
     public BigDecimal getTotalValue(){
+        if (isManualDebt()) return manualDebtAmount;
         if(this.getItems() == null || this.getItems().isEmpty()){
             return BigDecimal.ZERO;
         }

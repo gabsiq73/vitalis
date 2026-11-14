@@ -17,7 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest(properties = {"spring.datasource.url=jdbc:h2:mem:physical_stock;MODE=PostgreSQL",
         "spring.datasource.driver-class-name=org.h2.Driver", "spring.flyway.enabled=false", "spring.jpa.hibernate.ddl-auto=create-drop"})
-@Import(StockService.class)
+@Import({StockService.class, com.vitalis.demo.service.BottleInventoryService.class})
 class PhysicalStockListingTest {
     @Autowired ProductRepository products;
     @Autowired StockRepository stocks;

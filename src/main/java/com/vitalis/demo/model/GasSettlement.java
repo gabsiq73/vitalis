@@ -1,6 +1,7 @@
 package com.vitalis.demo.model;
 
 import com.vitalis.demo.model.enums.SettlementType;
+import com.vitalis.demo.model.enums.Method;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -43,6 +44,10 @@ public class GasSettlement extends BaseEntity{
 
     @Column(name = "GAS_SUP_settledDate")
     private LocalDateTime settledDate;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "GAS_SUP_payment_method")
+    private Method paymentMethod;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "GAS_SUP_settlement_type",nullable = false)

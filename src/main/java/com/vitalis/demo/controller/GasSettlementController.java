@@ -2,6 +2,7 @@ package com.vitalis.demo.controller;
 
 import com.vitalis.demo.dto.response.GasSettlementReportDTO;// Importe o novo DTO
 import com.vitalis.demo.dto.response.GasSettlementResponseDTO;
+import com.vitalis.demo.model.enums.Method;
 import com.vitalis.demo.mapper.GasSettlementMapper; // Importe o Mapper
 import com.vitalis.demo.service.GasSettlementService;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,10 @@ import java.util.UUID;
 @RequestMapping("/gas-settlements")
 @RequiredArgsConstructor
 public class GasSettlementController {
+    @PutMapping("/{id}")
+    public GasSettlementResponseDTO edit(@PathVariable UUID id, @jakarta.validation.Valid @RequestBody com.vitalis.demo.dto.request.GasSettlementUpdateDTO dto) {
+        return settlementService.edit(id, dto);
+    }
 
     private final GasSettlementService settlementService;
     private final GasSettlementMapper settlementMapper;
@@ -59,15 +64,22 @@ public class GasSettlementController {
     public ResponseEntity<Void> bulkSettle(
             @RequestParam UUID supplierId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end){
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end,
+            @RequestParam Method paymentMethod){
 
-        settlementService.settleAllBySupplier(supplierId, start, end);
+        settlementService.settleAllBySupplier(supplierId, start, end, paymentMethod);
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{id}/settle")
-    public ResponseEntity<Void> settleOne(@PathVariable UUID id){
-        settlementService.settleIndividual(id);
+    public ResponseEntity<Void> settleOne(@PathVariable UUID id, @RequestParam Method paymentMethod){
+        settlementService.settleIndividual(id, paymentMethod);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/payment-method")
+    public ResponseEntity<Void> classifyLegacyPayment(@PathVariable UUID id, @RequestParam Method paymentMethod) {
+        settlementService.classifyLegacyPayment(id, paymentMethod);
         return ResponseEntity.noContent().build();
     }
 }

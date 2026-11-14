@@ -21,5 +21,6 @@ public record OrderResponseDTO(
         BigDecimal totalValue,
         LocalDateTime createDate,
         Integer loanedBottlesCount,
-        String notes
+        String notes,
+        boolean manualDebt
 ) {}

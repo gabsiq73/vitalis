@@ -5,6 +5,8 @@ import com.vitalis.demo.model.GasSupplier;
 import com.vitalis.demo.model.OrderItem;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -14,6 +16,15 @@ import java.util.UUID;
 
 public interface GasSettlementRepository extends JpaRepository<GasSettlement, UUID> {
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select gs from GasSettlement gs where gs.id = :id")
+    Optional<GasSettlement> findByIdForUpdate(UUID id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT gs FROM GasSettlement gs WHERE gs.gasSupplier.id = :supplierId AND gs.settled = false " +
+           "AND gs.createDate BETWEEN :start AND :end AND gs.orderItem.order.status <> com.vitalis.demo.model.enums.OrderStatus.CANCELLED ORDER BY gs.id")
+    List<GasSettlement> findPendingForUpdate(UUID supplierId, LocalDateTime start, LocalDateTime end);
+
     List<GasSettlement> findByGasSupplier(GasSupplier supplier);
 
     @Query("SELECT gs FROM GasSettlement gs WHERE gs.settled = :settled AND gs.orderItem.order.status <> com.vitalis.demo.model.enums.OrderStatus.CANCELLED")
@@ -22,8 +33,8 @@ public interface GasSettlementRepository extends JpaRepository<GasSettlement, UU
     @Query("""
             SELECT SUM(
                 CASE
-                    WHEN gs.settlementType = com.vitalis.demo.model.enums.SettlementType.SUPPLIER_OWE THEN gs.amount * gs.orderItem.quantity
-                    WHEN gs.settlementType = com.vitalis.demo.model.enums.SettlementType.YOU_OWE THEN (gs.orderItem.unitPrice - gs.amount) * gs.orderItem.quantity
+                    WHEN gs.settlementType = com.vitalis.demo.model.enums.SettlementType.SUPPLIER_OWE THEN (gs.amount - coalesce(gs.orderItem.promotionWaterValue, 0)) * gs.orderItem.quantity
+                    WHEN gs.settlementType = com.vitalis.demo.model.enums.SettlementType.YOU_OWE THEN (gs.orderItem.unitPrice - gs.amount - coalesce(gs.orderItem.promotionWaterValue, 0)) * gs.orderItem.quantity
                     ELSE 0
                 END
             )

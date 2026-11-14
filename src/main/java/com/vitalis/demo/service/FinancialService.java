@@ -52,8 +52,7 @@ public class FinancialService {
     // Relatório Financeiro
 
     /**
-     * Atalho para o relatório financeiro de um único dia.
-     * Equivale a chamar {@link #generateFinancialReport} com start == end.
+     * Relatório financeiro de um dia com movimentos e vendas atribuídas ao depósito.
      */
     @Transactional(readOnly = true)
     public FinancialReportDTO findDailyFinancialPerformance(LocalDate date) {
@@ -76,7 +75,16 @@ public class FinancialService {
                         date.atStartOfDay(), date.atTime(LocalTime.MAX));
         BigDecimal gasIn = BigDecimal.ZERO;
         BigDecimal gasOut = BigDecimal.ZERO;
+        BigDecimal cashGasNet = BigDecimal.ZERO;
+        BigDecimal pixGasNet = BigDecimal.ZERO;
+        BigDecimal unclassified = BigDecimal.ZERO;
+        long unclassifiedCount = 0;
         for (GasSettlement settlement : settlements) {
+            BigDecimal signed = settlement.getSettlementType() == SettlementType.SUPPLIER_OWE
+                    ? settlement.getTotalAmount() : settlement.getTotalAmount().negate();
+            if (settlement.getPaymentMethod() == Method.DINHEIRO) cashGasNet = cashGasNet.add(signed);
+            else if (settlement.getPaymentMethod() == Method.PIX) pixGasNet = pixGasNet.add(signed);
+            else { unclassified = unclassified.add(signed); unclassifiedCount++; }
             if (settlement.getSettlementType() == SettlementType.SUPPLIER_OWE) {
                 gasIn = gasIn.add(settlement.getTotalAmount());
             } else if (settlement.getSettlementType() == SettlementType.YOU_OWE) {
@@ -90,7 +98,18 @@ public class FinancialService {
                 base.getBalance(), entries, adjustments, withdrawals,
                 base.totalReceived().add(entries).add(adjustments).subtract(withdrawals)
                         .add(gasIn).subtract(gasOut),
-                details, gasIn, gasOut, gasDetails);
+                details, gasIn, gasOut, gasDetails,
+                receivedByMethod(date, Method.DINHEIRO).add(entries).add(adjustments).subtract(withdrawals).add(cashGasNet),
+                receivedByMethod(date, Method.PIX).add(pixGasNet), unclassified, unclassifiedCount,
+                safeQuery(orderRepository.sumDepotDeliveredSales(OrderStatus.DELIVERED,
+                        date.atStartOfDay(), date.atTime(LocalTime.MAX))));
+    }
+
+    private BigDecimal receivedByMethod(LocalDate date, Method method) {
+        LocalDateTime start = date.atStartOfDay();
+        LocalDateTime end = date.atTime(LocalTime.MAX);
+        return safeQuery(paymentRepository.sumReceivedByMethod(start, end, method))
+                .add(safeQuery(clientCreditEntryRepository.sumReceivedByMethod(start, end, method)));
     }
 
     /**
@@ -124,6 +143,7 @@ public class FinancialService {
     @Transactional(readOnly = true)
     public DailyReportDTO generateOperationalSummary(LocalDate start, LocalDate end) {
         List<Order> orders = fetchOrdersInPeriod(start, end).stream()
+                .filter(o -> !o.isManualDebt())
                 .filter(o -> o.getStatus() != OrderStatus.CANCELLED)
                 .toList();
 
@@ -248,6 +268,7 @@ public class FinancialService {
         return orders.stream()
                 .flatMap(order -> order.getItems().stream())
                 .filter(item -> item.getProduct().getType() == type)
+                .filter(item -> item.getBottleMode() != com.vitalis.demo.model.enums.BottleMode.EXPIRED)
                 .mapToInt(OrderItem::getQuantity)
                 .sum();
     }
@@ -259,7 +280,8 @@ public class FinancialService {
         return orders.stream()
                 .flatMap(order -> order.getItems().stream())
                 .filter(item -> item.getProduct().getType() == ProductType.WATER)
-                .filter(item -> !item.getProduct().getName().toUpperCase().contains("COMPLETO"))
+                .filter(item -> item.getBottleMode() != com.vitalis.demo.model.enums.BottleMode.EXPIRED)
+                .filter(item -> item.getBottleMode() != com.vitalis.demo.model.enums.BottleMode.FULL && !item.getProduct().getName().toUpperCase().contains("COMPLETO"))
                 .mapToInt(OrderItem::getQuantity)
                 .sum();
     }
@@ -271,7 +293,8 @@ public class FinancialService {
         return orders.stream()
                 .flatMap(order -> order.getItems().stream())
                 .filter(item -> item.getProduct().getType() == ProductType.WATER)
-                .filter(item -> item.getProduct().getName().toUpperCase().contains("COMPLETO"))
+                .filter(item -> item.getBottleMode() != com.vitalis.demo.model.enums.BottleMode.EXPIRED)
+                .filter(item -> item.getBottleMode() == com.vitalis.demo.model.enums.BottleMode.FULL || item.getProduct().getName().toUpperCase().contains("COMPLETO"))
                 .mapToInt(OrderItem::getQuantity)
                 .sum();
     }

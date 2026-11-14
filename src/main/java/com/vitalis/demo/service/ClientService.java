@@ -22,6 +22,8 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.text.Normalizer;
+import java.util.Locale;
 
 @Service
 @AllArgsConstructor
@@ -51,8 +53,17 @@ public class ClientService {
 
     @Transactional(readOnly = true)
     public Page<Client> listClient(String name, ClientType type, Pageable pageable){
-        if(name != null && type != null) return repository.findByNameContainingIgnoreCaseAndClientType(pageable, name, type);
-        if(name != null) return repository.findByNameContainingIgnoreCaseAndClientTypeNot(pageable, name, ClientType.AVULSO);
+        if (name != null && !name.isBlank()) {
+            String term = Normalizer.normalize(name.trim(), Normalizer.Form.NFD)
+                    .replaceAll("\\p{M}+", "").toLowerCase(Locale.ROOT);
+            String pattern = "%" + term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
+            return repository.findAll((root, query, cb) -> cb.and(
+                    cb.isTrue(root.get("isActive")),
+                    type == null ? cb.notEqual(root.get("clientType"), ClientType.AVULSO) : cb.equal(root.get("clientType"), type),
+                    cb.like(cb.function("translate", String.class, cb.lower(root.get("name")),
+                            cb.literal("áàâãäåéèêëíìîïóòôõöúùûüçñ"), cb.literal("aaaaaaeeeeiiiiooooouuuucn")), pattern, '\\')
+            ), pageable);
+        }
         if(type != null) return repository.findByClientType(pageable, type);
 
         return repository.findByClientTypeNot(pageable, ClientType.AVULSO);

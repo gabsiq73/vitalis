@@ -38,7 +38,7 @@ import static org.mockito.Mockito.doAnswer;
 })
 @Import({AuditConfig.class, OrderCreationService.class, OrderService.class, PaymentService.class,
         OrderBalanceService.class, ClientService.class, ClientValidator.class, ClientPriceService.class,
-        ProductService.class, StockService.class, GasSupplierService.class, GasSettlementService.class,
+        ProductService.class, StockService.class, BottleInventoryService.class, GasSupplierService.class, GasSettlementService.class,
         SystemConfigService.class, OrderMapperImpl.class, OrderItemMapperImpl.class, PaymentMapperImpl.class,
         ClientMapperImpl.class, ProductMapperImpl.class, GasSupplierMapperImpl.class, GasSettlementMapperImpl.class})
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
