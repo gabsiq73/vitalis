@@ -43,11 +43,13 @@ public class CompletedOrderCorrectionService {
             if (product.getType() != item.getProduct().getType()) throw new BusinessException("Mantenha o tipo do item na correção.");
             GasSettlement settlement = product.getType() == ProductType.GAS ? settlements.findByOrderItem(item).orElseThrow() : null;
             BigDecimal oldCost = settlement == null ? null : settlement.getSettlementType() == SettlementType.YOU_OWE ? settlement.getAmount() : item.getUnitPrice().subtract(settlement.getAmount());
+            if (!product.getId().equals(item.getProduct().getId())) { item.setUnitCost(product.getCostPrice()); item.setCostEstimated(false); }
             item.setProduct(product); item.setQuantity(change.quantity()); item.setUnitPrice(change.unitPrice()); item.setBottleMode(change.bottleMode());
             if (settlement != null) {
                 item.setGasSupplier(change.supplierId() == null ? item.getGasSupplier() : suppliers.findById(change.supplierId()));
                 boolean received = change.receivedByUs() == null ? settlement.getSettlementType() == SettlementType.YOU_OWE : change.receivedByUs();
                 BigDecimal cost = change.gasCostPrice() == null ? oldCost : change.gasCostPrice();
+                if (change.gasCostPrice() != null) { item.setUnitCost(cost); item.setCostEstimated(false); }
                 if (cost.signum() < 0) throw new BusinessException("O custo do gás não pode ser negativo.");
                 settlements.updateAutomatedSettlement(settlement, item, received, cost);
                 financial.put(product.getId(), new GasFinancialInfoRequest(cost, received, change.gasPaymentMethod()));

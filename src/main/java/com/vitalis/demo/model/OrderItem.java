@@ -21,6 +21,10 @@ import java.util.UUID;
 @ToString
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 public class OrderItem extends BaseEntity{
+    @Column(precision = 10, scale = 2)
+    private BigDecimal unitCost;
+    @Column(nullable = false)
+    private boolean costEstimated;
     @Enumerated(EnumType.STRING)
     private com.vitalis.demo.model.enums.BottleMode bottleMode;
     @Column(nullable = false, columnDefinition = "boolean default false")

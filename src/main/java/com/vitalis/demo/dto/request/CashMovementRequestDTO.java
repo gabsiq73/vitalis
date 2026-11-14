@@ -11,5 +11,12 @@ public record CashMovementRequestDTO(
         BigDecimal amount,
         CashMovementDirection direction,
         LocalDateTime occurredAt,
-        String note
-) { }
+        String note,
+        com.vitalis.demo.model.enums.WithdrawalKind withdrawalKind,
+        com.vitalis.demo.model.enums.Method paymentMethod
+) {
+    public CashMovementRequestDTO(CashMovementType type, BigDecimal amount, CashMovementDirection direction,
+                                  LocalDateTime occurredAt, String note) {
+        this(type, amount, direction, occurredAt, note, null, null);
+    }
+}

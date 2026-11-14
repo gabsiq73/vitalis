@@ -14,5 +14,7 @@ public record CashMovementResponseDTO(
         CashMovementDirection direction,
         LocalDateTime occurredAt,
         String note,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        com.vitalis.demo.model.enums.WithdrawalKind withdrawalKind,
+        com.vitalis.demo.model.enums.Method paymentMethod
 ) { }

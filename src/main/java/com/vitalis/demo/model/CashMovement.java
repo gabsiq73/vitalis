@@ -16,6 +16,13 @@ import java.util.UUID;
 @NoArgsConstructor
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 public class CashMovement extends BaseEntity {
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private com.vitalis.demo.model.enums.WithdrawalKind withdrawalKind = com.vitalis.demo.model.enums.WithdrawalKind.RETIRADA;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private com.vitalis.demo.model.enums.Method paymentMethod = com.vitalis.demo.model.enums.Method.DINHEIRO;
     @EqualsAndHashCode.Include
     @Id
     @GeneratedValue

@@ -426,6 +426,7 @@ public class OrderService {
             if (receivedByUs == null || costPrice == null) {
                 throw new BusinessException("Dados financeiros do gás são obrigatórios!");
             }
+            item.setUnitCost(costPrice);
             gasSettlementService.createAutomatedSettlement(item, receivedByUs, costPrice);
         }
     }
@@ -481,6 +482,7 @@ public class OrderService {
      * validação → preço → fornecedor de gás.
      */
     private void processItemBeforeAdding(Order subOrder, OrderItem item, boolean isGas, Boolean isDelivery) {
+        if (item.getUnitCost() == null) item.setUnitCost(item.getProduct().getCostPrice());
         validateProductAvailability(item.getProduct());
         if (item.getBottleMode() != com.vitalis.demo.model.enums.BottleMode.EXPIRED) stockService.checkStockAvailability(item.getProduct(), item.getQuantity());
         resolveItemPrice(subOrder.getClient(), item, isDelivery);
@@ -644,6 +646,9 @@ public class OrderService {
             }
 
             if (newItem.getProduct().getType() != ProductType.GAS) {
+                OrderItem previous = oldItems.stream().filter(i -> i.getProduct().getId().equals(newItem.getProduct().getId())).findFirst().orElse(null);
+                newItem.setUnitCost(previous == null ? newItem.getProduct().getCostPrice() : previous.getUnitCost());
+                newItem.setCostEstimated(previous != null && previous.isCostEstimated());
                 updatedItems.add(newItem);
                 continue;
             }
@@ -676,6 +681,7 @@ public class OrderService {
             }
             oldItem.setQuantity(newItem.getQuantity());
             oldItem.setUnitPrice(newItem.getUnitPrice());
+            if (info != null && info.gasCostPrice() != null) { oldItem.setUnitCost(cost); oldItem.setCostEstimated(false); }
             oldItem.setBottleExpiration(newItem.getBottleExpiration());
             oldItem.setGasSupplier(newItem.getGasSupplier());
             if (settlementChanged) {

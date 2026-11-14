@@ -15,6 +15,10 @@ import java.util.List;
 import java.util.UUID;
 
 public interface PaymentRepository extends JpaRepository<Payment, UUID> {
+    @Query("SELECT p FROM Payment p WHERE p.date >= :start AND p.date < :end " +
+            "AND p.order.status <> com.vitalis.demo.model.enums.OrderStatus.CANCELLED " +
+            "AND p.order.paymentStatus <> com.vitalis.demo.model.enums.PaymentStatus.CANCELLED ORDER BY p.date, p.id")
+    List<Payment> findClosingReceipts(LocalDateTime start, LocalDateTime end);
 
     @Query("SELECT SUM(p.amount) FROM Payment p WHERE p.date BETWEEN :start AND :end AND p.method = :method " +
            "AND p.order.status <> com.vitalis.demo.model.enums.OrderStatus.CANCELLED")

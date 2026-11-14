@@ -51,9 +51,18 @@ public class CashMovementService {
             throw new BusinessException("Observação deve ter até 255 caracteres");
         }
         CashMovement movement = mapper.toEntity(dto);
+        var kind = dto.withdrawalKind() == null ? com.vitalis.demo.model.enums.WithdrawalKind.RETIRADA : dto.withdrawalKind();
+        var method = dto.paymentMethod() == null ? com.vitalis.demo.model.enums.Method.DINHEIRO : dto.paymentMethod();
+        if (method == com.vitalis.demo.model.enums.Method.SALDO
+                || (dto.type() != CashMovementType.WITHDRAWAL && (kind != com.vitalis.demo.model.enums.WithdrawalKind.RETIRADA
+                || method != com.vitalis.demo.model.enums.Method.DINHEIRO))) {
+            throw new BusinessException("Compras, despesas e PIX são permitidos apenas em saídas de caixa.");
+        }
+        movement.setWithdrawalKind(kind);
+        movement.setPaymentMethod(method);
         movement.setAmount(amount);
         movement.setNote(note);
-        if (movement.getOccurredAt() == null) movement.setOccurredAt(java.time.LocalDateTime.now());
+        if (movement.getOccurredAt() == null) movement.setOccurredAt(java.time.LocalDateTime.now(java.time.ZoneId.of("America/Sao_Paulo")));
         return mapper.toResponseDTO(repository.save(movement));
     }
 
