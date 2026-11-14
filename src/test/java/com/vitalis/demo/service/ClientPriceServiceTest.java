@@ -19,7 +19,7 @@ import java.math.BigDecimal;
 import static com.vitalis.demo.model.enums.ClientType.RESELLER;
 
 
-@SpringBootTest
+@SpringBootTest(properties = {"spring.flyway.enabled=false", "spring.jpa.hibernate.ddl-auto=create-drop"})
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
 public class ClientPriceServiceTest {
 

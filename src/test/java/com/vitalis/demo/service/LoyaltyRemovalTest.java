@@ -26,7 +26,7 @@ import static org.assertj.core.api.Assertions.*;
 @DataJpaTest(showSql = false, properties = {
         "spring.datasource.url=jdbc:h2:mem:loyalty_removal;MODE=PostgreSQL",
         "spring.datasource.driver-class-name=org.h2.Driver",
-        "spring.jpa.hibernate.ddl-auto=update",
+        "spring.flyway.enabled=false", "spring.jpa.hibernate.ddl-auto=update",
         "spring.sql.init.mode=always", "spring.sql.init.schema-locations=classpath:legacy-loyalty-schema.sql"
 })
 @Import({AuditConfig.class, OrderCreationService.class, OrderService.class, PaymentService.class,

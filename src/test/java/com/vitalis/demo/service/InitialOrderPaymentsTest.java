@@ -34,7 +34,7 @@ import static org.mockito.Mockito.doAnswer;
 @DataJpaTest(properties = {
         "spring.datasource.url=jdbc:h2:mem:initial_payments;MODE=PostgreSQL",
         "spring.datasource.driver-class-name=org.h2.Driver",
-        "spring.jpa.hibernate.ddl-auto=create-drop", "spring.jpa.show-sql=false"
+        "spring.flyway.enabled=false", "spring.jpa.hibernate.ddl-auto=create-drop", "spring.jpa.show-sql=false"
 })
 @Import({AuditConfig.class, OrderCreationService.class, OrderService.class, PaymentService.class,
         OrderBalanceService.class, ClientService.class, ClientValidator.class, ClientPriceService.class,

@@ -10,7 +10,7 @@ import java.time.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest(properties = {"spring.datasource.url=jdbc:h2:mem:gas_quantity;MODE=PostgreSQL",
-        "spring.datasource.driver-class-name=org.h2.Driver", "spring.jpa.hibernate.ddl-auto=create-drop", "spring.jpa.show-sql=false"})
+        "spring.datasource.driver-class-name=org.h2.Driver", "spring.flyway.enabled=false", "spring.jpa.hibernate.ddl-auto=create-drop", "spring.jpa.show-sql=false"})
 class GasMarginQuantityRepositoryTest {
     @Autowired ClientRepository clients;
     @Autowired OrderRepository orders;
