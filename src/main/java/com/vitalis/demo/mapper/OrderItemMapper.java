@@ -19,6 +19,7 @@ public abstract class OrderItemMapper {
     protected GasSettlementRepository gasSettlementRepository;
 
     @Mapping(target = "order", ignore = true)
+    @Mapping(target = "id", ignore = true)
     @Mapping(target = "product", ignore = true)
     @Mapping(target = "gasSupplier", ignore = true)
     public abstract OrderItem toEntity(OrderItemRequestDTO dto);

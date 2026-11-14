@@ -19,7 +19,7 @@ class GasDeliveryContractTest {
     MockMvc http;
     final UUID id = UUID.randomUUID();
     @BeforeEach void setUp() {
-        http = MockMvcBuilders.standaloneSetup(new OrderController(orders, mock(OrderCreationService.class),
+        http = MockMvcBuilders.standaloneSetup(new OrderController(mock(CompletedOrderCorrectionService.class), orders, mock(OrderCreationService.class),
                 mock(OrderMapper.class), mock(OrderItemMapper.class)))
                 .setControllerAdvice(new GlobalExceptionHandler()).build();
     }

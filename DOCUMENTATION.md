@@ -1,5 +1,63 @@
 # Vitalis — Documentação Técnica Completa
 
+### Correções de operação, garrafões e promoção Gás + água
+
+- `GET /bottle-inventory` retorna `configured`, `validQuantity`, `expiredQuantity`,
+  `filledQuantity` (soma das águas físicas), `emptyValidQuantity` e `totalQuantity`.
+  `PUT /bottle-inventory` recebe `{validQuantity, expiredQuantity}`, inteiros não
+  negativos. Válidos precisam cobrir as águas cheias. O registro singleton usa
+  `BottleInventory` e bloqueio pessimista nas movimentações. Até a contagem inicial,
+  águas legadas continuam funcionando; vendas completas/vencidas exigem configuração.
+- Itens de pedido acrescentam `bottleMode`: `REFILL` (padrão legado), `FULL` ou
+  `EXPIRED`. A entrega de REFILL baixa água, mantendo total por troca de vazio;
+  FULL baixa água e válidos; EXPIRED baixa vencidos sem baixar água. O modo é
+  explícito no item, sem novo ProductType. `bottleInventoryTracked` identifica
+  entregas feitas após ativar o controle; `bottleStockApplied` registra se houve
+  baixa do total, permitindo desfazer/corrigir sem alterar retroativamente vendas
+  anteriores à contagem. Entradas de água ficam limitadas pelos válidos vazios.
+  Vencidos são excluídos das contagens de água. Empréstimos permanecem registros
+  separados; cadastrá-los não altera automaticamente os totais físicos.
+- `OrderRequestDTOv2.promotion` opcional recebe `{waterProductId, bundleUnitPrice,
+  waterUnitValue}` com um item GAS no request. O backend inclui uma água por gás
+  a preço zero, guarda `promotionWaterValue` nos itens e preserva o total do
+  conjunto no gás. Promoção retorna lista com um pedido conjunto. A baixa inclui
+  a água. Acerto SUPPLIER_OWE é conjunto − custo do gás (repasse real); margem no
+  financeiro desconta também a água de referência. Ex.: 127 − 110 = 17 a receber,
+  sendo 9 da água e 8 de margem; água de 8 produz margem 9. PIX/Dinheiro recebido
+  pelo depósito e liquidação do fornecedor mantêm os contratos do caixa separado.
+- `PUT /orders/{id}/correction` recebe OrderRequestDTOv2 com `itemId` em cada item
+  original. Mantém cliente, IDs e número de linhas; permite mudar produto dentro
+  do mesmo tipo, preço, quantidade, custo, recebedor, data e observação, inclusive
+  após entrega e liquidação do gás. Também atende promoção ainda pendente. Usa
+  bloqueio do pedido e transação para restaurar os efeitos anteriores e aplicar
+  os novos. Falha de estoque desfaz toda a operação. Liquidações preservam ID,
+  meio e data; seus valores mudam com a correção. Pagamentos automáticos de gás
+  são reconciliados. Excedentes avulsos são convertidos em crédito do cliente,
+  preservando a data e o total recebido, sem duplicar caixa. A correção não aceita
+  pedido cancelado ou fiado manual. Na promoção, mantenha água inclusa a zero e
+  uma água por gás; `promotion.waterUnitValue` pode ser corrigido.
+- `PUT /gas-settlements/{id}` recebe `{amount, settled, settledDate, paymentMethod}`.
+  `amount` é unitário, >= 0, até duas casas. Permite editar liquidados e reabrir
+  pendentes, atualizando os saldos nas datas correspondentes sem criar outro
+  registro. Acertado exige data não futura e PIX/DINHEIRO. Direção/fornecedor
+  continuam vinculados à venda; corrigir esses dados passa pelo pedido.
+- `PUT /bottles/{id}` recebe LoanedBottleRequestDTO para editar cliente, produto,
+  quantidade positiva e data não futura. Mantém ID e situação da devolução; data
+  não pode ultrapassar devolução existente. Se trocar o cliente, desfaz somente
+  o vínculo incompatível com o pedido original. Desktop oferece edição dos pendentes.
+
+Schema via `ddl-auto: update`: entidade `BottleInventory`, campos `bottleMode`,
+`bottleStockApplied` e `bottleInventoryTracked` (boolean default false), e `promotionWaterValue` nullable em
+OrderItem. DTO de item acrescenta `bottleMode` e `promotionWaterValue` na resposta;
+request acrescenta `bottleMode` e `itemId`. Construtores Java anteriores de request
+foram preservados. Não há migração inferindo totais físicos a partir de vendas.
+
+Validação: testes novos de venda completa/vencida, cancelamento, correção paga,
+rollback, acerto liquidado, promoção com água 9/8 e empréstimo; regressão de
+pagamentos iniciais, confirmação de gás, edição pendente e fiados. Electron com
+API real em H2 descartável cobriu cadastro e edição nas telas, estoque, promoção
+e venda de vencido. Banco operacional não foi utilizado.
+
 ### Caixa separado por meio e busca de clientes sem acentos
 
 `GET /reports/performance/daily?date=YYYY-MM-DD` acrescenta:

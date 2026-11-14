@@ -1,4 +1,5 @@
 package com.vitalis.demo.controller;
+import com.vitalis.demo.service.CompletedOrderCorrectionService;
 
 import com.vitalis.demo.dto.request.OrderRequestDTOv2;
 import com.vitalis.demo.handler.GlobalExceptionHandler;
@@ -27,7 +28,7 @@ class InitialOrderPaymentsContractTest {
     @BeforeEach
     void setUp() {
         checkout = mock(OrderCreationService.class);
-        http = MockMvcBuilders.standaloneSetup(new OrderController(mock(OrderService.class), checkout,
+        http = MockMvcBuilders.standaloneSetup(new OrderController(mock(CompletedOrderCorrectionService.class), mock(OrderService.class), checkout,
                 mock(OrderMapper.class), mock(OrderItemMapper.class)))
                 .setControllerAdvice(new GlobalExceptionHandler()).build();
         when(checkout.createOrders(any(OrderRequestDTOv2.class))).thenReturn(List.of());

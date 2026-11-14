@@ -17,6 +17,9 @@ import java.util.List;
 import java.util.UUID;
 
 public interface OrderRepository extends JpaRepository<Order, UUID>, JpaSpecificationExecutor<Order> {
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select o from Order o where o.id = :id")
+    java.util.Optional<Order> findByIdForUpdate(UUID id);
 
     Page<Order> findByClient(Client client, Pageable pageable);
 

@@ -33,8 +33,8 @@ public interface GasSettlementRepository extends JpaRepository<GasSettlement, UU
     @Query("""
             SELECT SUM(
                 CASE
-                    WHEN gs.settlementType = com.vitalis.demo.model.enums.SettlementType.SUPPLIER_OWE THEN gs.amount * gs.orderItem.quantity
-                    WHEN gs.settlementType = com.vitalis.demo.model.enums.SettlementType.YOU_OWE THEN (gs.orderItem.unitPrice - gs.amount) * gs.orderItem.quantity
+                    WHEN gs.settlementType = com.vitalis.demo.model.enums.SettlementType.SUPPLIER_OWE THEN (gs.amount - coalesce(gs.orderItem.promotionWaterValue, 0)) * gs.orderItem.quantity
+                    WHEN gs.settlementType = com.vitalis.demo.model.enums.SettlementType.YOU_OWE THEN (gs.orderItem.unitPrice - gs.amount - coalesce(gs.orderItem.promotionWaterValue, 0)) * gs.orderItem.quantity
                     ELSE 0
                 END
             )

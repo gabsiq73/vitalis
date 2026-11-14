@@ -134,14 +134,24 @@ public class OrderService {
         Map<UUID, GasFinancialInfoRequest> financialMap = orderMapper.extractFinancialInfo(dto);
 
         // CHAMA O MÉTODO ÚNICO
-        List<OrderItem> allItems = resolveItemsFromDto(dto.items());
+        List<OrderItem> allItems = new ArrayList<>(resolveItemsFromDto(dto.items()));
+        if (dto.promotion() != null) {
+            if (allItems.size() != 1 || allItems.getFirst().getProduct().getType() != ProductType.GAS) throw new BusinessException("A promoção exige um item de gás e uma água selecionada.");
+            OrderItem gas = allItems.getFirst();
+            Product water = productService.findById(dto.promotion().waterProductId());
+            if (water.getType() != ProductType.WATER || !water.isActive()) throw new BusinessException("Selecione uma água ativa para a promoção.");
+            gas.setUnitPrice(dto.promotion().bundleUnitPrice());
+            gas.setPromotionWaterValue(dto.promotion().waterUnitValue());
+            OrderItem gift = new OrderItem(); gift.setProduct(water); gift.setQuantity(gas.getQuantity()); gift.setUnitPrice(BigDecimal.ZERO); gift.setPromotionWaterValue(dto.promotion().waterUnitValue());
+            allItems.add(gift);
+        }
 
         Order prototype = orderMapper.toEntity(dto);
         prototype.setClient(client);
         prototype.setItems(allItems);
 
         // Segue a partição (Gás vs Água)
-        Map<Boolean, List<OrderItem>> partitionedItems = partitionItemsByType(prototype);
+        Map<Boolean, List<OrderItem>> partitionedItems = dto.promotion() == null ? partitionItemsByType(prototype) : Map.of(true, allItems);
         List<Order> savedOrders = new ArrayList<>();
         UUID cancellationGroup = UUID.randomUUID();
 
@@ -163,6 +173,11 @@ public class OrderService {
     }
 
     // Atualização de Pedidos
+
+    @Transactional
+    public void reconcileCorrectedGasPayments(Order order, Map<UUID, GasFinancialInfoRequest> info) {
+        syncAutomaticGasPayment(order, info);
+    }
 
     @Transactional
     public OrderResponseDTO createManualDebt(ManualDebtRequestDTO dto) {
@@ -239,7 +254,7 @@ public class OrderService {
         if (dto != null) reviewGasDeliveryPayments(order, dto);
 
         order.getItems().forEach(item -> {
-            stockService.decreaseStock(item.getProduct(), item.getQuantity());
+            stockService.deliverItem(item);
         });
 
         order.setDeliveryDate(LocalDateTime.now());
@@ -467,12 +482,13 @@ public class OrderService {
      */
     private void processItemBeforeAdding(Order subOrder, OrderItem item, boolean isGas, Boolean isDelivery) {
         validateProductAvailability(item.getProduct());
-        stockService.checkStockAvailability(item.getProduct(), item.getQuantity());
+        if (item.getBottleMode() != com.vitalis.demo.model.enums.BottleMode.EXPIRED) stockService.checkStockAvailability(item.getProduct(), item.getQuantity());
         resolveItemPrice(subOrder.getClient(), item, isDelivery);
-        if (isGas) resolveGasSupplier(item);
+        if (item.getProduct().getType() == ProductType.GAS) resolveGasSupplier(item);
     }
 
     private void resolveItemPrice(Client client, OrderItem item, Boolean isDelivery) {
+        if (item.getPromotionWaterValue() != null && item.getProduct().getType() == ProductType.WATER && item.getUnitPrice() != null && item.getUnitPrice().signum() == 0) return;
         if (item.getUnitPrice() == null || item.getUnitPrice().signum() <= 0) {
             item.setUnitPrice(calculateFinalPrice(client, item.getProduct(), isDelivery));
         }
@@ -694,7 +710,7 @@ public class OrderService {
 
     private void revertDeliveredOrder(Order order) {
         order.getItems().forEach(item -> {
-            stockService.increaseStock(item.getProduct(), item.getQuantity());
+            stockService.reverseItem(item);
         });
 
         removeGasSettlements(order);

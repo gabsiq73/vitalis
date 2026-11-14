@@ -30,6 +30,19 @@ public class GasSettlementService {
     private final GasSettlementRepository repository;
     private final GasSettlementMapper mapper;
 
+    @Transactional
+    public GasSettlementResponseDTO edit(UUID id, com.vitalis.demo.dto.request.GasSettlementUpdateDTO dto) {
+        GasSettlement s = repository.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("Acerto não encontrado!"));
+        if (Boolean.TRUE.equals(dto.settled())) {
+            validatePaymentMethod(dto.paymentMethod());
+            if (dto.settledDate() == null || dto.settledDate().isAfter(LocalDateTime.now())) throw new BusinessException("Informe a data do acerto, sem data futura.");
+        }
+        s.setAmount(dto.amount()); s.setSettled(dto.settled());
+        s.setSettledDate(dto.settled() ? dto.settledDate() : null);
+        s.setPaymentMethod(dto.settled() ? dto.paymentMethod() : null);
+        return mapper.toResponseDTO(repository.save(s));
+    }
+
     @Transactional(readOnly = true)
     public GasSettlement findById(UUID id) {
         return findByIdOptional(id)

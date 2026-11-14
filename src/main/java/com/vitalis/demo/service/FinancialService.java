@@ -267,6 +267,7 @@ public class FinancialService {
         return orders.stream()
                 .flatMap(order -> order.getItems().stream())
                 .filter(item -> item.getProduct().getType() == type)
+                .filter(item -> item.getBottleMode() != com.vitalis.demo.model.enums.BottleMode.EXPIRED)
                 .mapToInt(OrderItem::getQuantity)
                 .sum();
     }
@@ -278,7 +279,8 @@ public class FinancialService {
         return orders.stream()
                 .flatMap(order -> order.getItems().stream())
                 .filter(item -> item.getProduct().getType() == ProductType.WATER)
-                .filter(item -> !item.getProduct().getName().toUpperCase().contains("COMPLETO"))
+                .filter(item -> item.getBottleMode() != com.vitalis.demo.model.enums.BottleMode.EXPIRED)
+                .filter(item -> item.getBottleMode() != com.vitalis.demo.model.enums.BottleMode.FULL && !item.getProduct().getName().toUpperCase().contains("COMPLETO"))
                 .mapToInt(OrderItem::getQuantity)
                 .sum();
     }
@@ -290,7 +292,8 @@ public class FinancialService {
         return orders.stream()
                 .flatMap(order -> order.getItems().stream())
                 .filter(item -> item.getProduct().getType() == ProductType.WATER)
-                .filter(item -> item.getProduct().getName().toUpperCase().contains("COMPLETO"))
+                .filter(item -> item.getBottleMode() != com.vitalis.demo.model.enums.BottleMode.EXPIRED)
+                .filter(item -> item.getBottleMode() == com.vitalis.demo.model.enums.BottleMode.FULL || item.getProduct().getName().toUpperCase().contains("COMPLETO"))
                 .mapToInt(OrderItem::getQuantity)
                 .sum();
     }

@@ -41,6 +41,108 @@ class CashMethodsAndClientSearchTest {
     @Autowired PaymentRepository payments;
     @Autowired ClientCreditEntryRepository credits;
     @Autowired CashMovementRepository movements;
+    @Autowired StockRepository stocks;
+    @Autowired LoanedBottleRepository loans;
+
+    JsonNode postJson(String path, Object body) throws Exception {
+        return json.readTree(http.perform(post(path).contentType("application/json").content(json.writeValueAsString(body)))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString());
+    }
+    JsonNode putJson(String path, Object body) throws Exception {
+        return json.readTree(http.perform(put(path).contentType("application/json").content(json.writeValueAsString(body)))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+    }
+    JsonNode getJson(String path) throws Exception {
+        return json.readTree(http.perform(get(path)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+    }
+    Product water() {
+        Product p = new Product(); p.setName("Água teste " + UUID.randomUUID()); p.setType(ProductType.WATER); p.setBasePrice(new BigDecimal("9.00")); p.setActive(true); products.saveAndFlush(p);
+        Stock s = new Stock(); s.setProduct(p); s.setQuantityInStock(5); s.setMinimumStock(1); stocks.saveAndFlush(s); return p;
+    }
+    JsonNode sale(Client c, Product p, String mode, int quantity, int price) throws Exception {
+        JsonNode response = postJson("/orders", java.util.Map.of("clientId", c.getId(), "isDelivery", true, "items", java.util.List.of(java.util.Map.of("productId", p.getId(), "quantity", quantity, "unitPrice", price, "bottleMode", mode))));
+        String id = response.get(0).get("id").asText();
+        http.perform(patch("/orders/"+id+"/confirm-delivery")).andExpect(status().isNoContent()); return getJson("/orders/"+id);
+    }
+
+    @Test void bottlesTrackAllocationCompleteSalesExpiredSalesAndCancellation() throws Exception {
+        Client c = client("Garrafões", ClientType.RETAIL, true); Product w = water();
+        putJson("/bottle-inventory", java.util.Map.of("validQuantity",10,"expiredQuantity",3));
+        http.perform(patch("/stocks/products/"+w.getId()).contentType("application/json").content("6")).andExpect(status().isBadRequest());
+        JsonNode full = sale(c,w,"FULL",2,40); sale(c,w,"REFILL",1,9); sale(c,w,"EXPIRED",2,3);
+        JsonNode b = getJson("/bottle-inventory");
+        assertThat(b.get("validQuantity").asInt()).isEqualTo(8); assertThat(b.get("expiredQuantity").asInt()).isEqualTo(1); assertThat(b.get("filledQuantity").asInt()).isEqualTo(2);
+        http.perform(delete("/orders/"+full.get("id").asText())).andExpect(status().isNoContent());
+        b = getJson("/bottle-inventory"); assertThat(b.get("validQuantity").asInt()).isEqualTo(10); assertThat(b.get("filledQuantity").asInt()).isEqualTo(4);
+    }
+
+    @Test void completedCorrectionPreservesItemsAndReconcilesPaidExcessWithoutNewCash() throws Exception {
+        Client c = client("Correção", ClientType.RETAIL, true); Product w = water();
+        putJson("/bottle-inventory", java.util.Map.of("validQuantity",10,"expiredQuantity",0));
+        JsonNode o = sale(c,w,"FULL",2,10); String id=o.get("id").asText(); String item=o.get("items").get(0).get("id").asText();
+        http.perform(post("/payments/bulk/"+c.getId()).param("amount","20").param("method","PIX")).andExpect(status().isNoContent());
+        JsonNode corrected=putJson("/orders/"+id+"/correction", java.util.Map.of("clientId",c.getId(),"isDelivery",true,"notes","corrigido","items",java.util.List.of(java.util.Map.of("itemId",item,"productId",w.getId(),"quantity",1,"unitPrice",8,"bottleMode","FULL"))));
+        assertThat(corrected.get("id").asText()).isEqualTo(id); assertThat(corrected.get("items").get(0).get("id").asText()).isEqualTo(item);
+        assertThat(getJson("/bottle-inventory").get("validQuantity").asInt()).isEqualTo(9);
+        assertThat(getJson("/bottle-inventory").get("filledQuantity").asInt()).isEqualTo(4);
+        assertThat(getJson("/clients/"+c.getId()).get("balance").decimalValue()).isEqualByComparingTo("12");
+        assertThat(report(LocalDate.now()).get("totalReceived").decimalValue()).isEqualByComparingTo("20");
+    }
+
+    @Test void promotionCountsFullReceiptWaterStockAndOnlyNetGasMargin() throws Exception {
+        Client c=client("Promoção",ClientType.RETAIL,true); Product w=water(); GasSupplier supplier=supplier();
+        Product p=new Product(); p.setName("Gás promoção"); p.setType(ProductType.GAS); p.setBasePrice(new BigDecimal("125")); p.setCostPrice(new BigDecimal("110")); p.setDefaultSupplier(supplier); p.setActive(true); products.saveAndFlush(p);
+        JsonNode created=postJson("/orders",java.util.Map.of("clientId",c.getId(),"isDelivery",true,"items",java.util.List.of(java.util.Map.of("productId",p.getId(),"quantity",1,"gasCostPrice",110,"receivedByUs",false)),"promotion",java.util.Map.of("waterProductId",w.getId(),"bundleUnitPrice",127,"waterUnitValue",9)));
+        JsonNode o=created.get(0); assertThat(created.size()).isEqualTo(1); assertThat(o.get("totalValue").decimalValue()).isEqualByComparingTo("127"); assertThat(o.get("items").size()).isEqualTo(2);
+        http.perform(patch("/orders/"+o.get("id").asText()+"/confirm-delivery")).andExpect(status().isNoContent());
+        JsonNode r=report(LocalDate.now()); assertThat(r.get("gasGrossProfit").decimalValue()).isEqualByComparingTo("8");
+        assertThat(stocks.findByProduct(w).orElseThrow().getQuantityInStock()).isEqualTo(4);
+        GasSettlement gs=settlements.findAll().getFirst(); assertThat(gs.getAmount()).isEqualByComparingTo("17");
+        assertThat(getJson("/payments/orders/"+o.get("id").asText()+"/balance").get("remainingBalance").decimalValue()).isZero();
+        JsonNode second=postJson("/orders",java.util.Map.of("clientId",c.getId(),"isDelivery",true,"items",java.util.List.of(java.util.Map.of("productId",p.getId(),"quantity",1,"gasCostPrice",110,"receivedByUs",false)),"promotion",java.util.Map.of("waterProductId",w.getId(),"bundleUnitPrice",127,"waterUnitValue",8)));
+        http.perform(patch("/orders/"+second.get(0).get("id").asText()+"/confirm-delivery")).andExpect(status().isNoContent());
+        assertThat(report(LocalDate.now()).get("gasGrossProfit").decimalValue()).isEqualByComparingTo("17");
+    }
+
+    @Test void correctsGasAfterSettlementAndPreservesSettlementIdentityDateAndMethod() throws Exception {
+        Client c=client("Gás corrigido",ClientType.RETAIL,true); GasSettlement gs=gas(c,supplier(),SettlementType.SUPPLIER_OWE,"15",1,OrderStatus.DELIVERED);
+        http.perform(patch("/gas-settlements/"+gs.getId()+"/settle").param("paymentMethod","DINHEIRO")).andExpect(status().isNoContent());
+        LocalDateTime oldDate=gs.getSettledDate(); OrderItem item=gs.getOrderItem();
+        putJson("/orders/"+item.getOrder().getId()+"/correction",java.util.Map.of("clientId",c.getId(),"isDelivery",true,"items",java.util.List.of(java.util.Map.of("itemId",item.getId(),"productId",item.getProduct().getId(),"quantity",2,"unitPrice",102,"gasCostPrice",85,"receivedByUs",false))));
+        assertThat(gs.getAmount()).isEqualByComparingTo("17"); assertThat(gs.getSettledDate()).isEqualTo(oldDate); assertThat(gs.getPaymentMethod()).isEqualTo(Method.DINHEIRO);
+        balance(report(LocalDate.now()),"34","0"); assertThat(settlements.count()).isEqualTo(1);
+    }
+
+    @Test void priceCorrectionWorksWhenEveryValidBottleIsAlreadyAllocated() throws Exception {
+        Client c=client("Preço com estoque cheio",ClientType.RETAIL,true); Product w=water();
+        putJson("/bottle-inventory",java.util.Map.of("validQuantity",5,"expiredQuantity",0));
+        JsonNode o=sale(c,w,"REFILL",1,9);
+        http.perform(patch("/stocks/products/"+w.getId()).contentType("application/json").content("1")).andExpect(status().isNoContent());
+        putJson("/orders/"+o.get("id").asText()+"/correction",java.util.Map.of("clientId",c.getId(),"isDelivery",true,"items",java.util.List.of(java.util.Map.of("itemId",o.get("items").get(0).get("id").asText(),"productId",w.getId(),"quantity",1,"unitPrice",8,"bottleMode","REFILL"))));
+        JsonNode b=getJson("/bottle-inventory"); assertThat(b.get("validQuantity").asInt()).isEqualTo(5); assertThat(b.get("filledQuantity").asInt()).isEqualTo(5);
+    }
+
+    @Test @org.springframework.test.annotation.DirtiesContext(methodMode = org.springframework.test.annotation.DirtiesContext.MethodMode.AFTER_METHOD)
+    void insufficientStockRollsBackEntireCompletedCorrection() throws Exception {
+        Client c=client("Correção sem estoque",ClientType.RETAIL,true); Product w=water();
+        putJson("/bottle-inventory",java.util.Map.of("validQuantity",10,"expiredQuantity",0));
+        JsonNode o=sale(c,w,"FULL",1,40); JsonNode before=getJson("/bottle-inventory");
+        // Each HTTP request must own its transaction to observe a completed rollback.
+        org.springframework.test.context.transaction.TestTransaction.flagForCommit();
+        org.springframework.test.context.transaction.TestTransaction.end();
+        http.perform(put("/orders/"+o.get("id").asText()+"/correction").contentType("application/json").content(json.writeValueAsString(java.util.Map.of("clientId",c.getId(),"isDelivery",true,"items",java.util.List.of(java.util.Map.of("itemId",o.get("items").get(0).get("id").asText(),"productId",w.getId(),"quantity",6,"unitPrice",40,"bottleMode","FULL")))))).andExpect(status().is4xxClientError());
+        assertThat(getJson("/bottle-inventory")).isEqualTo(before); assertThat(getJson("/orders/"+o.get("id").asText()).get("items").get(0).get("quantity").asInt()).isEqualTo(1);
+    }
+
+    @Test void editsSettledGasAndLoanWithoutReplacingRecords() throws Exception {
+        Client c=client("Edição",ClientType.RETAIL,true); Product w=water(); GasSettlement gs=gas(c,supplier(),SettlementType.YOU_OWE,"20",1,OrderStatus.DELIVERED);
+        http.perform(patch("/gas-settlements/"+gs.getId()+"/settle").param("paymentMethod","PIX")).andExpect(status().isNoContent());
+        JsonNode edited=putJson("/gas-settlements/"+gs.getId(),java.util.Map.of("amount",30,"settled",true,"settledDate",LocalDate.now().minusDays(1).atTime(9,0).toString(),"paymentMethod","DINHEIRO"));
+        assertThat(edited.get("id").asText()).isEqualTo(gs.getId().toString()); balance(report(LocalDate.now()),"0","0"); balance(report(LocalDate.now().minusDays(1)),"-30","0");
+        JsonNode loan=postJson("/bottles",java.util.Map.of("productId",w.getId(),"clientId",c.getId(),"quantity",2,"loanDate","2020-01-01T00:00:00"));
+        JsonNode changed=putJson("/bottles/"+loan.get("id").asText(),java.util.Map.of("productId",w.getId(),"clientId",c.getId(),"quantity",3,"loanDate","2021-01-01T00:00:00"));
+        assertThat(changed.get("id")).isEqualTo(loan.get("id")); assertThat(changed.get("quantity").asInt()).isEqualTo(3); assertThat(loans.count()).isEqualTo(1);
+    }
 
     Client client(String name, ClientType type, boolean active) {
         Client c = new Client();

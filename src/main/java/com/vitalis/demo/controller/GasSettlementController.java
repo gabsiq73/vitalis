@@ -18,6 +18,10 @@ import java.util.UUID;
 @RequestMapping("/gas-settlements")
 @RequiredArgsConstructor
 public class GasSettlementController {
+    @PutMapping("/{id}")
+    public GasSettlementResponseDTO edit(@PathVariable UUID id, @jakarta.validation.Valid @RequestBody com.vitalis.demo.dto.request.GasSettlementUpdateDTO dto) {
+        return settlementService.edit(id, dto);
+    }
 
     private final GasSettlementService settlementService;
     private final GasSettlementMapper settlementMapper;

@@ -21,5 +21,7 @@ public record OrderItemResponseDTO(
         String supplierName,
         BigDecimal gasCostPrice,
         Boolean receivedByUs,
-        Method gasPaymentMethod
+        Method gasPaymentMethod,
+        com.vitalis.demo.model.enums.BottleMode bottleMode,
+        BigDecimal promotionWaterValue
 ) {}

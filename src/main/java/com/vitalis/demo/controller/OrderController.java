@@ -32,6 +32,11 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @RequestMapping("/orders")
 public class OrderController {
+    private final com.vitalis.demo.service.CompletedOrderCorrectionService correctionService;
+    @PutMapping("/{id}/correction")
+    public OrderResponseDTO correct(@PathVariable UUID id, @Valid @RequestBody OrderRequestDTOv2 dto) {
+        return correctionService.correct(id, dto);
+    }
 
     private final OrderService orderService;
     private final OrderCreationService orderCreationService;
