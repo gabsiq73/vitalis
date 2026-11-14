@@ -283,6 +283,8 @@ public class PaymentService {
             remainingAmount = applyFundsToOrder(order, remainingAmount, paymentMethod, receivedAt);
         }
 
+        // Limpa o saldo devedor já quitado antes de somar o crédito excedente.
+        if (remainingAmount.signum() > 0) clientService.calculateDebtBalance(clientId);
         creditRemainingFundsIfAny(client, remainingAmount, paymentMethod, receivedAt, sourcePayment);
         clientService.calculateDebtBalance(clientId);
     }
@@ -299,6 +301,7 @@ public class PaymentService {
                 .filter(o -> excludedOrderId == null || !o.getId().equals(excludedOrderId))
                 .filter(o -> !orderBalanceService.hasSupplierCollectedGas(o))
                 .filter(o -> calculateOrderDebt(o).signum() > 0)
+                .sorted(Comparator.comparing(o -> o.isManualDebt() ? o.getDeliveryDate() : o.getCreateDate()))
                 .toList();
     }
 

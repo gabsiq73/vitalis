@@ -655,6 +655,6 @@ class OrderServiceTest {
     }
 
     private OrderResponseDTO stubDTO() {
-        return new OrderResponseDTO(null, null, null, null, null, null, List.of(), null, null, null, null);
+        return new OrderResponseDTO(null, null, null, null, null, null, List.of(), null, null, null, null, false);
     }
 }

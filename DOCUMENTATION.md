@@ -1,5 +1,32 @@
 # Vitalis — Documentação Técnica Completa
 
+### Busca de pedidos e fiados antigos
+
+`GET /orders` aceita `search` opcional: trecho do nome do cliente, UUID/número
+exibido (seis últimos caracteres, com ou sem `#`) ou observação. Busca sem distinção
+de maiúsculas, combinada aos filtros atuais e aplicada antes da paginação.
+`%` e `_` são caracteres literais. A listagem comercial exclui fiados manuais.
+
+`POST /orders/manual-debts` recebe `{clientId, amount, debtDate, notes?}` e retorna
+201 com `OrderResponseDTO`. Exige cliente ativo cadastrado, valor de 0,01 até
+99.999.999,99 com duas casas, data/hora local não futura e observação até 2000
+caracteres. Validação HTTP segue o handler existente (422); regra de negócio, 400.
+
+O registro reaproveita a cobrança de pedidos, com `ORD_manual_debt_amount` nullable
+(numeric 10,2), sem itens ou pagamentos iniciais, status interno `DELIVERED` e
+`PENDING` financeiro. `deliveryDate` guarda a data original; `createDate` mantém
+a auditoria do cadastro. `OrderResponseDTO` acrescenta `manualDebt` booleano.
+Histórico e pedidos abertos do cliente incluem esses registros. FIFO considera a
+data original do fiado manual. Pagamentos parciais, quitação, excedente em crédito
+e cancelamento usam os fluxos existentes. Não é permitido mudar para status de
+entrega, editar itens ou confirmar entrega novamente.
+
+O cadastro não gera estoque, acertos, caixa ou faturamento e não compõe métricas
+comerciais de pedidos. Recebimentos posteriores entram no caixa na data do
+pagamento. Hibernate adiciona a coluna nullable pelo `ddl-auto: update`; atualize
+o backend antes do desktop. Testes dirigidos: `OrderSearchAndManualDebtTest`,
+`ClientCreditEntryPaymentTest` e `InitialOrderPaymentsTest`.
+
 ## Sumário
 
 1. [Visão Geral do Projeto](#1-visão-geral-do-projeto)

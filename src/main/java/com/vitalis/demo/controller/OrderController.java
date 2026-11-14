@@ -1,6 +1,7 @@
 package com.vitalis.demo.controller;
 
 import com.vitalis.demo.dto.request.OrderRequestDTOv2;
+import com.vitalis.demo.dto.request.ManualDebtRequestDTO;
 import com.vitalis.demo.dto.request.ConfirmDeliveryRequestDTO;
 import com.vitalis.demo.dto.response.OrderResponseDTO;
 import com.vitalis.demo.mapper.OrderItemMapper;
@@ -50,11 +51,12 @@ public class OrderController {
     public ResponseEntity<Page<OrderResponseDTO>> listOrders(
             @RequestParam(required = false) OrderStatus status,
             @RequestParam(required = false) PaymentStatus paymentStatus,
+            @RequestParam(required = false) String search,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime deliveryAfter,
             @PageableDefault(size = 10, sort = "createDate", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
-        Page<Order> pageEntity = orderService.listOrders(status, paymentStatus, start, end, deliveryAfter, pageable);
+        Page<Order> pageEntity = orderService.listOrders(status, paymentStatus, start, end, deliveryAfter, search, pageable);
         Page<OrderResponseDTO> pageDTO = pageEntity.map(orderMapper::toResponseDTO);
         return ResponseEntity.ok(pageDTO);
     }
@@ -89,6 +91,11 @@ public class OrderController {
     public ResponseEntity<List<OrderResponseDTO>> create(@RequestBody @Valid OrderRequestDTOv2 dto) {
         List<OrderResponseDTO> response = orderCreationService.createOrders(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/manual-debts")
+    public ResponseEntity<OrderResponseDTO> createManualDebt(@RequestBody @Valid ManualDebtRequestDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(orderService.createManualDebt(dto));
     }
 
     @DeleteMapping("/{id}")

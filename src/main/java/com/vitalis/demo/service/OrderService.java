@@ -4,6 +4,7 @@ import com.vitalis.demo.dto.request.GasFinancialInfoRequest;
 import com.vitalis.demo.dto.request.ConfirmDeliveryRequestDTO;
 import com.vitalis.demo.dto.request.OrderItemRequestDTO;
 import com.vitalis.demo.dto.request.OrderRequestDTOv2;
+import com.vitalis.demo.dto.request.ManualDebtRequestDTO;
 import com.vitalis.demo.dto.response.OrderResponseDTO;
 import com.vitalis.demo.infra.exception.BusinessException;
 import com.vitalis.demo.infra.exception.ResourceNotFoundException;
@@ -69,8 +70,25 @@ public class OrderService {
     public Page<Order> listOrders(OrderStatus status, PaymentStatus paymentStatus,
                                   java.time.LocalDate start, java.time.LocalDate end,
                                   java.time.LocalDateTime deliveryAfter, Pageable pageable) {
+        return listOrders(status, paymentStatus, start, end, deliveryAfter, null, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Order> listOrders(OrderStatus status, PaymentStatus paymentStatus,
+                                  java.time.LocalDate start, java.time.LocalDate end,
+                                  java.time.LocalDateTime deliveryAfter, String search, Pageable pageable) {
         return repository.findAll((root, query, cb) -> {
             java.util.List<jakarta.persistence.criteria.Predicate> predicates = new java.util.ArrayList<>();
+            predicates.add(cb.isNull(root.get("manualDebtAmount")));
+            if (search != null && !search.isBlank()) {
+                String term = search.trim().toLowerCase(Locale.ROOT);
+                if (term.startsWith("#")) term = term.substring(1);
+                String pattern = "%" + term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("client").get("name")), pattern, '\\'),
+                        cb.like(cb.lower(root.get("notes")), pattern, '\\'),
+                        cb.like(root.get("id").as(String.class), pattern, '\\')));
+            }
             if (status != null)
                 predicates.add(cb.equal(root.get("status"), status));
             if (paymentStatus != null)
@@ -145,6 +163,31 @@ public class OrderService {
     }
 
     // Atualização de Pedidos
+
+    @Transactional
+    public OrderResponseDTO createManualDebt(ManualDebtRequestDTO dto) {
+        if (dto.amount() == null || dto.amount().signum() <= 0 || dto.amount().scale() > 2
+                || dto.amount().compareTo(new BigDecimal("99999999.99")) > 0) {
+            throw new BusinessException("Informe um valor entre R$ 0,01 e R$ 99.999.999,99, com até duas casas decimais.");
+        }
+        if (dto.debtDate() == null || dto.debtDate().isAfter(LocalDateTime.now())) {
+            throw new BusinessException("Informe a data do fiado, sem data futura.");
+        }
+        Client client = clientService.findById(dto.clientId());
+        if (client.getClientType() == ClientType.AVULSO) {
+            throw new BusinessException("Selecione um cliente cadastrado para registrar o fiado.");
+        }
+        Order debt = new Order();
+        debt.setClient(client);
+        debt.setManualDebtAmount(dto.amount().setScale(2, RoundingMode.HALF_UP));
+        debt.setDeliveryDate(dto.debtDate());
+        debt.setNotes(dto.notes() == null ? null : dto.notes().trim());
+        debt.setStatus(OrderStatus.DELIVERED);
+        debt.setPaymentStatus(PaymentStatus.PENDING);
+        Order saved = repository.saveAndFlush(debt);
+        clientService.calculateDebtBalance(client.getId());
+        return orderMapper.toResponseDTO(saved);
+    }
 
     @Transactional
     public OrderResponseDTO updateOrders(UUID id, OrderRequestDTOv2 dto) {
@@ -267,6 +310,7 @@ public class OrderService {
         if (order.getStatus() == OrderStatus.CANCELLED) {
             throw new BusinessException("Pedido cancelado não pode mudar de status.");
         }
+        if (order.isManualDebt()) throw new BusinessException("Fiado antigo não possui status de entrega.");
         order.setStatus(newStatus);
         repository.save(order);
     }

@@ -124,6 +124,7 @@ public class FinancialService {
     @Transactional(readOnly = true)
     public DailyReportDTO generateOperationalSummary(LocalDate start, LocalDate end) {
         List<Order> orders = fetchOrdersInPeriod(start, end).stream()
+                .filter(o -> !o.isManualDebt())
                 .filter(o -> o.getStatus() != OrderStatus.CANCELLED)
                 .toList();
 
