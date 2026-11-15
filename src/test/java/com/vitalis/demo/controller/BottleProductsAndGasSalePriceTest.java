@@ -24,6 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class BottleProductsAndGasSalePriceTest {
     @Autowired MockMvc http; @Autowired ObjectMapper json;
     @Autowired StockRepository stocks; @Autowired ProductRepository products; @Autowired GasSettlementRepository settlements;
+    @Autowired com.vitalis.demo.service.FinancialService financial;
     @Autowired OrderRepository orders; @Autowired EntityManager em;
     JsonNode send(String method,String path,Object body) throws Exception {
         var builder=method.equals("POST")?post(path):put(path);
@@ -54,6 +55,49 @@ class BottleProductsAndGasSalePriceTest {
         JsonNode o=order(c,Map.of("productId",expired,"quantity",2)); deliver(o);
         assertThat(stock(w)).isEqualTo(5); JsonNode b=getJson("/bottle-inventory"); assertThat(b.get("validQuantity").asInt()).isEqualTo(20); assertThat(b.get("expiredQuantity").asInt()).isEqualTo(1);
         http.perform(delete("/orders/"+o.get("id").asText())).andExpect(status().isNoContent()); assertThat(getJson("/bottle-inventory").get("expiredQuantity").asInt()).isEqualTo(3);
+    }
+    @Test void expiredRefillConsumesOnlyWaterAndCancellationRestoresIt() throws Exception {
+        String c=client(), w=water("Água troca"), expired=product("EXPIRED_BOTTLE","Vencido",3); configure();
+        JsonNode o=order(c,Map.of("productId",expired,"quantity",2,"bottleMode","REFILL","waterProductId",w,"unitPrice",9));
+        assertThat(o.get("items").get(0).get("bottleMode").asText()).isEqualTo("REFILL");
+        assertThat(o.get("items").get(0).get("waterProductId").asText()).isEqualTo(w);
+        assertThat(stock(w)).isEqualTo(5);
+        deliver(o); assertThat(stock(w)).isEqualTo(3);
+        assertThat(financial.findInventoryFlowByDate(java.time.LocalDate.now()).waterRefillOut()).isEqualTo(2);
+        assertThat(getJson("/bottle-inventory").get("validQuantity").asInt()).isEqualTo(20);
+        assertThat(getJson("/bottle-inventory").get("expiredQuantity").asInt()).isEqualTo(3);
+        http.perform(patch("/orders/"+o.get("id").asText()+"/confirm-delivery")).andExpect(status().isBadRequest());
+        http.perform(delete("/orders/"+o.get("id").asText())).andExpect(status().isNoContent());
+        assertThat(stock(w)).isEqualTo(5);
+        assertThat(getJson("/bottle-inventory").get("expiredQuantity").asInt()).isEqualTo(3);
+    }
+    @Test void correctionSwitchesExpiredSaleToRefillAndBackWithoutLosingBottles() throws Exception {
+        String c=client(), w=water("Água correção"), expired=product("EXPIRED_BOTTLE","Vencido",3); configure();
+        JsonNode o=order(c,Map.of("productId",expired,"quantity",1)); deliver(o);
+        String id=o.get("id").asText(), itemId=o.get("items").get(0).get("id").asText();
+        send("PUT","/orders/"+id+"/correction",Map.of("clientId",c,"isDelivery",true,"items",List.of(Map.of("itemId",itemId,"productId",expired,"quantity",2,"unitPrice",9,"bottleMode","REFILL","waterProductId",w))));
+        assertThat(stock(w)).isEqualTo(3);
+        assertThat(getJson("/bottle-inventory").get("expiredQuantity").asInt()).isEqualTo(3);
+        send("PUT","/orders/"+id+"/correction",Map.of("clientId",c,"isDelivery",true,"items",List.of(Map.of("itemId",itemId,"productId",expired,"quantity",1,"unitPrice",3,"bottleMode","EXPIRED"))));
+        assertThat(stock(w)).isEqualTo(5);
+        assertThat(getJson("/bottle-inventory").get("expiredQuantity").asInt()).isEqualTo(2);
+        http.perform(delete("/orders/"+id)).andExpect(status().isNoContent());
+        assertThat(getJson("/bottle-inventory").get("expiredQuantity").asInt()).isEqualTo(3);
+    }
+    @Test void expiredRefillRequiresWaterAndRejectsInsufficientStockAtomically() throws Exception {
+        String c=client(), w=water("Água validação"), expired=product("EXPIRED_BOTTLE","Vencido",3); configure();
+        for (Map<String,Object> item : List.of(Map.<String,Object>of("productId",expired,"quantity",1,"bottleMode","REFILL"), Map.<String,Object>of("productId",expired,"quantity",1,"bottleMode","REFILL","waterProductId",expired), Map.<String,Object>of("productId",expired,"quantity",6,"bottleMode","REFILL","waterProductId",w))) {
+            http.perform(post("/orders").contentType("application/json").content(json.writeValueAsString(Map.of("clientId",c,"isDelivery",true,"items",List.of(item))))).andExpect(status().isBadRequest());
+        }
+        assertThat(orders.count()).isZero(); assertThat(stock(w)).isEqualTo(5);
+        assertThat(getJson("/bottle-inventory").get("expiredQuantity").asInt()).isEqualTo(3);
+    }
+    @Test void pendingExpiredRefillCanChangeWaterBeforeDelivery() throws Exception {
+        String c=client(), a=water("Água A"), b=water("Água B"), expired=product("EXPIRED_BOTTLE","Vencido",3); configure();
+        JsonNode o=order(c,Map.of("productId",expired,"quantity",1,"bottleMode","REFILL","waterProductId",a));
+        send("PUT","/orders/"+o.get("id").asText(),Map.of("clientId",c,"isDelivery",true,"items",List.of(Map.of("productId",expired,"quantity",1,"bottleMode","REFILL","waterProductId",b))));
+        deliver(o); assertThat(stock(a)).isEqualTo(5); assertThat(stock(b)).isEqualTo(4);
+        assertThat(getJson("/bottle-inventory").get("expiredQuantity").asInt()).isEqualTo(3);
     }
     @Test void requiresActualActiveWaterOnlyForFullProduct() throws Exception {
         String c=client(), full=product("FULL_BOTTLE","Completo",40), expired=product("EXPIRED_BOTTLE","Vencido",3);
