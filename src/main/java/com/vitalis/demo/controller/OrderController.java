@@ -43,6 +43,17 @@ public class OrderController {
     private final OrderMapper orderMapper;
     private final OrderItemMapper orderItemMapper;
 
+    @GetMapping("/client/{id}/water-credits")
+    public List<com.vitalis.demo.dto.response.WaterCreditResponseDTO> waterCredits(@PathVariable UUID id) {
+        return orderService.waterCredits(id);
+    }
+
+    @PostMapping("/{id}/redeem-water")
+    public OrderResponseDTO redeemWater(@PathVariable UUID id,
+            @RequestBody @Valid com.vitalis.demo.dto.request.RedeemWaterCreditDTO dto) {
+        return orderService.redeemWaterCredit(id, dto.quantity());
+    }
+
     @GetMapping("{id}")
     public ResponseEntity<OrderResponseDTO> getById(@PathVariable("id") UUID id){
         return orderService.findByIdOptional(id)

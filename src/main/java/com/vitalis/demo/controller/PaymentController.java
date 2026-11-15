@@ -28,6 +28,13 @@ public class PaymentController {
     private final PaymentService paymentService;
     private final PaymentMapper paymentMapper;
 
+    @PostMapping("/credits/{clientId}")
+    public ResponseEntity<Void> addClientCredit(@PathVariable UUID clientId,
+            @RequestBody @Valid com.vitalis.demo.dto.request.ClientCreditRequestDTO dto) {
+        paymentService.addClientCredit(clientId, dto.amount(), dto.paymentMethod());
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping
     public ResponseEntity<PaymentResponseDTO> register(@RequestBody @Valid PaymentRequestDTO dto){
         Payment payment = paymentService.registerPayment(paymentMapper.toEntity(dto), dto.orderId());

@@ -48,6 +48,19 @@ public class PaymentService {
     // Consultas
 
     @Transactional
+    public void addClientCredit(UUID clientId, BigDecimal amount, Method method) {
+        if (amount == null || amount.signum() <= 0 || amount.scale() > 2
+                || amount.compareTo(new BigDecimal("99999999.99")) > 0
+                || (method != Method.PIX && method != Method.DINHEIRO)) {
+            throw new BusinessException("Informe valor positivo e recebimento em PIX ou Dinheiro.");
+        }
+        Client client = clientService.findById(clientId);
+        if (client.getClientType() == com.vitalis.demo.model.enums.ClientType.AVULSO)
+            throw new BusinessException("Selecione um cliente cadastrado para adicionar saldo.");
+        processBulkPayment(clientId, amount, method);
+    }
+
+    @Transactional
     public void reconcileAfterCorrection(Order order) {
         BigDecimal excess = orderBalanceService.calculateRemainingBalance(order).negate().max(BigDecimal.ZERO);
         BigDecimal credit = BigDecimal.ZERO;
@@ -189,6 +202,9 @@ public class PaymentService {
     @Transactional
     public Payment registerPayment(Payment payment, UUID orderId) {
         Order order = orderService.findById(orderId);
+        if (order.isWaterCredit()) {
+            throw new BusinessException("Esta água já foi paga na promoção e não aceita nova cobrança.");
+        }
         if (order.getStatus() == OrderStatus.CANCELLED) {
             throw new BusinessException("Pedido cancelado não aceita pagamento.");
         }

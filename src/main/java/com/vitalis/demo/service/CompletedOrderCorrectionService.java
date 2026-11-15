@@ -25,6 +25,7 @@ public class CompletedOrderCorrectionService {
     @Transactional
     public OrderResponseDTO correct(UUID id, OrderRequestDTOv2 dto) {
         Order order = orders.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("Pedido não encontrado."));
+        orderService.validatePromotionCreditEdit(order, dto);
         boolean delivered = order.getStatus() == OrderStatus.DELIVERED;
         if (delivered && dto.deliveryDate() != null && dto.deliveryDate().isAfter(java.time.LocalDateTime.now())) throw new BusinessException("A data da entrega concluída não pode ser futura.");
         if (order.getStatus() == OrderStatus.CANCELLED || order.isManualDebt()) throw new BusinessException("Selecione um pedido ativo para corrigir.");
@@ -56,7 +57,7 @@ public class CompletedOrderCorrectionService {
                 financial.put(product.getId(), new GasFinancialInfoRequest(cost, received, change.gasPaymentMethod()));
             }
         }
-        if (order.getItems().stream().anyMatch(i -> i.getPromotionWaterValue() != null)) {
+        if (!order.isDeferredWaterPromotion() && order.getItems().stream().anyMatch(i -> i.getPromotionWaterValue() != null)) {
             OrderItem gas = order.getItems().stream().filter(i -> i.getProduct().getType() == ProductType.GAS).findFirst().orElseThrow();
             OrderItem water = order.getItems().stream().filter(i -> i.getProduct().getType() == ProductType.WATER).findFirst().orElseThrow();
             if (!gas.getQuantity().equals(water.getQuantity()) || water.getUnitPrice().signum() != 0) throw new BusinessException("Na promoção mantenha uma água por gás e preço zero na água inclusa.");

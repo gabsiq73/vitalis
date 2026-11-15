@@ -28,7 +28,7 @@ public class OrderCreationService {
         paymentService.registerInitialPayments(dto.clientId(), orders, dto.initialPayments());
         // A retirada ocorre após o uso do crédito, antes de recalcular a dívida da entrega.
         if (!Boolean.TRUE.equals(dto.isDelivery())) {
-            orders.forEach(order -> orderService.confirmDelivery(order.getId()));
+            orders.stream().filter(order -> !order.isWaterCredit()).forEach(order -> orderService.confirmDelivery(order.getId()));
         }
         return orderMapper.toResponseDTOList(orders);
     }

@@ -22,5 +22,13 @@ public record OrderResponseDTO(
         LocalDateTime createDate,
         Integer loanedBottlesCount,
         String notes,
-        boolean manualDebt
-) {}
+        boolean manualDebt,
+        boolean waterCredit,
+        boolean deferredWaterPromotion
+) {
+    public OrderResponseDTO(UUID id, LocalDateTime deliveryDate, OrderStatus status, PaymentStatus paymentStatus,
+                            UUID clientId, String clientName, List<OrderItemResponseDTO> items, BigDecimal totalValue,
+                            LocalDateTime createDate, Integer loanedBottlesCount, String notes, boolean manualDebt) {
+        this(id, deliveryDate, status, paymentStatus, clientId, clientName, items, totalValue, createDate, loanedBottlesCount, notes, manualDebt, false, false);
+    }
+}

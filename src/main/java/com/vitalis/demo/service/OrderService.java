@@ -137,6 +137,7 @@ public class OrderService {
 
         // CHAMA O MÉTODO ÚNICO
         List<OrderItem> allItems = new ArrayList<>(resolveItemsFromDto(dto.items()));
+        OrderItem deferredWater = null;
         if (dto.promotion() != null) {
             if (allItems.size() != 1 || allItems.getFirst().getProduct().getType() != ProductType.GAS) throw new BusinessException("A promoção exige um item de gás e uma água selecionada.");
             OrderItem gas = allItems.getFirst();
@@ -145,7 +146,11 @@ public class OrderService {
             gas.setUnitPrice(dto.promotion().bundleUnitPrice());
             gas.setPromotionWaterValue(dto.promotion().waterUnitValue());
             OrderItem gift = new OrderItem(); gift.setProduct(water); gift.setQuantity(gas.getQuantity()); gift.setUnitPrice(BigDecimal.ZERO); gift.setPromotionWaterValue(dto.promotion().waterUnitValue());
-            allItems.add(gift);
+            if (Boolean.TRUE.equals(dto.promotion().waterAsCredit())) {
+                if (client.getClientType() == ClientType.AVULSO) throw new BusinessException("Água em crédito exige um cliente cadastrado.");
+                gift.setUnitCost(water.getCostPrice());
+                deferredWater = gift;
+            } else allItems.add(gift);
         }
 
         Order prototype = orderMapper.toEntity(dto);
@@ -171,6 +176,14 @@ public class OrderService {
             }
         });
 
+        if (deferredWater != null) {
+            Order credit = createSubOrderTemplate(prototype);
+            credit.setDeliveryDate(null);
+            credit.setCancellationGroup(cancellationGroup);
+            credit.setPaymentStatus(PaymentStatus.PAID);
+            credit.addItem(deferredWater);
+            savedOrders.add(repository.save(credit));
+        }
         return orderMapper.toResponseDTOList(savedOrders);
     }
 
@@ -209,6 +222,7 @@ public class OrderService {
     @Transactional
     public OrderResponseDTO updateOrders(UUID id, OrderRequestDTOv2 dto) {
         Order existingOrder = findById(id);
+        validatePromotionCreditEdit(existingOrder, dto);
         checkItemsModificationAllowed(existingOrder);
 
         // 1. Atualiza campos básicos
@@ -245,7 +259,9 @@ public class OrderService {
 
     @Transactional
     public void confirmDelivery(UUID orderId, ConfirmDeliveryRequestDTO dto) {
-        Order order = findById(orderId);
+        Order order = lockOrderWithPromotionSource(orderId);
+        if (order.isWaterCredit() && !waterCreditAvailable(order))
+            throw new BusinessException("Conclua a entrega do gás antes de resgatar a água da promoção.");
 
         if (order.getStatus() == OrderStatus.CANCELLED) {
             throw new BusinessException("Pedido cancelado não pode ser entregue.");
@@ -323,7 +339,9 @@ public class OrderService {
             throw new BusinessException("Para este status, utilize os endpoints específicos de confirmação ou cancelamento.");
         }
 
-        Order order = findById(orderId);
+        Order order = lockOrderWithPromotionSource(orderId);
+        if (order.isWaterCredit() && !waterCreditAvailable(order))
+            throw new BusinessException("Conclua a entrega do gás antes de movimentar a água em crédito.");
         if (order.getStatus() == OrderStatus.CANCELLED) {
             throw new BusinessException("Pedido cancelado não pode mudar de status.");
         }
@@ -349,6 +367,14 @@ public class OrderService {
     public void deletePermanently(UUID orderId) {
         Order order = repository.findByIdForUpdate(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pedido não encontrado."));
+        if (order.isWaterCredit()) throw new BusinessException("A água em crédito pertence à promoção. Apague o pedido de gás original para excluir a promoção inteira.");
+        if (order.isDeferredWaterPromotion()) {
+            for (Order member : repository.findByCancellationGroup(order.getCancellationGroup())) deleteOnePermanently(member);
+        } else deleteOnePermanently(order);
+    }
+
+    private void deleteOnePermanently(Order order) {
+        UUID orderId = order.getId();
         UUID clientId = order.getClient().getId();
         if (order.getStatus() != OrderStatus.CANCELLED) cancelOneOrder(order);
         // Remove também vínculos antigos de pedidos que já estavam cancelados.
@@ -365,7 +391,17 @@ public class OrderService {
     // Cancelamento
     @Transactional
     public void cancelOrder(UUID orderId) {
-        Order order = findById(orderId);
+        Order order = lockOrderWithPromotionSource(orderId);
+        if (order.isWaterCredit()) {
+            if (order.getStatus() != OrderStatus.DELIVERED)
+                throw new BusinessException("Para cancelar a água em crédito, cancele a promoção de gás original.");
+            order.getItems().forEach(stockService::reverseItem);
+            order.setStatus(OrderStatus.PENDING);
+            order.setPaymentStatus(PaymentStatus.PAID);
+            order.setDeliveryDate(null);
+            repository.save(order);
+            return;
+        }
         List<Order> group = order.getCancellationGroup() == null
                 ? List.of(order)
                 : repository.findByCancellationGroup(order.getCancellationGroup());
@@ -395,6 +431,69 @@ public class OrderService {
         order.setStatus(OrderStatus.CANCELLED);
         order.setPaymentStatus(PaymentStatus.CANCELLED);
         repository.save(order);
+    }
+
+    public void validatePromotionCreditEdit(Order order, OrderRequestDTOv2 dto) {
+        if (order.isWaterCredit()) throw new BusinessException("Use Resgatar água para entregar este crédito, sem alterar quantidade ou preço do crédito.");
+        if (order.isDeferredWaterPromotion()) {
+            OrderItem gas = order.getItems().getFirst();
+            if (dto.items().size() != 1 || !gas.getProduct().getId().equals(dto.items().getFirst().productId())
+                    || !gas.getQuantity().equals(dto.items().getFirst().quantity()))
+                throw new BusinessException("Mantenha o produto e a quantidade desta promoção com água em crédito. Para trocá-los, cancele a promoção e registre novamente.");
+        }
+    }
+
+    private boolean waterCreditAvailable(Order credit) {
+        return repository.findByCancellationGroup(credit.getCancellationGroup()).stream()
+                .anyMatch(o -> o.isDeferredWaterPromotion() && o.getStatus() == OrderStatus.DELIVERED);
+    }
+
+    private Order lockOrderWithPromotionSource(UUID id) {
+        Order current = findById(id);
+        if (current.isWaterCredit()) {
+            repository.findByCancellationGroup(current.getCancellationGroup()).stream()
+                    .filter(Order::isDeferredWaterPromotion)
+                    .forEach(source -> repository.findByIdForUpdate(source.getId())
+                            .orElseThrow(() -> new ResourceNotFoundException("Promoção original não encontrada.")));
+        }
+        return repository.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("Pedido não encontrado."));
+    }
+
+    @Transactional(readOnly = true)
+    public List<com.vitalis.demo.dto.response.WaterCreditResponseDTO> waterCredits(UUID clientId) {
+        Client client = clientService.findById(clientId);
+        return java.util.stream.Stream.concat(repository.findByClientAndStatus(client, OrderStatus.PENDING).stream(),
+                        repository.findByClientAndStatus(client, OrderStatus.SHIPPED).stream())
+                .filter(Order::isWaterCredit).sorted(Comparator.comparing(Order::getCreateDate))
+                .map(o -> new com.vitalis.demo.dto.response.WaterCreditResponseDTO(o.getId(),
+                        o.getItems().getFirst().getProduct().getId(), o.getItems().getFirst().getProduct().getName(),
+                        o.getItems().getFirst().getQuantity(), o.getCreateDate(), waterCreditAvailable(o))).toList();
+    }
+
+    @Transactional
+    public OrderResponseDTO redeemWaterCredit(UUID orderId, int quantity) {
+        Order credit = lockOrderWithPromotionSource(orderId);
+        if (!credit.isWaterCredit() || (credit.getStatus() != OrderStatus.PENDING && credit.getStatus() != OrderStatus.SHIPPED))
+            throw new BusinessException("Este crédito de água não está disponível para resgate.");
+        OrderItem original = credit.getItems().getFirst();
+        if (quantity < 1 || quantity > original.getQuantity()) throw new BusinessException("Informe uma quantidade entre 1 e " + original.getQuantity() + ".");
+        if (!waterCreditAvailable(credit)) throw new BusinessException("Conclua a entrega do gás antes de resgatar a água.");
+        Order delivery = credit;
+        if (quantity < original.getQuantity()) {
+            delivery = createSubOrderTemplate(credit);
+            delivery.setCancellationGroup(credit.getCancellationGroup());
+            delivery.setPaymentStatus(PaymentStatus.PAID);
+            OrderItem item = new OrderItem();
+            item.setProduct(original.getProduct()); item.setQuantity(quantity); item.setUnitPrice(BigDecimal.ZERO);
+            item.setUnitCost(original.getUnitCost()); item.setCostEstimated(original.isCostEstimated());
+            item.setPromotionWaterValue(original.getPromotionWaterValue());
+            delivery.addItem(item);
+            original.setQuantity(original.getQuantity() - quantity);
+            repository.save(credit);
+            delivery = repository.saveAndFlush(delivery);
+        }
+        confirmDelivery(delivery.getId());
+        return orderMapper.toResponseDTO(delivery);
     }
 
     private void refundSaldoPayments(Order order) {

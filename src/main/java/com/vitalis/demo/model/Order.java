@@ -61,6 +61,21 @@ public class Order extends BaseEntity{
         return manualDebtAmount != null;
     }
 
+    @Transient
+    public boolean isWaterCredit() {
+        return cancellationGroup != null && items != null && items.size() == 1
+                && items.getFirst().getProduct().getType() == com.vitalis.demo.model.enums.ProductType.WATER
+                && items.getFirst().getPromotionWaterValue() != null
+                && items.getFirst().getUnitPrice().signum() == 0;
+    }
+
+    @Transient
+    public boolean isDeferredWaterPromotion() {
+        return cancellationGroup != null && items != null && items.size() == 1
+                && items.getFirst().getProduct().getType() == com.vitalis.demo.model.enums.ProductType.GAS
+                && items.getFirst().getPromotionWaterValue() != null;
+    }
+
     @OneToMany(mappedBy = "order", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Payment> payments = new ArrayList<>();
 

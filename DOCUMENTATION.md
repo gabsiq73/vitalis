@@ -1,5 +1,11 @@
 # Vitalis — Documentação Técnica Completa
 
+### Saldo direto e água da promoção em crédito
+
+Contratos, regras de caixa, resgate e cancelamento estão em
+[CREDITS_AND_PROMOTIONS.md](CREDITS_AND_PROMOTIONS.md). Reutiliza os registros
+existentes, sem migration nem alteração dos dados antigos.
+
 ### Correção de preço pelo acerto e exclusão definitiva
 
 `PUT /gas-settlements/{id}` mantém `amount`, `settled`, `settledDate` e
