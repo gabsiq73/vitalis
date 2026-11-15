@@ -17,6 +17,15 @@ import java.util.List;
 import java.util.UUID;
 
 public interface OrderRepository extends JpaRepository<Order, UUID>, JpaSpecificationExecutor<Order> {
+    @Query("select coalesce(sum(i.quantity), 0) from Order o join o.items i " +
+            "where o.status = com.vitalis.demo.model.enums.OrderStatus.DELIVERED " +
+            "and o.paymentStatus <> com.vitalis.demo.model.enums.PaymentStatus.CANCELLED " +
+            "and o.deliveryDate >= :start and o.deliveryDate < :end " +
+            "and (i.product.type = com.vitalis.demo.model.enums.ProductType.FULL_BOTTLE " +
+            "or (i.product.type = com.vitalis.demo.model.enums.ProductType.WATER " +
+            "and i.bottleMode = com.vitalis.demo.model.enums.BottleMode.FULL))")
+    long sumDeliveredFullBottles(LocalDateTime start, LocalDateTime end);
+
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @Query("select o from Order o where o.id = :id")
     java.util.Optional<Order> findByIdForUpdate(UUID id);

@@ -1,5 +1,20 @@
 # Vitalis — Documentação Técnica Completa
 
+### Relatório de garrafões
+
+`GET /reports/bottles?start=YYYY-MM-DD&end=YYYY-MM-DD` (ADMIN) retorna
+`{fullBottlesSold, brokenBottles, brokenValidBottles, brokenExpiredBottles}`,
+quantidades inteiras, zero quando não há movimento. Dias inicial e final inclusivos.
+Conta unidades de garrafões completos em pedidos entregues pela data de entrega,
+incluindo fiado; exclui cancelados, pendentes, trocas de água, gás e venda de vencidos.
+Inclui `FULL_BOTTLE` e o modo legado `WATER + FULL`. Quebras somam válidos e vencidos,
+vazios e cheios, pela data `occurredAt`. Inversão de datas retorna 400.
+As somas são feitas no banco, sem limite de paginação. Consulta sem alteração de dados
+ou schema. O card em Relatórios acompanha 7/30/90 dias e Atualizar.
+
+Arquivos: `BottleReportDTO`, `BottleReportService`, `FinancialReportController`,
+`OrderRepository`, `BottleBreakageRepository` e teste `BottleReportTest`.
+
 ### Garrafões quebrados — válido ou vencido, vazio ou cheio
 
 Rotas, regras de estoque e migration aditiva V6 em

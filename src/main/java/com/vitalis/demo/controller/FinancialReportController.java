@@ -21,6 +21,15 @@ import java.time.LocalDate;
 public class FinancialReportController {
 
     private final FinancialService financialService;
+    private final com.vitalis.demo.service.BottleReportService bottleReportService;
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/bottles")
+    public ResponseEntity<com.vitalis.demo.dto.response.BottleReportDTO> getBottles(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
+        return ResponseEntity.ok(bottleReportService.report(start, end));
+    }
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/performance")
