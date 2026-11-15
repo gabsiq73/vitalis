@@ -1,5 +1,11 @@
 # Vitalis — Documentação Técnica Completa
 
+### Garrafões quebrados — válido ou vencido, vazio ou cheio
+
+Rotas, regras de estoque e migration aditiva V6 em
+[BOTTLE_BREAKAGES.md](BOTTLE_BREAKAGES.md). A versão desktop 1.0.7 inclui
+o registro e o histórico em Estoque.
+
 ### Saldo direto e água da promoção em crédito
 
 Contratos, regras de caixa, resgate e cancelamento estão em

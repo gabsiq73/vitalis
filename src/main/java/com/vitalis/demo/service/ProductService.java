@@ -24,6 +24,7 @@ public class ProductService {
     private final StockService stockService;
     private final ProductMapper productMapper;
     private final GasSupplierService gasSupplierService;
+    private final com.vitalis.demo.repository.BottleBreakageRepository bottleBreakages;
 
     @Transactional(readOnly = true)
     public Product findById(UUID id) {
@@ -75,7 +76,7 @@ public class ProductService {
     public void delete(UUID id){
         Product product = findById(id);
 
-        if(product.hasOrders()){
+        if(product.hasOrders() || bottleBreakages.existsByWaterProduct_Id(id)){
             product.setActive(false);
             repository.save(product);
         }
@@ -86,8 +87,9 @@ public class ProductService {
     @Transactional
     public void update(UUID id, ProductUpdateDTO dto){
         Product product = findById(id);
-        if (dto.type() != null && dto.type() != product.getType() && product.hasOrders())
-            throw new BusinessException("Produtos com pedidos mantêm seu tipo. Cadastre um novo produto para outro tipo de venda.");
+        if (dto.type() != null && dto.type() != product.getType()
+                && (product.hasOrders() || bottleBreakages.existsByWaterProduct_Id(id)))
+            throw new BusinessException("Produtos com pedidos ou quebras registradas mantêm seu tipo. Cadastre um novo produto para outro tipo de venda.");
         if (dto.type() != null && dto.type() != ProductType.WATER && product.getType() == ProductType.WATER
                 && stockService.findByProduct(product).getQuantityInStock() > 0)
             throw new BusinessException("Realoque o estoque de água antes de alterar o tipo do produto.");

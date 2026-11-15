@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class BottleInventoryService {
     private final BottleInventoryRepository repository;
     private final StockRepository stocks;
+    private final BottleBreakageRepository breakages;
     @Transactional
     public void lockForMovement() { repository.lockInventory(); }
     @Transactional(readOnly = true)
@@ -20,7 +21,9 @@ public class BottleInventoryService {
         BottleInventory b = repository.findById(1L).orElseGet(BottleInventory::new);
         long filled = stocks.filledQuantity();
         return new BottleInventoryResponseDTO(b.isConfigured(), b.getValidQuantity(), b.getExpiredQuantity(), filled,
-                b.isConfigured() ? b.getValidQuantity() - filled : 0, (long)b.getValidQuantity() + b.getExpiredQuantity());
+                b.isConfigured() ? b.getValidQuantity() - filled : 0, (long)b.getValidQuantity() + b.getExpiredQuantity(),
+                breakages.sumQuantityByValidity(com.vitalis.demo.model.enums.BottleValidity.VALID),
+                breakages.sumQuantityByValidity(com.vitalis.demo.model.enums.BottleValidity.EXPIRED));
     }
     @Transactional
     public BottleInventoryResponseDTO configure(BottleInventoryRequestDTO dto) {
