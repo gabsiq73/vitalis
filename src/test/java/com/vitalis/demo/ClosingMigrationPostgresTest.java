@@ -14,10 +14,22 @@ class ClosingMigrationPostgresTest {
     static final String URL="jdbc:postgresql://127.0.0.1:55439/vitalis";
     static final String PASSWORD="closing_test_only";
     @Test void migratesOldDataWithoutChangingAnyOriginalColumn() throws Exception {
+        verifyUpgrade(false);
+    }
+    @Test void baselinesExistingSchemaWithoutRecreatingTablesOrChangingOldData() throws Exception {
+        verifyUpgrade(true);
+    }
+    private void verifyUpgrade(boolean existingSchema) throws Exception {
         String database="closing_migration_"+UUID.randomUUID().toString().replace("-", "");
         try(Connection admin=DriverManager.getConnection(URL,"postgres",PASSWORD); Statement s=admin.createStatement()) { s.executeUpdate("CREATE DATABASE "+database); }
         String databaseUrl="jdbc:postgresql://127.0.0.1:55439/"+database;
-        Flyway.configure().dataSource(databaseUrl,"postgres",PASSWORD).target("1").load().migrate();
+        if (existingSchema) {
+            try (Connection c=DriverManager.getConnection(databaseUrl,"postgres",PASSWORD); Statement s=c.createStatement()) {
+                s.execute(Files.readString(Path.of("src/main/resources/db/migration/V1__baseline.sql")));
+            }
+            assertThatThrownBy(() -> Flyway.configure().dataSource(databaseUrl,"postgres",PASSWORD).load().migrate())
+                    .hasMessageContaining("non-empty schema");
+        } else Flyway.configure().dataSource(databaseUrl,"postgres",PASSWORD).target("1").load().migrate();
         try (Connection c=DriverManager.getConnection(databaseUrl,"postgres",PASSWORD); Statement s=c.createStatement()) {
             String audit="create_date,last_modified_date";
             String cli="00000000-0000-0000-0000-000000000001", prod="00000000-0000-0000-0000-000000000002", ord="00000000-0000-0000-0000-000000000003";
@@ -33,13 +45,17 @@ class ClosingMigrationPostgresTest {
                 while(rs.next()) columns.computeIfAbsent(rs.getString(1),ignored->new ArrayList<>()).add(rs.getString(2));
             }
             var before=snapshot(c,columns);
-            Path dump=Path.of("target/closing-before-v2.dump");
+            Path dump=Path.of(existingSchema ? "target/closing-existing-before-baseline.dump" : "target/closing-before-v2.dump");
             Process process=new ProcessBuilder("docker","exec","vitalis-fechamento-pg16","pg_dump","-U","postgres","-Fc",database).redirectOutput(dump.toFile()).redirectError(ProcessBuilder.Redirect.INHERIT).start();
             assertThat(process.waitFor()).isZero(); assertThat(Files.size(dump)).isPositive();
+            if (existingSchema) Flyway.configure().dataSource(databaseUrl,"postgres",PASSWORD).baselineVersion("1").load().baseline();
             Flyway.configure().dataSource(databaseUrl,"postgres",PASSWORD).load().migrate();
             assertThat(snapshot(c,columns)).isEqualTo(before);
             try(ResultSet rs=s.executeQuery("select unit_cost,cost_estimated from tb_order_item")) { rs.next(); assertThat(rs.getBigDecimal(1)).isEqualByComparingTo("5"); assertThat(rs.getBoolean(2)).isTrue(); }
             try(ResultSet rs=s.executeQuery("select withdrawal_kind,payment_method from tb_cash_movement")) { rs.next(); assertThat(rs.getString(1)).isEqualTo("RETIRADA"); assertThat(rs.getString(2)).isEqualTo("DINHEIRO"); }
+            if (existingSchema) {
+                try(ResultSet rs=s.executeQuery("select type from flyway_schema_history where version='1'")) { rs.next(); assertThat(rs.getString(1)).isEqualTo("BASELINE"); }
+            }
             Files.writeString(Path.of("target/closing-migration-verification.txt"),"PostgreSQL 16.3: V1 -> V2 -> V3. Original columns identical in all "+columns.size()+" tables; 7 seeded rows preserved. Dump: "+dump+". Cost backfill and default cash classification verified.\n");
         }
     }

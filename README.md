@@ -118,6 +118,21 @@ Consulte os exemplos de responses e erros em [DOCUMENTATION.md](DOCUMENTATION.md
 
 ## Testes
 
+### Banco existente sem histórico Flyway
+
+Se aparecer `Found non-empty schema(s) "public" but no schema history table`,
+a conexão já funcionou, mas o banco ainda não foi registrado no Flyway.
+Não execute a V1 sobre esse banco e não recrie tabelas. Faça backup completo,
+restaure-o em Postgres descartável e valide nessa cópia o baseline explícito em
+versão 1 (`Flyway.baseline()`) seguido das migrations e do Hibernate `validate`.
+Confira as colunas e dados antigos antes/depois; só depois repita no original,
+com autorização do responsável. `baseline-on-migrate` permanece desligado.
+
+O teste opt-in `ClosingMigrationPostgresTest` cobre tanto V1 já registrada quanto
+schema antigo sem histórico, incluindo reprodução do erro, baseline V1, aplicação
+de V2/V3 e comparação dos dados antigos. Usa somente o Postgres descartável na
+porta 55439: `./mvnw.cmd -Dtest=ClosingMigrationPostgresTest -Dclosing.postgres=true test`.
+
 ```powershell
 .\mvnw.cmd test
 ```
