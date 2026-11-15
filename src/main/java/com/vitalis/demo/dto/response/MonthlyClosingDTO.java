@@ -6,6 +6,7 @@ import java.util.List;
 
 public record MonthlyClosingDTO(int year, int month, String timeZone, int movementDays,
                                List<Day> days, Totals totals, Summary summary, List<String> warnings) {
+    // waterProfit is the legacy JSON name for gross water sales, without deducting cost.
     public record Day(LocalDate date, BigDecimal waterProfit, BigDecimal gasProfit,
                       BigDecimal purchases, BigDecimal expenses, BigDecimal dailyBalance,
                       BigDecimal accumulatedBalance, BigDecimal withdrawals) { }
