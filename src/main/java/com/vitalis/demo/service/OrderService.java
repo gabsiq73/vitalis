@@ -84,10 +84,12 @@ public class OrderService {
                 String term = search.trim().toLowerCase(Locale.ROOT);
                 if (term.startsWith("#")) term = term.substring(1);
                 String pattern = "%" + term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
+                // Hibernate 6.6 Expression.as only changes the Java type; cast emits SQL CAST.
+                var orderIdText = ((org.hibernate.query.criteria.JpaExpression<UUID>) root.<UUID>get("id")).cast(String.class);
                 predicates.add(cb.or(
                         cb.like(cb.lower(root.get("client").get("name")), pattern, '\\'),
                         cb.like(cb.lower(root.get("notes")), pattern, '\\'),
-                        cb.like(root.get("id").as(String.class), pattern, '\\')));
+                        cb.like(cb.lower(orderIdText), pattern, '\\')));
             }
             if (status != null)
                 predicates.add(cb.equal(root.get("status"), status));

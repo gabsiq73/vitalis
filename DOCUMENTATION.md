@@ -107,6 +107,15 @@ anterior também passou. Não foi utilizado o banco operacional nem PostgreSQL.
 `GET /orders` aceita `search` opcional: trecho do nome do cliente, UUID/número
 exibido (seis últimos caracteres, com ou sem `#`) ou observação. Busca sem distinção
 de maiúsculas, combinada aos filtros atuais e aplicada antes da paginação.
+
+O UUID é convertido explicitamente para texto no SQL antes de aplicar LIKE.
+No Hibernate 6.6, `Expression.as(String.class)` não emite essa conversão; a busca
+usa `JpaExpression.cast(String.class)` para evitar `operator does not exist: uuid ~~ text`
+no PostgreSQL. Não há mudança de schema ou contrato.
+Regressão PostgreSQL 16: `OrderSearchPostgresTest`, com
+`VITALIS_ORDER_SEARCH_TEST_URL=jdbc:postgresql://127.0.0.1:55439/vitalis` apontando
+somente para banco descartável. Cobre cliente, observação, UUID completo/número
+com `#`, paginação, filtros e caracteres literais `%`, `_` e barra invertida.
 `%` e `_` são caracteres literais. A listagem comercial exclui fiados manuais.
 
 `POST /orders/manual-debts` recebe `{clientId, amount, debtDate, notes?}` e retorna
