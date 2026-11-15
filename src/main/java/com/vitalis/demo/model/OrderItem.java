@@ -27,7 +27,7 @@ public class OrderItem extends BaseEntity{
 
     @Transient
     public Product getWaterStockProduct() {
-        if (product != null && product.getType() == com.vitalis.demo.model.enums.ProductType.FULL_BOTTLE) return waterProduct;
+        if (product != null && (product.getType() == com.vitalis.demo.model.enums.ProductType.FULL_BOTTLE || product.getType() == com.vitalis.demo.model.enums.ProductType.EXPIRED_BOTTLE)) return waterProduct;
         return product != null && product.getType() == com.vitalis.demo.model.enums.ProductType.WATER ? product : null;
     }
     @Column(precision = 10, scale = 2)
@@ -44,7 +44,7 @@ public class OrderItem extends BaseEntity{
     private BigDecimal promotionWaterValue;
     public com.vitalis.demo.model.enums.BottleMode getBottleMode() {
         if (product != null && product.getType() == com.vitalis.demo.model.enums.ProductType.FULL_BOTTLE) return com.vitalis.demo.model.enums.BottleMode.FULL;
-        if (product != null && product.getType() == com.vitalis.demo.model.enums.ProductType.EXPIRED_BOTTLE) return com.vitalis.demo.model.enums.BottleMode.EXPIRED;
+        if (product != null && product.getType() == com.vitalis.demo.model.enums.ProductType.EXPIRED_BOTTLE) return bottleMode == com.vitalis.demo.model.enums.BottleMode.REFILL ? bottleMode : com.vitalis.demo.model.enums.BottleMode.EXPIRED;
         return bottleMode == null ? com.vitalis.demo.model.enums.BottleMode.REFILL : bottleMode;
     }
 
