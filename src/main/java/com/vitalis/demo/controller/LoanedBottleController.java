@@ -40,7 +40,7 @@ public class LoanedBottleController {
         LoanedBottle entity = loanedBottleMapper.toEntity(dto);
 
         entity.setClient(clientService.findById(dto.clientId()));
-        entity.setProduct(productService.findById(dto.productId()));
+        if (dto.productId() != null) entity.setProduct(productService.findById(dto.productId()));
         if (dto.orderId() != null) {
             entity.setOrder(orderService.findById(dto.orderId()));
         }

@@ -29,7 +29,7 @@ public class LoanedBottle extends BaseEntity {
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "PROD_id", nullable = false)
+    @JoinColumn(name = "PROD_id")
     private Product product;
 
     @Column(name = "LB_qtd")

@@ -28,12 +28,13 @@ public class LoanedBottleService {
     public LoanedBottle edit(UUID id, com.vitalis.demo.dto.request.LoanedBottleRequestDTO dto) {
         LoanedBottle loan = findById(id);
         loan.setClient(clientService.findById(dto.clientId()));
-        loan.setProduct(productService.findById(dto.productId()));
+        if (dto.productId() != null) loan.setProduct(productService.findById(dto.productId()));
         loan.setQuantity(dto.quantity());
-        if (dto.loanDate() == null || dto.loanDate().isAfter(LocalDateTime.now())) throw new BusinessException("Informe a data do empréstimo, sem data futura.");
-        if (loan.getReturnDate() != null && dto.loanDate().isAfter(loan.getReturnDate())) throw new BusinessException("O empréstimo não pode ser posterior à devolução.");
+        LocalDateTime loanDate = dto.loanDate() == null ? loan.getLoanDate() : dto.loanDate();
+        if (loanDate == null || loanDate.isAfter(LocalDateTime.now())) throw new BusinessException("Informe a data do empréstimo, sem data futura.");
+        if (loan.getReturnDate() != null && loanDate.isAfter(loan.getReturnDate())) throw new BusinessException("O empréstimo não pode ser posterior à devolução.");
         if (loan.getOrder() != null && !loan.getOrder().getClient().getId().equals(dto.clientId())) loan.setOrder(null);
-        loan.setLoanDate(dto.loanDate());
+        loan.setLoanDate(loanDate);
         return repository.save(loan);
     }
 

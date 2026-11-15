@@ -45,6 +45,7 @@ public class CompletedOrderCorrectionService {
             BigDecimal oldCost = settlement == null ? null : settlement.getSettlementType() == SettlementType.YOU_OWE ? settlement.getAmount() : item.getUnitPrice().subtract(settlement.getAmount());
             if (!product.getId().equals(item.getProduct().getId())) { item.setUnitCost(product.getCostPrice()); item.setCostEstimated(false); }
             item.setProduct(product); item.setQuantity(change.quantity()); item.setUnitPrice(change.unitPrice()); item.setBottleMode(change.bottleMode());
+            orderService.resolveBottleWater(item, change.waterProductId());
             if (settlement != null) {
                 item.setGasSupplier(change.supplierId() == null ? item.getGasSupplier() : suppliers.findById(change.supplierId()));
                 boolean received = change.receivedByUs() == null ? settlement.getSettlementType() == SettlementType.YOU_OWE : change.receivedByUs();

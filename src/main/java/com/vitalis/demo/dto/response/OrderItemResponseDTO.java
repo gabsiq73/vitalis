@@ -23,5 +23,7 @@ public record OrderItemResponseDTO(
         Boolean receivedByUs,
         Method gasPaymentMethod,
         com.vitalis.demo.model.enums.BottleMode bottleMode,
-        BigDecimal promotionWaterValue
+        BigDecimal promotionWaterValue,
+        UUID waterProductId,
+        String waterProductName
 ) {}

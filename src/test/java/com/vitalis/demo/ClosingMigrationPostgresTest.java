@@ -40,6 +40,7 @@ class ClosingMigrationPostgresTest {
             s.executeUpdate("INSERT INTO tb_payment(pay_id,ord_id,pay_date,pay_amount,pay_method,pay_automatic_gas,"+audit+") VALUES ('00000000-0000-0000-0000-000000000005','"+ord+"','2020-01-02',11,'PIX',false,'2020-01-01','2020-01-02')");
             s.executeUpdate("INSERT INTO tb_cash_movement(id,amount,type,note,occurred_at,"+audit+") VALUES ('00000000-0000-0000-0000-000000000006',12,'WITHDRAWAL','Retirada antiga','2020-01-02','2020-01-01','2020-01-02')");
             s.executeUpdate("INSERT INTO tb_client_credit_entry(id,client_cli_id,amount,method,date,"+audit+") VALUES ('00000000-0000-0000-0000-000000000007','"+cli+"',7,'DINHEIRO','2020-01-02','2020-01-01','2020-01-02')");
+            s.executeUpdate("INSERT INTO tb_loaned_bottle(lb_id,cli_id,prod_id,lb_qtd,lb_status,lb_loan_date,"+audit+") VALUES ('00000000-0000-0000-0000-000000000008','"+cli+"','"+prod+"',2,'LOANED','2020-01-02','2020-01-01','2020-01-02')");
             Map<String,List<String>> columns=new TreeMap<>();
             try(ResultSet rs=s.executeQuery("select table_name,column_name from information_schema.columns where table_schema='public' and table_name <> 'flyway_schema_history' order by table_name,ordinal_position")) {
                 while(rs.next()) columns.computeIfAbsent(rs.getString(1),ignored->new ArrayList<>()).add(rs.getString(2));
@@ -51,12 +52,16 @@ class ClosingMigrationPostgresTest {
             if (existingSchema) Flyway.configure().dataSource(databaseUrl,"postgres",PASSWORD).baselineVersion("1").load().baseline();
             Flyway.configure().dataSource(databaseUrl,"postgres",PASSWORD).load().migrate();
             assertThat(snapshot(c,columns)).isEqualTo(before);
+            s.executeUpdate("INSERT INTO tb_loaned_bottle(lb_id,cli_id,lb_qtd,lb_status,lb_loan_date,"+audit+") VALUES ('00000000-0000-0000-0000-000000000009','"+cli+"',1,'LOANED','2020-01-02','2020-01-01','2020-01-02')");
+            try(ResultSet rs=s.executeQuery("select prod_id from tb_loaned_bottle where lb_id='00000000-0000-0000-0000-000000000009'")) { rs.next(); assertThat(rs.getObject(1)).isNull(); }
+            s.executeUpdate("INSERT INTO tb_product(prod_id,prod_name,prod_type,prod_base_price,prod_is_active,"+audit+") VALUES ('00000000-0000-0000-0000-000000000010','Garrafão completo','FULL_BOTTLE',40,true,'2020-01-01','2020-01-02'),('00000000-0000-0000-0000-000000000011','Vencido','EXPIRED_BOTTLE',3,true,'2020-01-01','2020-01-02')");
+            s.executeUpdate("INSERT INTO tb_order_item(ord_item_id,ord_id,prod_id,water_product_id,ord_item_quantity,ord_item_unit_price,"+audit+") VALUES ('00000000-0000-0000-0000-000000000012','"+ord+"','00000000-0000-0000-0000-000000000010','"+prod+"',1,40,'2020-01-01','2020-01-02')");
             try(ResultSet rs=s.executeQuery("select unit_cost,cost_estimated from tb_order_item")) { rs.next(); assertThat(rs.getBigDecimal(1)).isEqualByComparingTo("5"); assertThat(rs.getBoolean(2)).isTrue(); }
             try(ResultSet rs=s.executeQuery("select withdrawal_kind,payment_method from tb_cash_movement")) { rs.next(); assertThat(rs.getString(1)).isEqualTo("RETIRADA"); assertThat(rs.getString(2)).isEqualTo("DINHEIRO"); }
             if (existingSchema) {
                 try(ResultSet rs=s.executeQuery("select type from flyway_schema_history where version='1'")) { rs.next(); assertThat(rs.getString(1)).isEqualTo("BASELINE"); }
             }
-            Files.writeString(Path.of("target/closing-migration-verification.txt"),"PostgreSQL 16.3: V1 -> V2 -> V3. Original columns identical in all "+columns.size()+" tables; 7 seeded rows preserved. Dump: "+dump+". Cost backfill and default cash classification verified.\n");
+            Files.writeString(Path.of("target/closing-migration-verification.txt"),"PostgreSQL 16.3: baseline/V1 -> V2 -> V3 -> V4 -> V5. Original columns identical in all "+columns.size()+" tables; 8 seeded rows preserved, including legacy loan product. Dump: "+dump+". New loan without product, bottle SKU types, selected water FK, cost backfill and default cash classification verified.\n");
         }
     }
     Map<String,List<String>> snapshot(Connection c,Map<String,List<String>> columns) throws SQLException {

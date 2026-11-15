@@ -47,9 +47,11 @@ public class StockService {
 
     @Transactional
     public void createInitialStock(Product product){
-        if (product.getType() == ProductType.GAS) {
+        if (product.getType() != ProductType.WATER) {
             return;
         }
+
+        if (repository.findByProduct(product).isPresent()) return;
 
         Stock initialStock = new Stock();
         initialStock.setProduct(product);
@@ -65,7 +67,7 @@ public class StockService {
             throw new BusinessException("A quantidade para baixar deve ser maior que 0");
         }
 
-        if (product.getType() == ProductType.GAS) {
+        if (product.getType() != ProductType.WATER) {
             return;
         }
 
@@ -82,7 +84,7 @@ public class StockService {
 
     @Transactional
     public void increaseStock(Product product, Integer quantity){
-        if (product.getType() == ProductType.GAS) {
+        if (product.getType() != ProductType.WATER) {
             return;
         }
 
@@ -95,14 +97,14 @@ public class StockService {
     @Transactional
     public void deliverItem(com.vitalis.demo.model.OrderItem item) {
         if (item.getProduct().getType() == ProductType.GAS) return;
-        if (item.getBottleMode() != com.vitalis.demo.model.enums.BottleMode.EXPIRED) decreaseStock(item.getProduct(), item.getQuantity());
+        if (item.getBottleMode() != com.vitalis.demo.model.enums.BottleMode.EXPIRED) decreaseStock(item.getWaterStockProduct(), item.getQuantity());
         bottleInventory.applySale(item, false);
     }
     @Transactional
     public void reverseItem(com.vitalis.demo.model.OrderItem item) {
         if (item.getProduct().getType() == ProductType.GAS) return;
         bottleInventory.applySale(item, true);
-        if (item.getBottleMode() != com.vitalis.demo.model.enums.BottleMode.EXPIRED) increaseStock(item.getProduct(), item.getQuantity());
+        if (item.getBottleMode() != com.vitalis.demo.model.enums.BottleMode.EXPIRED) increaseStock(item.getWaterStockProduct(), item.getQuantity());
     }
 
     @Transactional
@@ -110,7 +112,7 @@ public class StockService {
         if (item.getProduct().getType() == ProductType.GAS) return;
         bottleInventory.applySale(item, true);
         if (item.getBottleMode() != com.vitalis.demo.model.enums.BottleMode.EXPIRED) {
-            Stock stock = findByProduct(item.getProduct());
+            Stock stock = findByProduct(item.getWaterStockProduct());
             stock.setQuantityInStock(Math.addExact(stock.getQuantityInStock(), item.getQuantity()));
             repository.save(stock);
         }
@@ -119,7 +121,7 @@ public class StockService {
     public void validateAllocation() { bottleInventory.reserveFilled(0); }
 
     public void checkStockAvailability(Product product, Integer requestedQuantity){
-        if (product.getType() == ProductType.GAS) return;
+        if (product.getType() != ProductType.WATER) return;
 
         Stock stock = findByProduct(product);
         Integer available = stock.getQuantityInStock();

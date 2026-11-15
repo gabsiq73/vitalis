@@ -7,7 +7,6 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 public record LoanedBottleRequestDTO(
-        @NotNull(message = "Campo obrigatório!")
         UUID productId,
         @NotNull(message = "Campo obrigatório!")
         UUID clientId,

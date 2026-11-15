@@ -23,8 +23,16 @@ public record OrderItemRequestDTO(
         @jakarta.validation.constraints.DecimalMin(value="0.00",message="O preço não pode ser negativo.") @jakarta.validation.constraints.Digits(integer=8,fraction=2,message="Informe o preço com até duas casas decimais.") BigDecimal unitPrice,
         Method gasPaymentMethod,
         com.vitalis.demo.model.enums.BottleMode bottleMode,
-        UUID itemId
+        UUID itemId,
+        UUID waterProductId
 ) {
+    public OrderItemRequestDTO(UUID productId, Integer quantity, LocalDate bottleExpiration,
+                              UUID supplierId, BigDecimal gasCostPrice, Boolean receivedByUs,
+                              BigDecimal unitPrice, Method gasPaymentMethod,
+                              com.vitalis.demo.model.enums.BottleMode bottleMode, UUID itemId) {
+        this(productId, quantity, bottleExpiration, supplierId, gasCostPrice, receivedByUs, unitPrice,
+                gasPaymentMethod, bottleMode, itemId, null);
+    }
     public OrderItemRequestDTO(UUID productId, Integer quantity, LocalDate bottleExpiration,
                               UUID supplierId, BigDecimal gasCostPrice, Boolean receivedByUs,
                               BigDecimal unitPrice, Method gasPaymentMethod) {

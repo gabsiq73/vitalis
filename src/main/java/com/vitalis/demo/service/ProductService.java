@@ -86,6 +86,11 @@ public class ProductService {
     @Transactional
     public void update(UUID id, ProductUpdateDTO dto){
         Product product = findById(id);
+        if (dto.type() != null && dto.type() != product.getType() && product.hasOrders())
+            throw new BusinessException("Produtos com pedidos mantêm seu tipo. Cadastre um novo produto para outro tipo de venda.");
+        if (dto.type() != null && dto.type() != ProductType.WATER && product.getType() == ProductType.WATER
+                && stockService.findByProduct(product).getQuantityInStock() > 0)
+            throw new BusinessException("Realoque o estoque de água antes de alterar o tipo do produto.");
 
         if (dto.name() != null && !dto.name().equalsIgnoreCase(product.getName())) {
             boolean nameTaken = repository.findByName(dto.name()).stream()
@@ -105,11 +110,12 @@ public class ProductService {
         }
         if (dto.defaultSupplierId() != null) {
             product.setDefaultSupplier(gasSupplierService.findById(dto.defaultSupplierId()));
-        } else if (dto.type() == ProductType.WATER) {
+        } else if (dto.type() != null && dto.type() != ProductType.GAS) {
             product.setDefaultSupplier(null);
         }
         
         repository.save(product);
+        if (dto.type() == ProductType.WATER) stockService.createInitialStock(product);
     }
 
 

@@ -21,6 +21,15 @@ import java.util.UUID;
 @ToString
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 public class OrderItem extends BaseEntity{
+    @ManyToOne
+    @JoinColumn(name = "water_product_id")
+    private Product waterProduct;
+
+    @Transient
+    public Product getWaterStockProduct() {
+        if (product != null && product.getType() == com.vitalis.demo.model.enums.ProductType.FULL_BOTTLE) return waterProduct;
+        return product != null && product.getType() == com.vitalis.demo.model.enums.ProductType.WATER ? product : null;
+    }
     @Column(precision = 10, scale = 2)
     private BigDecimal unitCost;
     @Column(nullable = false)
@@ -34,6 +43,8 @@ public class OrderItem extends BaseEntity{
     @Column(precision = 10, scale = 2)
     private BigDecimal promotionWaterValue;
     public com.vitalis.demo.model.enums.BottleMode getBottleMode() {
+        if (product != null && product.getType() == com.vitalis.demo.model.enums.ProductType.FULL_BOTTLE) return com.vitalis.demo.model.enums.BottleMode.FULL;
+        if (product != null && product.getType() == com.vitalis.demo.model.enums.ProductType.EXPIRED_BOTTLE) return com.vitalis.demo.model.enums.BottleMode.EXPIRED;
         return bottleMode == null ? com.vitalis.demo.model.enums.BottleMode.REFILL : bottleMode;
     }
 

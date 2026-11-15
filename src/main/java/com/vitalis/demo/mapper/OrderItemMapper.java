@@ -22,10 +22,13 @@ public abstract class OrderItemMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "product", ignore = true)
     @Mapping(target = "gasSupplier", ignore = true)
+    @Mapping(target = "waterProduct", ignore = true)
     public abstract OrderItem toEntity(OrderItemRequestDTO dto);
 
     @Mapping(target = "productId", source = "product.id")
     @Mapping(target = "productName", source = "product.name")
+    @Mapping(target = "waterProductId", source = "waterProduct.id")
+    @Mapping(target = "waterProductName", source = "waterProduct.name")
     @Mapping(target = "supplierId", source = "gasSupplier.id")
     @Mapping(target = "supplierName", source = "gasSupplier.name")
     @Mapping(target = "subTotal", expression = "java(item.getUnitPrice().multiply(java.math.BigDecimal.valueOf(item.getQuantity())))")

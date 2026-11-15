@@ -699,6 +699,56 @@ Gerencia as liquidações financeiras com fornecedores de gás.
 
 ---
 
+### Empréstimos sem escolha da água — V4
+
+Empréstimos representam garrafões, independentemente da marca de água.
+`POST /bottles` aceita somente `clientId` e `quantity` (inteiro positivo).
+`loanDate` omitido/nulo recebe a data e hora do servidor em São Paulo.
+`orderId` continua opcional para o empréstimo junto ao pedido.
+
+`productId` é opcional por compatibilidade com clientes antigos. Novos empréstimos
+sem produto retornam `productId: null` e `productName: null`; os campos permanecem
+no response. No `PUT /bottles/{id}`, omitir produto e data preserva os valores
+históricos. Edição de cliente/quantidade, devolução e exclusão continuam disponíveis.
+O desktop mostra “Garrafão” quando não existe produto associado.
+
+`V4__allow_bottle_loans_without_water_product.sql` apenas remove o NOT NULL de
+`tb_loaned_bottle.prod_id`, preservando os valores e a chave estrangeira existentes.
+Não há produto fictício, mudança de estoque ou lançamento financeiro. O formulário
+de Vasilhames e a seção de empréstimo de Novo Pedido não pedem uma água.
+
+### Produtos de garrafão completo e vencido — V5
+
+`ProductType` aceita `FULL_BOTTLE` (Garrafão completo) e `EXPIRED_BOTTLE`
+(Garrafão vencido), além de WATER/GAS. São produtos próprios com nome e preço;
+não criam estoque de água próprio nem alteram os produtos antigos.
+
+No `POST /orders`, o item FULL_BOTTLE exige `waterProductId`, apontando para uma
+água WATER ativa. O item continua único: `unitPrice`/preço do produto é o preço
+completo da venda, sem somar outra cobrança da água. O response do item acrescenta
+`waterProductId` e `waterProductName`. A entrega baixa a água escolhida e os
+garrafões válidos; EXPIRED_BOTTLE não recebe água e baixa somente os vencidos.
+Cancelamento e correção de pedido concluído revertem/aplicam as duas baixas,
+inclusive quando é preciso trocar a água escolhida. A escolha fica gravada no item.
+
+`V5__bottle_products_with_selected_water.sql` amplia o check de tipo do produto e
+adiciona a FK opcional `tb_order_item.water_product_id`. Produtos com vendas,
+inclusive águas usadas em completos, mantêm tipo/histórico; exclusão desativa o
+produto. O Fechamento mantém seu tratamento anterior para vendas de vasilhames.
+
+Os formulários de criação de pedido de gás agora editam o preço de venda usando
+`unitPrice`, como na água. O custo vem do catálogo, é congelado no item e não é
+editado na criação (inclusive na promoção). O contrato antigo `gasCostPrice`
+permanece compatível para clientes antigos e correções existentes.
+
+Verificações deste lote: criação/edição/devolução sem produto, venda dos novos
+produtos, troca da água na correção e cancelamento, preço de venda do gás e
+margem com custo cadastrado; migrations em PostgreSQL 16 e em cópia de backup
+existente, preservando todas as colunas antigas das 16 tabelas. Suíte completa:
+262 testes, com os mesmos 29 testes legados falhando (5 falhas e 24 erros), sem
+regressões novas. No desktop: 49 testes, lint, TypeScript, build Vite/Electron e
+dois fluxos Electron com API real/Postgres passaram. Não foi gerado instalador.
+
 ### LoanedBottleService
 
 Controla empréstimos de vasilhames.

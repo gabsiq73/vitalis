@@ -271,7 +271,7 @@ public class FinancialService {
     private int countItemsByType(List<Order> orders, ProductType type) {
         return orders.stream()
                 .flatMap(order -> order.getItems().stream())
-                .filter(item -> item.getProduct().getType() == type)
+                .filter(item -> item.getProduct().getType() == type || (type == ProductType.WATER && item.getProduct().getType() == ProductType.FULL_BOTTLE))
                 .filter(item -> item.getBottleMode() != com.vitalis.demo.model.enums.BottleMode.EXPIRED)
                 .mapToInt(OrderItem::getQuantity)
                 .sum();
@@ -296,7 +296,7 @@ public class FinancialService {
     private int countWaterComplete(List<Order> orders) {
         return orders.stream()
                 .flatMap(order -> order.getItems().stream())
-                .filter(item -> item.getProduct().getType() == ProductType.WATER)
+                .filter(item -> item.getProduct().getType() == ProductType.WATER || item.getProduct().getType() == ProductType.FULL_BOTTLE)
                 .filter(item -> item.getBottleMode() != com.vitalis.demo.model.enums.BottleMode.EXPIRED)
                 .filter(item -> item.getBottleMode() == com.vitalis.demo.model.enums.BottleMode.FULL || item.getProduct().getName().toUpperCase().contains("COMPLETO"))
                 .mapToInt(OrderItem::getQuantity)

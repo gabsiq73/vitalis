@@ -409,7 +409,7 @@ public class OrderService {
         boolean hasSpecialPrice = price.compareTo(product.getBasePrice()) < 0;
 
         // Desconto de retirada: apenas RETAIL sem preço especial (RESELLER já tem preço negociado)
-        if (!isDelivery && client.getClientType() == ClientType.RETAIL && !hasSpecialPrice) {
+        if (product.getType() == ProductType.WATER && !isDelivery && client.getClientType() == ClientType.RETAIL && !hasSpecialPrice) {
             var config = systemConfigService.getConfig();
             price = price.subtract(
                 BigDecimal.valueOf(config.getPickupDiscountCents()).divide(BigDecimal.valueOf(100))
@@ -484,7 +484,7 @@ public class OrderService {
     private void processItemBeforeAdding(Order subOrder, OrderItem item, boolean isGas, Boolean isDelivery) {
         if (item.getUnitCost() == null) item.setUnitCost(item.getProduct().getCostPrice());
         validateProductAvailability(item.getProduct());
-        if (item.getBottleMode() != com.vitalis.demo.model.enums.BottleMode.EXPIRED) stockService.checkStockAvailability(item.getProduct(), item.getQuantity());
+        if (item.getBottleMode() != com.vitalis.demo.model.enums.BottleMode.EXPIRED) stockService.checkStockAvailability(item.getWaterStockProduct() == null ? item.getProduct() : item.getWaterStockProduct(), item.getQuantity());
         resolveItemPrice(subOrder.getClient(), item, isDelivery);
         if (item.getProduct().getType() == ProductType.GAS) resolveGasSupplier(item);
     }
@@ -767,6 +767,7 @@ public class OrderService {
             // Resolve o Produto
             Product product = productService.findById(itemDto.productId());
             item.setProduct(product);
+            resolveBottleWater(item, itemDto.waterProductId());
 
             // Resolve o Fornecedor se for Gás
             if (product.getType() == ProductType.GAS) {
@@ -782,6 +783,19 @@ public class OrderService {
 
             return item;
         }).toList();
+    }
+
+    public void resolveBottleWater(OrderItem item, UUID waterProductId) {
+        if (item.getProduct().getType() == ProductType.FULL_BOTTLE) {
+            Product water = waterProductId == null ? item.getWaterProduct() : productService.findById(waterProductId);
+            boolean unchanged = water != null && item.getWaterProduct() != null && water.getId().equals(item.getWaterProduct().getId());
+            if (water == null || water.getType() != ProductType.WATER || (!water.isActive() && !unchanged))
+                throw new BusinessException("Selecione a água do garrafão completo.");
+            item.setWaterProduct(water);
+        } else {
+            if (waterProductId != null) throw new BusinessException("Somente o garrafão completo permite escolher uma água.");
+            item.setWaterProduct(null);
+        }
     }
 
 }

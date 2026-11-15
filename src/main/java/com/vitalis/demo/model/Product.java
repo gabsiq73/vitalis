@@ -59,8 +59,12 @@ public class Product extends BaseEntity {
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY)
     private List<OrderItem> orderItems = new ArrayList<>();
 
+    @OneToMany(mappedBy = "waterProduct", fetch = FetchType.LAZY)
+    private List<OrderItem> fullBottleItems = new ArrayList<>();
+
     public boolean hasOrders(){
-        return this.orderItems != null && !this.orderItems.isEmpty();
+        return (this.orderItems != null && !this.orderItems.isEmpty())
+                || (this.fullBottleItems != null && !this.fullBottleItems.isEmpty());
     }
 
     public void toggleActive(){
