@@ -7,7 +7,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:${DB_PORT}/vitalis
     username: postgres
-    password: ${DB_PASSWORD}
+    password: ${DB_PASSWORD:postgres}
 
   flyway:
     enabled: true

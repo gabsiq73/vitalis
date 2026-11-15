@@ -67,10 +67,16 @@ src/main/java/com/vitalis/demo/
 
    ```powershell
    $env:DB_PORT = '5434'
+   # Opcional no Docker local; o padrão continua sendo postgres.
+   # Para senha diferente: $env:DB_PASSWORD = '<senha do seu banco>'
    .\mvnw.cmd spring-boot:run
    ```
 
-   A API inicia em `http://localhost:8080` e o Swagger em `http://localhost:8080/swagger-ui/index.html`.
+   A API inicia em `http://localhost:8080`. No IntelliJ, mantenha `DB_PORT=5434`
+   nas variáveis da execução. `DB_PASSWORD` é opcional para o Docker local e,
+   quando informado, prevalece sobre o padrão `postgres`. O runtime instalado
+   continua usando a senha explícita da sua configuração.
+   O Swagger fica disponível com o perfil `dev` em `http://localhost:8080/swagger-ui/index.html`.
 
 ## Primeira conta de usuário
 
