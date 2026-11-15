@@ -345,6 +345,23 @@ public class OrderService {
         });
     }
 
+    @Transactional
+    public void deletePermanently(UUID orderId) {
+        Order order = repository.findByIdForUpdate(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Pedido não encontrado."));
+        UUID clientId = order.getClient().getId();
+        if (order.getStatus() != OrderStatus.CANCELLED) cancelOneOrder(order);
+        // Remove também vínculos antigos de pedidos que já estavam cancelados.
+        order.getItems().forEach(item -> gasSettlementService.findByOrderItem(item)
+                .ifPresent(s -> gasSettlementService.delete(s.getId())));
+        loanedBottleRepository.deleteAll(loanedBottleRepository.findByOrder_Id(orderId));
+        removeCreditEntriesForPayments(order);
+        repository.flush();
+        repository.delete(order);
+        repository.flush();
+        clientService.calculateDebtBalance(clientId);
+    }
+
     // Cancelamento
     @Transactional
     public void cancelOrder(UUID orderId) {

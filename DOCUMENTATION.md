@@ -1,13 +1,31 @@
 # Vitalis — Documentação Técnica Completa
 
-### Troca de água com garrafão vencido
+### Correção de preço pelo acerto e exclusão definitiva
 
-`EXPIRED_BOTTLE` aceita `bottleMode: REFILL` com `waterProductId` de uma água
-ativa. A entrega baixa somente essa água e mantém válidos e vencidos; o
-cancelamento recompõe a água. Criação, edição e correção usam os campos existentes.
-Sem modo explícito, pedidos de vencidos preservam a venda do vasilhame (`EXPIRED`).
-Não há campos novos, alteração de schema ou reinterpretação do histórico.
+`PUT /gas-settlements/{id}` mantém `amount`, `settled`, `settledDate` e
+`paymentMethod`; acrescenta `salePrice` e `costPrice` opcionais, não negativos,
+com até duas casas e oito dígitos inteiros. Sem preços, mantém o contrato antigo.
+Com preços, `GasSettlementOperationService` usa a correção do pedido para atualizar
+o item e seu custo, pagamentos automáticos, excedente em crédito e margem;
+o valor de `amount` é recalculado pelos preços. A operação é transacional e
+mantém IDs, produtos, quantidades e os demais itens, inclusive em promoções.
+No conjunto gás + água, `salePrice` é o preço do conjunto.
 
+`DELETE /orders/{id}/permanent` (ADMIN) apaga apenas o pedido selecionado,
+seus itens, pagamentos, empréstimos e acertos. Reutiliza os efeitos de reversão
+do cancelamento para estoque, SALDO e crédito vinculado, e recalcula a dívida.
+Pedidos cancelados não revertem estoque novamente. Outros subpedidos do mesmo
+grupo são mantidos. Uma falha reverte a transação; IDs inexistentes retornam 404.
+`DELETE /gas-settlements/{id}` (ADMIN) apaga também o pedido vinculado inteiro;
+sem vínculo, apaga somente o acerto. O desktop explicita esse efeito na confirmação.
+`DELETE /orders/{id}` continua sendo cancelamento, preservando compatibilidade.
+Não há novos campos de resposta, mudanças de schema ou migrations.
+
+Validação dirigida: `GasPriceAndDeletionTest` (9 testes), cobrindo acerto
+liquidado, venda/custo, pagamento automático e parcial, crédito excedente,
+promoção, estoque, subpedido misto, cancelado, SALDO/empréstimo, preço zero e
+validação, 404 e autorização. Electron com API real em H2 descartável cobre
+edição, desistência da exclusão, exclusão de acerto com pedido, detalhe e lista.
 
 ### Correções de operação, garrafões e promoção Gás + água
 

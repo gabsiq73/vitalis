@@ -20,7 +20,16 @@ import java.util.UUID;
 public class GasSettlementController {
     @PutMapping("/{id}")
     public GasSettlementResponseDTO edit(@PathVariable UUID id, @jakarta.validation.Valid @RequestBody com.vitalis.demo.dto.request.GasSettlementUpdateDTO dto) {
-        return settlementService.edit(id, dto);
+        return operations.edit(id, dto);
+    }
+
+    private final com.vitalis.demo.service.GasSettlementOperationService operations;
+
+    @DeleteMapping("/{id}")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> delete(@PathVariable UUID id) {
+        operations.delete(id);
+        return ResponseEntity.noContent().build();
     }
 
     private final GasSettlementService settlementService;

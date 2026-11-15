@@ -110,6 +110,13 @@ public class OrderController {
         return ResponseEntity.noContent().build();
     }
 
+    @DeleteMapping("/{id}/permanent")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deletePermanently(@PathVariable UUID id) {
+        orderService.deletePermanently(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @DeleteMapping("/{id}/void")
     public ResponseEntity<Void> voidOrder(@PathVariable UUID id) {
         orderService.voidOrder(id);
