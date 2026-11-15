@@ -788,14 +788,21 @@ public class OrderService {
     }
 
     public void resolveBottleWater(OrderItem item, UUID waterProductId) {
-        if (item.getProduct().getType() == ProductType.FULL_BOTTLE) {
+        if (item.getProduct().getType() == ProductType.EXPIRED_BOTTLE
+                && item.getBottleMode() != com.vitalis.demo.model.enums.BottleMode.REFILL
+                && waterProductId != null) {
+            throw new BusinessException("Escolha Troca de água para informar a água do garrafão vencido.");
+        }
+        if (item.getProduct().getType() == ProductType.FULL_BOTTLE
+                || (item.getProduct().getType() == ProductType.EXPIRED_BOTTLE
+                    && item.getBottleMode() == com.vitalis.demo.model.enums.BottleMode.REFILL)) {
             Product water = waterProductId == null ? item.getWaterProduct() : productService.findById(waterProductId);
             boolean unchanged = water != null && item.getWaterProduct() != null && water.getId().equals(item.getWaterProduct().getId());
             if (water == null || water.getType() != ProductType.WATER || (!water.isActive() && !unchanged))
-                throw new BusinessException("Selecione a água do garrafão completo.");
+                throw new BusinessException("Selecione uma água ativa para o garrafão.");
             item.setWaterProduct(water);
         } else {
-            if (waterProductId != null) throw new BusinessException("Somente o garrafão completo permite escolher uma água.");
+            if (waterProductId != null) throw new BusinessException("Escolha um garrafão completo ou uma troca com garrafão vencido para selecionar a água.");
             item.setWaterProduct(null);
         }
     }

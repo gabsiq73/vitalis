@@ -1,5 +1,14 @@
 # Vitalis — Documentação Técnica Completa
 
+### Troca de água com garrafão vencido
+
+`EXPIRED_BOTTLE` aceita `bottleMode: REFILL` com `waterProductId` de uma água
+ativa. A entrega baixa somente essa água e mantém válidos e vencidos; o
+cancelamento recompõe a água. Criação, edição e correção usam os campos existentes.
+Sem modo explícito, pedidos de vencidos preservam a venda do vasilhame (`EXPIRED`).
+Não há campos novos, alteração de schema ou reinterpretação do histórico.
+
+
 ### Correções de operação, garrafões e promoção Gás + água
 
 - `GET /bottle-inventory` retorna `configured`, `validQuantity`, `expiredQuantity`,
