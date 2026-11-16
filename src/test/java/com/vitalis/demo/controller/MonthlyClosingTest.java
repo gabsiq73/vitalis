@@ -73,14 +73,14 @@ class MonthlyClosingTest {
         item(order(1),ProductType.GAS,"120","110",2);
         money(report().totals().gasProfit(),"20"); money(report().summary().revenue().value(),"240");
     }
-    @Test void formulaSubtractsPurchaseExpenseAndWithdrawalOnce() {
+    @Test void formulaSubtractsPurchaseAndExpenseButWithdrawalIsDemonstrative() {
         item(order(1),ProductType.WATER,"10","6",10);
         item(order(1),ProductType.GAS,"120","110",1);
         out(1,WithdrawalKind.COMPRA,"40"); out(1,WithdrawalKind.DESPESA,"15"); out(1,WithdrawalKind.RETIRADA,"20");
         var r=report(); var d=r.days().getFirst();
         money(d.waterProfit(),"100"); money(d.gasProfit(),"10"); money(d.purchases(),"40");
-        money(d.expenses(),"15"); money(d.withdrawals(),"20"); money(d.dailyBalance(),"35");
-        money(r.summary().profitMargin().value(),"35");
+        money(d.expenses(),"15"); money(d.withdrawals(),"20"); money(d.dailyBalance(),"55");
+        money(r.summary().profitMargin().value(),"55");
     }
     @Test void dayTwoAccumulates200Plus250AndNewMonthStartsAtZero() {
         item(order(1),ProductType.WATER,"10","6",20);
@@ -93,8 +93,9 @@ class MonthlyClosingTest {
     @Test void negativeDaysAndDaysWithOnlyOutflowsAccumulateInDateOrder() {
         item(order(3),ProductType.WATER,"10","6",1);
         out(1,WithdrawalKind.RETIRADA,"30"); out(2,WithdrawalKind.COMPRA,"5");
-        var r=report(); money(r.days().getFirst().dailyBalance(),"-30");
-        money(r.days().get(1).accumulatedBalance(),"-35"); money(r.days().get(2).accumulatedBalance(),"-25");
+        var r=report(); money(r.days().getFirst().dailyBalance(),"0");
+        money(r.days().getFirst().withdrawals(),"30");
+        money(r.days().get(1).accumulatedBalance(),"-5"); money(r.days().get(2).accumulatedBalance(),"5");
     }
     @Test void receivingAnOldDebtDoesNotCountTheSaleAgain() {
         Order o=order(1); o.setDeliveryDate(LocalDateTime.of(2026,9,1,12,0));
@@ -157,7 +158,8 @@ class MonthlyClosingTest {
         money(s.purchases().percentage().setScale(2,RoundingMode.HALF_UP),"43.66");
         money(s.expenses().percentage().setScale(2,RoundingMode.HALF_UP),"23.98");
         money(s.profitMargin().percentage().setScale(2,RoundingMode.HALF_UP),"32.35");
-        out(2,WithdrawalKind.RETIRADA,"10000"); assertThat(report().summary().profitMargin().percentage()).isNegative();
+        out(2,WithdrawalKind.RETIRADA,"10000"); money(report().summary().profitMargin().value(),"4597.40");
+        out(2,WithdrawalKind.DESPESA,"10000"); assertThat(report().summary().profitMargin().percentage()).isNegative();
     }
     @Test void saoPauloDeliveryMidnightSeparatesMonths() {
         Order before=order(1); before.setDeliveryDate(LocalDateTime.ofInstant(Instant.parse("2026-11-01T02:59:59Z"),MonthlyClosingService.ZONE)); orders.saveAndFlush(before); item(before,ProductType.WATER,"3","2",1);
@@ -204,8 +206,9 @@ class MonthlyClosingTest {
         out(1,WithdrawalKind.RETIRADA,"20");
         http.perform(get("/reports/closing").param("year","2026").param("month","10"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.totals.waterProfit").value(100))
-                .andExpect(jsonPath("$.totals.purchases").value(40)).andExpect(jsonPath("$.totals.dailyBalance").value(40))
-                .andExpect(jsonPath("$.totals.accumulatedBalance").value(40));
+                .andExpect(jsonPath("$.totals.purchases").value(40)).andExpect(jsonPath("$.totals.dailyBalance").value(60))
+                .andExpect(jsonPath("$.totals.withdrawals").value(20))
+                .andExpect(jsonPath("$.totals.accumulatedBalance").value(60));
         var daily=json.readTree(http.perform(get("/reports/performance/daily").param("date","2026-10-01"))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
         money(daily.get("pixBalance").decimalValue(),"-40"); money(daily.get("cashBalance").decimalValue(),"-20");

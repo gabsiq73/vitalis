@@ -1,5 +1,10 @@
 # Vitalis — Documentação Técnica Completa
 
+### Correções de cadastro, fiados, compras de garrafões e fechamento
+
+Contratos e comportamento atual em [OPERATIONAL_ADJUSTMENTS.md](OPERATIONAL_ADJUSTMENTS.md).
+Retiradas agora são demonstrativas no fechamento; continuam movimentando o Caixa do Dia.
+
 ### Relatório de garrafões
 
 `GET /reports/bottles?start=YYYY-MM-DD&end=YYYY-MM-DD` (ADMIN) retorna
@@ -796,12 +801,13 @@ inclusive quando é preciso trocar a água escolhida. A escolha fica gravada no 
 
 `V5__bottle_products_with_selected_water.sql` amplia o check de tipo do produto e
 adiciona a FK opcional `tb_order_item.water_product_id`. Produtos com vendas,
-inclusive águas usadas em completos, mantêm tipo/histórico; exclusão desativa o
-produto. O Fechamento mantém seu tratamento anterior para vendas de vasilhames.
+inclusive águas usadas em completos, mantêm tipo/histórico; exclusão com histórico
+é recusada e orienta desativar. O Fechamento mantém seu tratamento anterior para vendas de vasilhames.
 Troca de água em garrafão vencido entra como venda de água pelo preço cobrado.
 As regras atuais do relatório estão em [FECHAMENTO.md](FECHAMENTO.md):
 vendas concluídas por data de entrega, inclusive fiadas; água sem desconto de
-custo, gás por margem e saldo descontando compras de água, despesas e retiradas.
+custo, gás por margem e saldo descontando compras de água e despesas.
+Retiradas são demonstrativas no fechamento, somadas a partir do Caixa do Dia.
 
 Os formulários de criação de pedido de gás agora editam o preço de venda usando
 `unitPrice`, como na água. O custo vem do catálogo, é congelado no item e não é

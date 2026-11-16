@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface ClientPriceRepository extends JpaRepository<ClientPrice, UUID> {
+    void deleteByProduct_Id(UUID id);
 
     Optional<ClientPrice> findByClientAndProduct(Client client, Product product);
 

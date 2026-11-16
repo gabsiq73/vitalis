@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.UUID;
 
 public interface OrderItemRepository extends JpaRepository<OrderItem, UUID> {
+    boolean existsByProduct_IdOrWaterProduct_Id(UUID productId, UUID waterProductId);
 
     List<OrderItem> findByProduct(Product product);
 }
