@@ -48,6 +48,29 @@ public class PaymentService {
     // Consultas
 
     @Transactional
+    public Payment updateMethod(UUID id, Method method) {
+        UUID orderId = repository.findOrderIdById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Pagamento não encontrado."));
+        // Serialize with delivery, correction and cancellation, preserving payment identity.
+        Order order = orderRepository.findByIdForUpdate(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Pedido não encontrado."));
+        Payment payment = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Pagamento não encontrado."));
+        if (order.getStatus() == OrderStatus.CANCELLED || order.getPaymentStatus() == PaymentStatus.CANCELLED)
+            throw new BusinessException("Pagamento de pedido cancelado não pode ser alterado.");
+        if ((method != Method.PIX && method != Method.DINHEIRO)
+                || (payment.getMethod() != Method.PIX && payment.getMethod() != Method.DINHEIRO))
+            throw new BusinessException("A correção permite trocar PIX e Dinheiro. Uso de saldo não é um recebimento.");
+        payment.setMethod(method);
+        // Credit split from the same payment retains the original receipt classification.
+        clientCreditEntryRepository.findBySourcePaymentIn(List.of(payment)).forEach(entry -> {
+            entry.setMethod(method);
+            clientCreditEntryRepository.save(entry);
+        });
+        return repository.save(payment);
+    }
+
+    @Transactional
     public void addClientCredit(UUID clientId, BigDecimal amount, Method method) {
         if (amount == null || amount.signum() <= 0 || amount.scale() > 2
                 || amount.compareTo(new BigDecimal("99999999.99")) > 0

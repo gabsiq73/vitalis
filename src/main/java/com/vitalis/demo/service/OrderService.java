@@ -77,19 +77,34 @@ public class OrderService {
     public Page<Order> listOrders(OrderStatus status, PaymentStatus paymentStatus,
                                   java.time.LocalDate start, java.time.LocalDate end,
                                   java.time.LocalDateTime deliveryAfter, String search, Pageable pageable) {
+        return listOrders(status, paymentStatus, start, end, deliveryAfter, search, null, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Order> listOrders(OrderStatus status, PaymentStatus paymentStatus,
+                                  java.time.LocalDate start, java.time.LocalDate end,
+                                  java.time.LocalDateTime deliveryAfter, String search, UUID productId, Pageable pageable) {
         return repository.findAll((root, query, cb) -> {
             java.util.List<jakarta.persistence.criteria.Predicate> predicates = new java.util.ArrayList<>();
             predicates.add(cb.isNull(root.get("manualDebtAmount")));
             if (search != null && !search.isBlank()) {
-                String term = search.trim().toLowerCase(Locale.ROOT);
+                String term = com.vitalis.demo.util.SearchText.normalize(search);
                 if (term.startsWith("#")) term = term.substring(1);
                 String pattern = "%" + term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
                 // Hibernate 6.6 Expression.as only changes the Java type; cast emits SQL CAST.
                 var orderIdText = ((org.hibernate.query.criteria.JpaExpression<UUID>) root.<UUID>get("id")).cast(String.class);
                 predicates.add(cb.or(
-                        cb.like(cb.lower(root.get("client").get("name")), pattern, '\\'),
-                        cb.like(cb.lower(root.get("notes")), pattern, '\\'),
+                        cb.like(com.vitalis.demo.util.SearchText.normalized(cb, root.get("client").get("name")), pattern, '\\'),
+                        cb.like(com.vitalis.demo.util.SearchText.normalized(cb, root.get("notes")), pattern, '\\'),
                         cb.like(cb.lower(orderIdText), pattern, '\\')));
+            }
+            if (productId != null) {
+                var matchingItem = query.subquery(UUID.class);
+                var item = matchingItem.from(OrderItem.class);
+                matchingItem.select(item.get("id")).where(cb.equal(item.get("order"), root),
+                        cb.or(cb.equal(item.get("product").get("id"), productId),
+                                cb.equal(item.get("waterProduct").get("id"), productId)));
+                predicates.add(cb.exists(matchingItem));
             }
             if (status != null)
                 predicates.add(cb.equal(root.get("status"), status));
@@ -271,6 +286,17 @@ public class OrderService {
 
         if (dto != null) reviewGasDeliveryPayments(order, dto);
 
+        if (dto != null && dto.loanedBottleQuantity() != null) {
+            if (dto.loanedBottleQuantity() <= 0) throw new BusinessException("Informe uma quantidade positiva de vasilhames.");
+            LoanedBottle loan = new LoanedBottle();
+            loan.setClient(order.getClient());
+            loan.setOrder(order);
+            loan.setQuantity(dto.loanedBottleQuantity());
+            loan.setLoanDate(LocalDateTime.now());
+            loan.setLoanStatus(com.vitalis.demo.model.enums.LoanStatus.LOANED);
+            loanedBottleRepository.save(loan);
+        }
+
         order.getItems().forEach(item -> {
             stockService.deliverItem(item);
         });
@@ -286,7 +312,7 @@ public class OrderService {
         List<OrderItem> gasItems = order.getItems().stream()
                 .filter(item -> item.getProduct().getType() == ProductType.GAS).toList();
         Map<UUID, ConfirmDeliveryRequestDTO.GasPayment> selections = new HashMap<>();
-        for (var selection : dto.gasPayments()) {
+        for (var selection : dto.gasPayments() == null ? List.<ConfirmDeliveryRequestDTO.GasPayment>of() : dto.gasPayments()) {
             if (selections.put(selection.orderItemId(), selection) != null) {
                 throw new BusinessException("Informe cada item de gás apenas uma vez.");
             }

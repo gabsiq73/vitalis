@@ -54,14 +54,12 @@ public class ClientService {
     @Transactional(readOnly = true)
     public Page<Client> listClient(String name, ClientType type, Pageable pageable){
         if (name != null && !name.isBlank()) {
-            String term = Normalizer.normalize(name.trim(), Normalizer.Form.NFD)
-                    .replaceAll("\\p{M}+", "").toLowerCase(Locale.ROOT);
+            String term = com.vitalis.demo.util.SearchText.normalize(name);
             String pattern = "%" + term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
             return repository.findAll((root, query, cb) -> cb.and(
                     cb.isTrue(root.get("isActive")),
                     type == null ? cb.notEqual(root.get("clientType"), ClientType.AVULSO) : cb.equal(root.get("clientType"), type),
-                    cb.like(cb.function("translate", String.class, cb.lower(root.get("name")),
-                            cb.literal("áàâãäåéèêëíìîïóòôõöúùûüçñ"), cb.literal("aaaaaaeeeeiiiiooooouuuucn")), pattern, '\\')
+                    cb.like(com.vitalis.demo.util.SearchText.normalized(cb, root.get("name")), pattern, '\\')
             ), pageable);
         }
         if(type != null) return repository.findByClientType(pageable, type);

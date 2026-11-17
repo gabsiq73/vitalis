@@ -68,11 +68,12 @@ public class OrderController {
             @RequestParam(required = false) OrderStatus status,
             @RequestParam(required = false) PaymentStatus paymentStatus,
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) UUID productId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime deliveryAfter,
             @PageableDefault(size = 10, sort = "createDate", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
-        Page<Order> pageEntity = orderService.listOrders(status, paymentStatus, start, end, deliveryAfter, search, pageable);
+        Page<Order> pageEntity = orderService.listOrders(status, paymentStatus, start, end, deliveryAfter, search, productId, pageable);
         Page<OrderResponseDTO> pageDTO = pageEntity.map(orderMapper::toResponseDTO);
         return ResponseEntity.ok(pageDTO);
     }

@@ -15,6 +15,8 @@ import java.util.List;
 import java.util.UUID;
 
 public interface PaymentRepository extends JpaRepository<Payment, UUID> {
+    @Query("select p.order.id from Payment p where p.id = :id")
+    java.util.Optional<UUID> findOrderIdById(UUID id);
     @Query("SELECT p FROM Payment p WHERE p.date >= :start AND p.date < :end " +
             "AND p.order.status <> com.vitalis.demo.model.enums.OrderStatus.CANCELLED " +
             "AND p.order.paymentStatus <> com.vitalis.demo.model.enums.PaymentStatus.CANCELLED ORDER BY p.date, p.id")

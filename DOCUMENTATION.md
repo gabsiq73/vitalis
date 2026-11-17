@@ -1,5 +1,46 @@
 # Vitalis — Documentação Técnica Completa
 
+### Empréstimo na entrega, pesquisa, produto e correção do recebimento
+
+- `PATCH /orders/{id}/confirm-delivery` aceita `loanedBottleQuantity` opcional,
+  inteiro positivo. Sem o campo, mantém o comportamento anterior. Cria um
+  empréstimo adicional sem produto, vinculado ao cliente e ao pedido, na mesma
+  transação da entrega e estoque. Em pedidos de água, `gasPayments` pode ser
+  omitido ou vazio; gás continua exigindo revisão de todos os itens quando há
+  corpo. Entrega repetida/cancelada é recusada antes de criar o empréstimo.
+  Falha de estoque reverte também o empréstimo. Cancelar/apagar o pedido mantém
+  os efeitos de reversão existentes, incluindo o empréstimo vinculado.
+- `GET /orders` aceita `productId` UUID opcional. Filtra pedidos contendo o
+  produto ou a água usada num garrafão completo/troca, antes da paginação,
+  sem duplicar pedidos com mais de um item. Combina com os filtros existentes.
+- `search` em pedidos (cliente/observação) e `name` em clientes ignoram acentos
+  latinos, caixa e espaços; mantêm `%`, `_` e barra invertida literais. A busca
+  por número/UUID, ativos/tipo de cliente e exclusão de fiados manuais permanecem.
+  A normalização do campo usa `translate` e `replace`, sem extensão ou alteração
+  dos nomes salvos, com a mesma semântica no PostgreSQL e no H2.
+- `PATCH /payments/{id}/payment-method` recebe `{paymentMethod: "PIX" | "DINHEIRO"}`
+  e retorna `PaymentResponseDTO` (200). Corrige somente um recebimento existente,
+  inclusive parcial, automático de gás, de pedido entregue ou já quitado.
+  Preserva ID, valor, data, notas, quitação, estoque e acerto. Atualiza também a
+  classificação dos créditos excedentes vinculados àquele pagamento, mantendo
+  o saldo financeiro do cliente e o total recebido. O relatório e o fechamento
+  usam o método corrigido na data original. Não aceita converter SALDO, método
+  ausente/inválido, pedido cancelado ou pagamento inexistente (404).
+  Usa transação e bloqueio do pedido, como correção/cancelamento existentes.
+
+Sem novos campos de resposta, schema ou migrations. Atualize o desktop junto
+com a API (`gabsiq73/vitalis-desktop#35`, `gabsiq73/vitalis#20`). Regressão dirigida
+em `DeliverySearchPaymentCorrectionTest`; a variante
+`DeliverySearchPaymentCorrectionPostgresTest` usa somente PostgreSQL descartável
+em `127.0.0.1:55440/vitalis`, habilitada com `VITALIS_DELIVERY_TEST_POSTGRES=true`.
+
+Validação: oito cenários novos passaram em H2 e em PostgreSQL 16 (16 testes),
+incluindo rollback real de empréstimo por falta de estoque, repetição de entrega,
+cancelamento, paginação, filtros, pagamento parcial/excedente, pedido quitado e
+recebimento automático de gás com acerto já liquidado. As regressões dirigidas
+de busca e fiados também passaram. Electron/API real descartável verificou os
+fluxos de tela; Postman validou a busca de cliente com duas asserções.
+
 ### Relatório de garrafões
 
 `GET /reports/bottles?start=YYYY-MM-DD&end=YYYY-MM-DD` (ADMIN) retorna

@@ -28,6 +28,12 @@ public class PaymentController {
     private final PaymentService paymentService;
     private final PaymentMapper paymentMapper;
 
+    @PatchMapping("/{id}/payment-method")
+    public ResponseEntity<PaymentResponseDTO> updateMethod(@PathVariable UUID id,
+            @RequestBody @Valid com.vitalis.demo.dto.request.PaymentMethodUpdateDTO dto) {
+        return ResponseEntity.ok(paymentMapper.toResponseDTO(paymentService.updateMethod(id, dto.paymentMethod())));
+    }
+
     @PostMapping("/credits/{clientId}")
     public ResponseEntity<Void> addClientCredit(@PathVariable UUID clientId,
             @RequestBody @Valid com.vitalis.demo.dto.request.ClientCreditRequestDTO dto) {
