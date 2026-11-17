@@ -19,7 +19,8 @@ percentuais nulos, inclusive faturamento.
   motivos de lançamentos antigos automaticamente.
 - **Despesas**: WITHDRAWAL/DESPESA do Caixa do Dia.
 - **Retirada**: WITHDRAWAL/RETIRADA, incluindo saídas legadas sem classificação.
-- **Saldo do dia** = (Vendas água − Compras) + Vendas gás − Despesas − Retirada.
+  É a parte da empresa, apenas demonstrativa; não afeta o resultado do fechamento.
+- **Saldo do dia** = (Vendas água − Compras) + Vendas gás − Despesas.
 - **Saldo do mês**: soma dos saldos diários em ordem cronológica desde o início
   do mês selecionado. Reinicia a cada mês. Ex.: dia 1 = 200, dia 2 = 250,
   acumulado no dia 2 = 450. O total mensal mostra 450, sem somar os acumulados.
@@ -27,7 +28,8 @@ percentuais nulos, inclusive faturamento.
   tanto em DINHEIRO quanto PIX, cada saída uma única vez.
 
 Exemplo: 10 águas a R$ 10, gás a R$ 120 com custo R$ 110, boleto de R$ 40,
-despesa de R$ 15 e retirada de R$ 20 resultam em água 100, gás 10 e saldo 35.
+despesa de R$ 15 e retirada de R$ 20 resultam em água 100, gás 10 e saldo 55.
+A retirada de 20 permanece visível, sem reduzir o saldo.
 
 `summary.revenue` continua sendo o faturamento bruto das vendas consideradas,
 incluindo o preço integral do gás. `summary.profitMargin.value` é o saldo mensal
@@ -38,13 +40,13 @@ pela fórmula acima; os percentuais são sobre esse faturamento bruto.
 ```json
 {"year":2026,"month":10,"timeZone":"America/Sao_Paulo","movementDays":1,
  "days":[{"date":"2026-10-01","waterProfit":100,"gasProfit":10,"purchases":40,
- "expenses":15,"dailyBalance":35,"accumulatedBalance":35,"withdrawals":20}],
+ "expenses":15,"dailyBalance":55,"accumulatedBalance":55,"withdrawals":20}],
  "totals":{"waterProfit":100,"gasProfit":10,"purchases":40,"expenses":15,
- "dailyBalance":35,"accumulatedBalance":35,"withdrawals":20},
+ "dailyBalance":55,"accumulatedBalance":55,"withdrawals":20},
  "summary":{"revenue":{"value":220,"percentage":100},
  "purchases":{"value":40,"percentage":18.18181818181818},
  "expenses":{"value":15,"percentage":6.818181818181818},
- "profitMargin":{"value":35,"percentage":15.90909090909091}},"warnings":[]}
+ "profitMargin":{"value":55,"percentage":25}},"warnings":[]}
 ```
 
 Valores e percentuais são números, percentuais na escala 0–100. A API mantém

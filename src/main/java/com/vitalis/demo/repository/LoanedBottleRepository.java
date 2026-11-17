@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.UUID;
 
 public interface LoanedBottleRepository extends JpaRepository<LoanedBottle, UUID> {
+    boolean existsByProduct_Id(UUID id);
 
     List<LoanedBottle> findByClient(Client client);
 

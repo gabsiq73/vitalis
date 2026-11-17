@@ -25,6 +25,11 @@ public class ProductService {
     private final ProductMapper productMapper;
     private final GasSupplierService gasSupplierService;
     private final com.vitalis.demo.repository.BottleBreakageRepository bottleBreakages;
+    private final com.vitalis.demo.repository.BottlePurchaseRepository bottlePurchases;
+    private final com.vitalis.demo.repository.StockRepository stocks;
+    private final com.vitalis.demo.repository.LoanedBottleRepository loans;
+    private final com.vitalis.demo.repository.ClientPriceRepository clientPrices;
+    private final com.vitalis.demo.repository.OrderItemRepository orderItems;
 
     @Transactional(readOnly = true)
     public Product findById(UUID id) {
@@ -76,11 +81,16 @@ public class ProductService {
     public void delete(UUID id){
         Product product = findById(id);
 
-        if(product.hasOrders() || bottleBreakages.existsByWaterProduct_Id(id)){
-            product.setActive(false);
-            repository.save(product);
-        }
-        else repository.delete(product);
+        if (orderItems.existsByProduct_IdOrWaterProduct_Id(id, id) || bottleBreakages.existsByWaterProduct_Id(id)
+                || bottlePurchases.existsByWaterProduct_Id(id) || loans.existsByProduct_Id(id))
+            throw new BusinessException("Produto com histórico de pedidos, empréstimos, compras ou quebras. Desative-o para preservar os registros.");
+        // O cadastro de água cria um estoque vazio, que também precisa ser removido.
+        // Os vasilhames físicos permanecem no total do depósito.
+        clientPrices.deleteByProduct_Id(id);
+        stocks.findByProduct(product).ifPresent(stocks::delete);
+        stocks.flush();
+        repository.delete(product);
+        repository.flush();
     }
 
 
@@ -88,8 +98,8 @@ public class ProductService {
     public void update(UUID id, ProductUpdateDTO dto){
         Product product = findById(id);
         if (dto.type() != null && dto.type() != product.getType()
-                && (product.hasOrders() || bottleBreakages.existsByWaterProduct_Id(id)))
-            throw new BusinessException("Produtos com pedidos ou quebras registradas mantêm seu tipo. Cadastre um novo produto para outro tipo de venda.");
+                && (product.hasOrders() || bottleBreakages.existsByWaterProduct_Id(id) || bottlePurchases.existsByWaterProduct_Id(id)))
+            throw new BusinessException("Produtos com pedidos, compras ou quebras registradas mantêm seu tipo. Cadastre um novo produto para outro tipo de venda.");
         if (dto.type() != null && dto.type() != ProductType.WATER && product.getType() == ProductType.WATER
                 && stockService.findByProduct(product).getQuantityInStock() > 0)
             throw new BusinessException("Realoque o estoque de água antes de alterar o tipo do produto.");

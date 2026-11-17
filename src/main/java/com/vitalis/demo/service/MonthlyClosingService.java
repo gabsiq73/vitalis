@@ -82,7 +82,7 @@ public class MonthlyClosingService {
     }
     private static class Values {
         ClosingFraction water = ZERO, gas = ZERO, purchases = ZERO, expenses = ZERO, withdrawals = ZERO, revenue = ZERO;
-        ClosingFraction balance() { return water.subtract(purchases).add(gas).subtract(expenses).subtract(withdrawals); }
+        ClosingFraction balance() { return water.subtract(purchases).add(gas).subtract(expenses); }
         void add(Values d) { water = water.add(d.water); gas = gas.add(d.gas); purchases = purchases.add(d.purchases);
             expenses = expenses.add(d.expenses); withdrawals = withdrawals.add(d.withdrawals); revenue = revenue.add(d.revenue); }
     }
