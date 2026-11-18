@@ -2,6 +2,7 @@ package com.vitalis.demo.controller;
 
 import com.vitalis.demo.dto.request.ClientRequestDTO;
 import com.vitalis.demo.dto.response.ClientResponseDTO;
+import com.vitalis.demo.dto.update.ClientBalanceUpdateDTO;
 import com.vitalis.demo.dto.update.ClientUpdateDTO;
 import com.vitalis.demo.mapper.ClientMapper;
 import com.vitalis.demo.model.Client;
@@ -66,6 +67,12 @@ public class ClientController {
     public ResponseEntity<Void> update(@PathVariable("id") UUID id, @RequestBody @Valid ClientUpdateDTO dto){
         clientService.update(id,dto);
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/balance")
+    public ResponseEntity<BigDecimal> correctBalance(@PathVariable UUID id,
+                                                     @Valid @RequestBody ClientBalanceUpdateDTO dto) {
+        return ResponseEntity.ok(clientService.correctBalance(id, dto.expectedBalance(), dto.balance()));
     }
 
     @GetMapping("/{id}/outstanding-debt")

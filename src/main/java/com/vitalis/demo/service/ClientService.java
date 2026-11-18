@@ -101,6 +101,29 @@ public class ClientService {
     }
 
     @Transactional
+    public BigDecimal correctBalance(UUID id, BigDecimal expectedBalance, BigDecimal balance) {
+        Client client = repository.findActiveByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado."));
+        if (client.getClientType() == ClientType.AVULSO) {
+            throw new BusinessException("A correção de saldo exige um cliente cadastrado.");
+        }
+
+        BigDecimal current = client.getBalance() == null ? BigDecimal.ZERO : client.getBalance();
+        if (current.signum() < 0 || getOutstandingDebt(id).signum() > 0) {
+            throw new BusinessException("Corrija primeiro o valor dos pedidos em aberto.");
+        }
+        if (current.compareTo(balance) == 0) {
+            return current;
+        }
+        if (current.compareTo(expectedBalance) != 0) {
+            throw new BusinessException("O saldo mudou. Feche a correção e atualize a ficha do cliente.");
+        }
+
+        client.setBalance(balance);
+        return balance;
+    }
+
+    @Transactional
     public void addCreditBalance(UUID clientId, BigDecimal amount) {
         Client client = findByIdIncludingInactive(clientId);
 

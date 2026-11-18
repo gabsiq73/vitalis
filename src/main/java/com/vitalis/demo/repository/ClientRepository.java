@@ -21,6 +21,10 @@ public interface ClientRepository extends JpaRepository<Client, UUID>, JpaSpecif
         return findByIdAndIsActiveTrue(id);
     }
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select c from Client c where c.id = :id and c.isActive = true")
+    Optional<Client> findActiveByIdForUpdate(UUID id);
+
     Optional<Client> findByIdAndIsActiveTrue(UUID id);
 
     @Query("select c from Client c where c.id = :id")

@@ -64,6 +64,34 @@ class ClientCreditAndDeferredPromotionTest {
         money(daily.get("pixBalance"),"100"); money(daily.get("totalInvoiced"),"0");
         assertThat(orders.count()).isZero();
     }
+    @Test void manualCorrectionCanIncreaseReduceAndZeroCreditWithoutChangingCash() throws Exception {
+        send("POST","/payments/credits/"+client,Map.of("amount",100,"paymentMethod","PIX"));
+        String balancePath = "/clients/" + client + "/balance";
+        money(send("PATCH",balancePath,Map.of("expectedBalance",100,"balance",120)),"120");
+        money(send("PATCH",balancePath,Map.of("expectedBalance",120,"balance",40)),"40");
+        money(send("PATCH",balancePath,Map.of("expectedBalance",40,"balance",0)),"0");
+        money(send("PATCH",balancePath,Map.of("expectedBalance",40,"balance",0)),"0");
+        money(getJson("/clients/"+client).get("balance"),"0");
+        money(getJson("/reports/performance/daily?date="+LocalDate.now()).get("pixBalance"),"100");
+        assertThat(orders.count()).isZero();
+    }
+
+    @Test void manualCorrectionRejectsStaleBalancesInvalidAmountsAndOutstandingDebt() throws Exception {
+        String balancePath = "/clients/" + client + "/balance";
+        send("PATCH",balancePath,Map.of("expectedBalance",0,"balance",20));
+        http.perform(req("PATCH",balancePath,Map.of("expectedBalance",0,"balance",10)))
+                .andExpect(status().isBadRequest());
+        for (Object invalid : List.of(-1, new BigDecimal("1.001"), 100000000)) {
+            http.perform(req("PATCH",balancePath,Map.of("expectedBalance",20,"balance",invalid)))
+                    .andExpect(status().isUnprocessableEntity());
+        }
+        money(getJson("/clients/"+client).get("balance"),"20");
+        send("POST","/orders/manual-debts",Map.of("clientId",client,"amount",30,"debtDate","2020-01-01T12:00:00"));
+        http.perform(req("PATCH",balancePath,Map.of("expectedBalance",0,"balance",10)))
+                .andExpect(status().isBadRequest());
+        money(getJson("/clients/"+client+"/outstanding-debt"),"30");
+    }
+
     @Test void directDepositPaysOldestDebtsThenLeavesOnlyTheRemainderAsCredit() throws Exception {
         JsonNode debt=send("POST","/orders/manual-debts",Map.of("clientId",client,"amount",30,"debtDate","2020-01-01T12:00:00"));
         send("POST","/payments/credits/"+client,Map.of("amount",100,"paymentMethod","DINHEIRO"));
