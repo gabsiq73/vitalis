@@ -110,10 +110,14 @@ public class OrderService {
                 predicates.add(cb.equal(root.get("status"), status));
             if (paymentStatus != null)
                 predicates.add(cb.equal(root.get("paymentStatus"), paymentStatus));
-            if (start != null)
-                predicates.add(cb.greaterThanOrEqualTo(root.get("createDate"), start.atStartOfDay()));
-            if (end != null)
-                predicates.add(cb.lessThanOrEqualTo(root.get("createDate"), end.atTime(java.time.LocalTime.MAX)));
+            if (start != null || end != null) {
+                var orderDate = cb.coalesce(root.<LocalDateTime>get("deliveryDate"),
+                        root.<LocalDateTime>get("createDate"));
+                if (start != null)
+                    predicates.add(cb.greaterThanOrEqualTo(orderDate, start.atStartOfDay()));
+                if (end != null)
+                    predicates.add(cb.lessThan(orderDate, end.plusDays(1).atStartOfDay()));
+            }
             if (deliveryAfter != null)
                 predicates.add(cb.greaterThan(root.get("deliveryDate"), deliveryAfter));
             return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));

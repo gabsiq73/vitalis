@@ -80,6 +80,39 @@ class OrderSearchAndManualDebtTest {
     }
 
     @Test
+    void scheduledOrdersBelongToDeliveryDayInsteadOfCreationDay() throws Exception {
+        Client client = client("Agenda de entregas");
+        LocalDate today = LocalDate.now();
+        LocalDate tomorrow = today.plusDays(1);
+
+        Order regular = new Order();
+        regular.setClient(client);
+        regular.setStatus(OrderStatus.PENDING);
+        orders.saveAndFlush(regular);
+
+        Order scheduled = new Order();
+        scheduled.setClient(client);
+        scheduled.setStatus(OrderStatus.PENDING);
+        scheduled.setDeliveryDate(tomorrow.atStartOfDay());
+        orders.saveAndFlush(scheduled);
+
+        String todayFilter = "/orders?start=" + today + "&end=" + today;
+        String tomorrowFilter = "/orders?start=" + tomorrow + "&end=" + tomorrow;
+        http.perform(get(todayFilter).param("status", "PENDING"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(regular.getId().toString()));
+        http.perform(get(todayFilter).param("deliveryAfter", today.atStartOfDay().toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0));
+        http.perform(get(tomorrowFilter).param("deliveryAfter", today.atStartOfDay().toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(scheduled.getId().toString()));
+        assertThat(read("/orders?size=1").path("totalElements").asInt()).isEqualTo(2);
+    }
+
+    @Test
     void manualDebtUsesExistingPaymentsWithoutSalesStockOrCashAtRegistration() throws Exception {
         Client client = client("Caderno");
         JsonNode debt = debt(client, "75.50");
