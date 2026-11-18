@@ -59,12 +59,15 @@ public class FinancialService {
         FinancialReportDTO base = generateFinancialReport(date, date);
         List<CashMovement> movements = cashMovementService.findEntitiesBetween(date, date, null);
         BigDecimal entries = BigDecimal.ZERO;
+        BigDecimal pixEntries = BigDecimal.ZERO;
         BigDecimal adjustments = BigDecimal.ZERO;
         BigDecimal withdrawals = BigDecimal.ZERO;
         BigDecimal pixWithdrawals = BigDecimal.ZERO;
         for (CashMovement movement : movements) {
-            if (movement.getType() == CashMovementType.ENTRY) entries = entries.add(movement.getAmount());
-            else if (movement.getType() == CashMovementType.WITHDRAWAL) {
+            if (movement.getType() == CashMovementType.ENTRY) {
+                entries = entries.add(movement.getAmount());
+                if (movement.getPaymentMethod() == Method.PIX) pixEntries = pixEntries.add(movement.getAmount());
+            } else if (movement.getType() == CashMovementType.WITHDRAWAL) {
                 withdrawals = withdrawals.add(movement.getAmount());
                 if (movement.getPaymentMethod() == Method.PIX) pixWithdrawals = pixWithdrawals.add(movement.getAmount());
             }
@@ -103,8 +106,10 @@ public class FinancialService {
                 base.totalReceived().add(entries).add(adjustments).subtract(withdrawals)
                         .add(gasIn).subtract(gasOut),
                 details, gasIn, gasOut, gasDetails,
-                receivedByMethod(date, Method.DINHEIRO).add(entries).add(adjustments).subtract(withdrawals).add(pixWithdrawals).add(cashGasNet),
-                receivedByMethod(date, Method.PIX).subtract(pixWithdrawals).add(pixGasNet), unclassified, unclassifiedCount,
+                receivedByMethod(date, Method.DINHEIRO).add(entries.subtract(pixEntries))
+                        .add(adjustments).subtract(withdrawals).add(pixWithdrawals).add(cashGasNet),
+                receivedByMethod(date, Method.PIX).add(pixEntries).subtract(pixWithdrawals).add(pixGasNet),
+                unclassified, unclassifiedCount,
                 safeQuery(orderRepository.sumDepotDeliveredSales(OrderStatus.DELIVERED,
                         date.atStartOfDay(), date.atTime(LocalTime.MAX))));
     }

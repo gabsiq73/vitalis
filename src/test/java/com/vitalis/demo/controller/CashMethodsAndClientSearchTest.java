@@ -258,6 +258,42 @@ class CashMethodsAndClientSearchTest {
     }
 
     @Test
+    void manualEntriesUseTheirMethodAndDeletingPixRestoresOnlyThePixBalance() throws Exception {
+        LocalDate day = LocalDate.now();
+        String occurredAt = day.atTime(10, 0).toString();
+        JsonNode cash = postJson("/cash-movements", java.util.Map.of(
+                "type", "ENTRY", "amount", 20, "occurredAt", occurredAt, "paymentMethod", "DINHEIRO"));
+        JsonNode pix = postJson("/cash-movements", java.util.Map.of(
+                "type", "ENTRY", "amount", 35, "occurredAt", occurredAt, "paymentMethod", "PIX"));
+        JsonNode legacy = postJson("/cash-movements", java.util.Map.of(
+                "type", "ENTRY", "amount", 5, "occurredAt", occurredAt));
+        assertThat(cash.path("paymentMethod").asText()).isEqualTo("DINHEIRO");
+        assertThat(pix.path("paymentMethod").asText()).isEqualTo("PIX");
+        assertThat(legacy.path("paymentMethod").asText()).isEqualTo("DINHEIRO");
+
+        http.perform(post("/cash-movements").contentType("application/json")
+                .content(json.writeValueAsString(java.util.Map.of(
+                        "type", "ADJUSTMENT", "direction", "IN", "amount", 10, "paymentMethod", "PIX"))))
+                .andExpect(status().isBadRequest());
+        http.perform(post("/cash-movements").contentType("application/json")
+                .content(json.writeValueAsString(java.util.Map.of(
+                        "type", "ENTRY", "amount", 10, "paymentMethod", "SALDO"))))
+                .andExpect(status().isBadRequest());
+
+        JsonNode before = report(day);
+        balance(before, "25", "35");
+        assertThat(before.path("totalEntries").decimalValue()).isEqualByComparingTo("60");
+        assertThat(before.path("finalBalance").decimalValue()).isEqualByComparingTo("60");
+        assertThat(before.path("totalReceived").decimalValue()).isZero();
+
+        http.perform(delete("/cash-movements/" + pix.path("id").asText())).andExpect(status().isNoContent());
+        JsonNode after = report(day);
+        balance(after, "25", "0");
+        assertThat(after.path("totalEntries").decimalValue()).isEqualByComparingTo("25");
+        assertThat(after.path("finalBalance").decimalValue()).isEqualByComparingTo("25");
+    }
+
+    @Test
     void separatesMethodsIncludingCreditAndManualCashAndSettlementsWithQuantity() throws Exception {
         Client c = client("João", ClientType.RETAIL, true);
         Order paid = order(c, OrderStatus.DELIVERED);

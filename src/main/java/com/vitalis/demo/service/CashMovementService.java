@@ -7,6 +7,8 @@ import com.vitalis.demo.infra.exception.ResourceNotFoundException;
 import com.vitalis.demo.mapper.CashMovementMapper;
 import com.vitalis.demo.model.CashMovement;
 import com.vitalis.demo.model.enums.CashMovementType;
+import com.vitalis.demo.model.enums.Method;
+import com.vitalis.demo.model.enums.WithdrawalKind;
 import com.vitalis.demo.repository.CashMovementRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -51,12 +53,16 @@ public class CashMovementService {
             throw new BusinessException("Observação deve ter até 255 caracteres");
         }
         CashMovement movement = mapper.toEntity(dto);
-        var kind = dto.withdrawalKind() == null ? com.vitalis.demo.model.enums.WithdrawalKind.RETIRADA : dto.withdrawalKind();
-        var method = dto.paymentMethod() == null ? com.vitalis.demo.model.enums.Method.DINHEIRO : dto.paymentMethod();
-        if (method == com.vitalis.demo.model.enums.Method.SALDO
-                || (dto.type() != CashMovementType.WITHDRAWAL && (kind != com.vitalis.demo.model.enums.WithdrawalKind.RETIRADA
-                || method != com.vitalis.demo.model.enums.Method.DINHEIRO))) {
-            throw new BusinessException("Compras, despesas e PIX são permitidos apenas em saídas de caixa.");
+        var kind = dto.withdrawalKind() == null ? WithdrawalKind.RETIRADA : dto.withdrawalKind();
+        var method = dto.paymentMethod() == null ? Method.DINHEIRO : dto.paymentMethod();
+        if (method == Method.SALDO) {
+            throw new BusinessException("Use Dinheiro ou PIX para movimentar o caixa.");
+        }
+        if (dto.type() != CashMovementType.WITHDRAWAL && kind != WithdrawalKind.RETIRADA) {
+            throw new BusinessException("Compras e despesas são permitidas apenas em saídas de caixa.");
+        }
+        if (dto.type() == CashMovementType.ADJUSTMENT && method != Method.DINHEIRO) {
+            throw new BusinessException("O ajuste de caixa aceita apenas dinheiro físico.");
         }
         movement.setWithdrawalKind(kind);
         movement.setPaymentMethod(method);
