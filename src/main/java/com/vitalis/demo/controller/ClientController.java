@@ -6,6 +6,7 @@ import com.vitalis.demo.dto.update.ClientBalanceUpdateDTO;
 import com.vitalis.demo.dto.update.ClientUpdateDTO;
 import com.vitalis.demo.mapper.ClientMapper;
 import com.vitalis.demo.model.Client;
+import com.vitalis.demo.model.enums.ClientStatus;
 import com.vitalis.demo.model.enums.ClientType;
 import com.vitalis.demo.service.ClientService;
 import jakarta.validation.Valid;
@@ -32,8 +33,10 @@ public class ClientController {
     public ResponseEntity<Page<ClientResponseDTO>> listClient(
             @PageableDefault(size = 10, sort = "name") Pageable pageable,
             @RequestParam(required = false) String name,
-            @RequestParam(required = false)ClientType type){
-        Page<Client> pageEntity = clientService.listClient(name, type, pageable);
+            @RequestParam(required = false) ClientType type,
+            @RequestParam(required = false) ClientStatus status,
+            @RequestParam(defaultValue = "false") boolean positiveBalance) {
+        Page<Client> pageEntity = clientService.listClient(name, type, status, positiveBalance, pageable);
         Page<ClientResponseDTO> pageDTO = pageEntity.map(clientMapper::toResponseDTO);
         return ResponseEntity.ok(pageDTO);
     }

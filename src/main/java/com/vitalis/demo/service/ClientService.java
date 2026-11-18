@@ -11,7 +11,9 @@ import com.vitalis.demo.model.enums.ClientType;
 import com.vitalis.demo.model.enums.OrderStatus;
 import com.vitalis.demo.repository.ClientRepository;
 import com.vitalis.demo.repository.OrderRepository;
+import com.vitalis.demo.util.SearchText;
 import com.vitalis.demo.validator.ClientValidator;
+import jakarta.persistence.criteria.Predicate;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -52,19 +55,25 @@ public class ClientService {
     }
 
     @Transactional(readOnly = true)
-    public Page<Client> listClient(String name, ClientType type, Pageable pageable){
-        if (name != null && !name.isBlank()) {
-            String term = com.vitalis.demo.util.SearchText.normalize(name);
-            String pattern = "%" + term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
-            return repository.findAll((root, query, cb) -> cb.and(
-                    cb.isTrue(root.get("isActive")),
-                    type == null ? cb.notEqual(root.get("clientType"), ClientType.AVULSO) : cb.equal(root.get("clientType"), type),
-                    cb.like(com.vitalis.demo.util.SearchText.normalized(cb, root.get("name")), pattern, '\\')
-            ), pageable);
-        }
-        if(type != null) return repository.findByClientType(pageable, type);
-
-        return repository.findByClientTypeNot(pageable, ClientType.AVULSO);
+    public Page<Client> listClient(String name, ClientType type, ClientStatus status,
+                                   boolean positiveBalance, Pageable pageable) {
+        return repository.findAll((root, query, cb) -> {
+            List<Predicate> filters = new ArrayList<>();
+            filters.add(cb.isTrue(root.get("isActive")));
+            filters.add(type == null
+                    ? cb.notEqual(root.get("clientType"), ClientType.AVULSO)
+                    : cb.equal(root.get("clientType"), type));
+            if (name != null && !name.isBlank()) {
+                filters.add(cb.like(SearchText.normalized(cb, root.get("name")), SearchText.pattern(name), '\\'));
+            }
+            if (status != null) {
+                filters.add(cb.equal(root.get("clientStatus"), status));
+            }
+            if (positiveBalance) {
+                filters.add(cb.greaterThan(root.<BigDecimal>get("balance"), BigDecimal.ZERO));
+            }
+            return cb.and(filters.toArray(Predicate[]::new));
+        }, pageable);
     }
 
     @Transactional

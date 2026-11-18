@@ -21,6 +21,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest(properties = {
+        "spring.flyway.enabled=false",
         "spring.datasource.url=jdbc:h2:mem:cash_methods;MODE=PostgreSQL;DB_CLOSE_DELAY=-1",
         "spring.datasource.driver-class-name=org.h2.Driver",
         "spring.jpa.hibernate.ddl-auto=create-drop", "spring.jpa.show-sql=false",
@@ -177,6 +178,36 @@ class CashMethodsAndClientSearchTest {
         JsonNode loan=postJson("/bottles",java.util.Map.of("productId",w.getId(),"clientId",c.getId(),"quantity",2,"loanDate","2020-01-01T00:00:00"));
         JsonNode changed=putJson("/bottles/"+loan.get("id").asText(),java.util.Map.of("productId",w.getId(),"clientId",c.getId(),"quantity",3,"loanDate","2021-01-01T00:00:00"));
         assertThat(changed.get("id")).isEqualTo(loan.get("id")); assertThat(changed.get("quantity").asInt()).isEqualTo(3); assertThat(loans.count()).isEqualTo(1);
+    }
+
+    @Test void financialClientFiltersApplyBeforePaginationAndCombineWithNameAndType() throws Exception {
+        Client ana = client("Águas Ana", ClientType.RETAIL, true);
+        ana.setBalance(new BigDecimal("12.50"));
+        Client bia = client("Águas Bia", ClientType.RETAIL, true);
+        bia.setBalance(new BigDecimal("25.00"));
+        client("Águas Caio", ClientType.RESELLER, true).setBalance(new BigDecimal("50.00"));
+        client("Outro cliente", ClientType.RETAIL, true).setBalance(BigDecimal.TEN);
+        client("Águas Inativo", ClientType.RETAIL, false).setBalance(BigDecimal.TEN);
+        client("Águas Avulso", ClientType.AVULSO, true).setBalance(BigDecimal.TEN);
+        client("Águas Saldo nulo", ClientType.RETAIL, true).setBalance(null);
+        client("Águas Sem saldo", ClientType.RETAIL, true);
+        Client overdue = client("Águas Em atraso", ClientType.RETAIL, true);
+        overdue.setClientStatus(ClientStatus.OVERDUE);
+        Client negative = client("Águas Saldo negativo", ClientType.RETAIL, true);
+        negative.setBalance(BigDecimal.ONE.negate());
+
+        String credit = "/clients?name=aguas&type=RETAIL&positiveBalance=true&size=1&sort=balance,desc";
+        JsonNode first = getJson(credit);
+        assertThat(first.path("totalElements").asInt()).isEqualTo(2);
+        assertThat(first.path("totalPages").asInt()).isEqualTo(2);
+        assertThat(first.path("content").get(0).path("id").asText()).isEqualTo(bia.getId().toString());
+        assertThat(getJson(credit + "&page=1").path("content").get(0).path("id").asText()).isEqualTo(ana.getId().toString());
+
+        JsonNode delinquent = getJson("/clients?name=aguas&type=RETAIL&status=OVERDUE");
+        assertThat(delinquent.path("totalElements").asInt()).isEqualTo(1);
+        assertThat(delinquent.path("content").get(0).path("id").asText()).isEqualTo(overdue.getId().toString());
+        assertThat(getJson("/clients?positiveBalance=true").path("totalElements").asInt()).isEqualTo(4);
+        assertThat(getJson("/clients").path("totalElements").asInt()).isEqualTo(8);
     }
 
     Client client(String name, ClientType type, boolean active) {
